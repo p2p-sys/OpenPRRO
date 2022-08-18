@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% block head_block %}
+    <meta name="description" content="">
+    <title>Main page</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	<style>
+		.download-btn {
+		    background-color: DodgerBlue;
+		    border: none;
+		    color: white;
+		    padding: 12px 30px;
+		    font-size: 16px;
+		    cursor: pointer;
+		    font-size: 20px;
+		}
+		.exit-btn {
+		    background-color: DodgerBlue;
+		    border: none;
+		    color: white;
+		    padding: 5px 15px;
+		    font-size: 16px;
+		    cursor: pointer;
+		}
+		/* Darker background on mouse-over */
+		.download-btn:hover {
+		    background-color: RoyalBlue;
+		}
+	</style>
+	<style>
+		.loader-spinner {
+			border: 16px solid #f3f3f3;
+			border-radius: 50%;
+			border-top: 16px solid #3498db;
+			width: 120px;
+			height: 120px;
+			-webkit-animation: spin 2s linear infinite; /* Safari */
+			animation: spin 2s linear infinite;
+		}
+
+		/* Safari */
+		@-webkit-keyframes spin {
+		  0% { -webkit-transform: rotate(0deg); }
+		  100% { -webkit-transform: rotate(360deg); }
+		}
+
+		@keyframes spin {
+		  0% { transform: rotate(0deg); }
+		  100% { transform: rotate(360deg); }
+		}
+	</style>
+
+
+	<script src="{{ url_for('static', filename='js/jquery.xmlrpc.js') }}"></script>
+
+	<script>
+	  var visitorId = ''
+	  function initFingerprintJS() {
+		FingerprintJS.load().then(fp => {
+		  // The FingerprintJS agent is ready.
+		  // Get a visitor identifier when you'd like to.
+		  fp.get().then(result => {
+			// This is the visitor identifier:
+			visitorId = result.visitorId;
+		  });
+		});
+	  }
+	</script>
+
+	<script
+	  async
+	  src="/static/js/fp.min.js"
+	  onload="initFingerprintJS()"
+	></script>
+
+	<script>
+		ENABLE_RRO_DEPARTMENT_CHOOSE = '{{config['ENABLE_RRO_DEPARTMENT_CHOOSE']}}'
+		LOCAL_RPC_URL = '{{config['LOCAL_RPC_URL']}}'
+		// check_oleweb = '{{current_user.check_oleweb}}'
+		// console.log(check_oleweb)
+
+		function remote_call(method, params){
+			// Check HTTPS
+			// console.log('Check HTTPS')
+			// return $.xmlrpc({
+			// 	url: LOCAL_RPC_URL,//LOCAL_RPC_URL.replace("http", "https"),
+			// 	methodName: method,
+			// 	params: params,
+			// 	success: function(response, status, jqXHR) {
+			// 		// console.log('Success sending: ' + method + '('+params+')')
+			// 		// console.log(response)
+			// 	},
+			// 	error: function(response, status) {
+			// 		console.log('Error sending: ' + method + '('+params+')')
+			// 		// console.log(response)
+			// 		// console.log(status)
+			// 		console.log('Check HTTP')
+                    return $.xmlrpc({
+						url: (typeof LOCAL_RPC_URL !== typeof undefined) ? LOCAL_RPC_URL : 'http://localhost:5725/RPC2',
+						methodName: method,
+						params: params,
+						success: function(response, status, jqXHR) {
+							// console.log('Sending: ' + method + '('+params+')')
+							// console.log(response)
+						},
+						error: function(jqXHR, status, error) {
+						    console.log('Error sending: ' + method + '('+params+')')
+						}
+					});
+			// 	}
+			// });
+		}
+
+		$.urlParam = function(name){
+		    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+		    if (results==null){
+		       return null;
+		    }
+		    else{
+		       return results[1] || 0;
+		    }
+		}
+
+		function selectDepartment(department_id, rro_id, rro_type){
+			// console.log(visitorId);
+			$.ajax({
+				dataType: "json",
+				url: "{{ url_for('department.select_department') }}"+department_id,
+				data: {rro_id:rro_id, rro_type:rro_type, visitor:visitorId},
+				success: function(data) {
+					if (data.status == 'success'){
+						if($.urlParam('next_dep')){
+							window.location.href=decodeURIComponent($.urlParam('next_dep'));
+						}else{
+							window.location.href=''
+						}
+					}else if(data.status == 'fail'){
+						alert(data.details)
+						window.location.href=''
+					}
+				},
+				error:  function() {
+					alert('Невдалося обрати відділення')
+				}
+			});
+		}
+		function displayDepartments(departments, selectDepFns, choose_msg){
+			$('#departments').append(
+				$('<h3>').addClass('text-centered text-danger').html(choose_msg)
+			)
+			$('#departments').append($('<br>'))
+
+			$.each(departments , function( index, value ) {
+				$('#departments')
+					.append($('<span>')
+					.addClass("btn btn-lg btn-default")
+					.attr('id', 'button' + value[1])
+					.html(value[2])
+					// .html(value[2] + ' №' + value[1])
+					.click(function(){
+						selectDepFns(value[0])
+					})
+				);
+			});
+
+			// $('#departments').append($('<br>')).append($('<br>')).append($('<p>').append('<a href="/login/logout"><button class="exit-btn"><i class="fa fa-external-link"></i> Вийти</button></a>'))
+		}
+		function updateDepartmentsList(rro_id, rro_type){
+			$('#departments').html('')
+			if(ENABLE_RRO_DEPARTMENT_CHOOSE == 'True'){
+				choose_msg = 'Данного РРО, ще немає в базі, будь-ласка УВАЖНО оберіть відділення на якому Ви зараз знаходитеся'
+			}else{
+				choose_msg = 'Оберіть відділення'
+				rro_id = false
+			}
+
+			var CallBackFns =  function(department_id){
+				selectDepartment(department_id, rro_id, rro_type)
+			}
+
+			return $.ajax({
+				type: "GET",
+				url: 'get_aviable_departments',
+				data: {'rro_id':rro_id, visitor:visitorId},
+				contentType : 'application/json',
+				success: function(departments_list){
+					// console.log(departments_list)
+					switch (departments_list.status) {
+  						case 'selected':
+  							window.location.href='/'
+  							break;
+  						case 'denied':
+  							$('#departments').append(
+  								$('<h1>').html('У вас немає доступу до роботи на данному відділенні!')
+							)
+  							break;
+  						case 'aquired':
+							displayDepartments(departments_list.departments_list, CallBackFns, choose_msg)
+							break;
+                        case 'deactivated':
+  							$('#departments').append(
+  								$('<h1>').html('Відділення було деактивовано!')
+                                                                .append($('<h4>').html(departments_list.comment))
+							)
+                            if (departments_list.departments_list) {
+							    displayDepartments(departments_list.departments_list, CallBackFns, choose_msg)
+                            }
+  							break;
+                        case 'error':
+  							$('#departments').append(
+  								$('<h1>').html('Помилка входу в програму')
+                                                                .append($('<h4>').html(departments_list.comment))
+							)
+  							break;
+					}
+				},
+				error: function(){
+					alert('Помилка підключення до серверу')
+				}
+			});
+		}
+		function detectIE() {
+		    var ua = window.navigator.userAgent;
+
+		    var msie = ua.indexOf('MSIE ');
+		    if (msie > 0) {
+		        // IE 10 or older => return version number
+		        return parseInt(ua.substring(msie + 5, ua.indexOf('.', msie)), 10);
+		    }
+
+		    var trident = ua.indexOf('Trident/');
+		    if (trident > 0) {
+		        // IE 11 => return version number
+		        var rv = ua.indexOf('rv:');
+		        return parseInt(ua.substring(rv + 3, ua.indexOf('.', rv)), 10);
+		    }
+
+		    var edge = ua.indexOf('Edge/');
+		    if (edge > 0) {
+		       // Edge (IE 12+) => return version number
+		       return parseInt(ua.substring(edge + 5, ua.indexOf('.', edge)), 10);
+		    }
+
+		    // other browser
+		    return false;
+		}
+
+		displayDownloadScreen = function(){
+			$('#departments').html('')
+			$('#departments')
+				.append($('<h4>').html('Клієнтську программу не виявлено'))
+				.append($('<h4>').html('Для подальшої роботи її необхідно запустити (іконка {{config['OLEWEB_NAME']}} на робочому столі)'))
+				// .append($('<h4>').html('або встановити завантаживши наступний пакетний файл(ігноруйте попередження безпеки браузера):'))
+				// .append($('<p>').append('<a href="{{config['OLEWEB_URL']}}"><button class="download-btn"><i class="fa fa-download"></i> Завантажити</button></a>'))
+				.append($('<p>').append('<a target="_blank" href="{{config['INSTRUCTION_URL']}}"><button class="download-btn"><i class="fa fa-file-pdf-o"></i> Інструкція</button></a>'))
+		}
+		displayDownloadScreenExplorer = function(){
+			$('#departments').html('')
+			$('#departments')
+				.append($('<h4>').html('Клієнтську программу не виявлено'))
+				.append($('<h4>').html('Для подальшої роботи її необхідно запустити (іконка {{config['OLEWEB_NAME']}} на робочому столі)'))
+				// .append($('<h4>').html('або встановити завантаживши наступний пакетний файл(ігноруйте попередження безпеки браузера):'))
+				// .append($('<p>').append('<a href="{{config['OLEWEB_URL']}}"> Завантажити</a>'))
+				.append($('<p>').append('<a target="_blank" href="{{config['INSTRUCTION_URL']}}"> Інструкція</a>'))
+		}
+		choose_department = function(){
+			// return remote_call('directole', ['GetPrinterSerialNumber'])
+			// .done(function(data){
+			// 	updateDepartmentsList(data[0], 'rro')
+			// })
+			console.log('1')
+			return remote_call('directole', ['Passthrough', 'CONF'])
+				.always(function(data){
+					console.log(data)
+					if (data.statusText === "error") {
+						updateDepartmentsList(0, 'prro')
+					} else {
+						resp = data[0]
+						if (resp == 'None') {
+							remote_call('restartScript').always(function(){
+								var msg = 'Не знайдено підключеного РРО намагаємося перезапустити Oleweb...'
+								console.log(msg)
+								setTimeout(rro_identify, 5000)
+							})
+						} else {
+							var rro_id = data[0].substr(6, 10)
+							updateDepartmentsList(rro_id, 'rro')
+						}
+					}
+				})
+		}
+		display_downloads = function(){
+			console.log('Помилка зв"язку з Ole manager')
+			if (detectIE()){
+				displayDownloadScreenExplorer()
+			}else{
+				displayDownloadScreen()
+			}
+		}
+
+		$( document ).ready(function() {
+			rro_identify = function(){
+
+				return remote_call('directole', ['Version']).then(
+					function(data){//["4.1.20161206"]
+						if (data.length == 1){
+							console.log('Ole manager працює: ' + data[0])
+							if (detectIE()){
+								$('#departments')
+									.html('')
+									.append($('<h4>')
+									.html('Клієнтську программу успішно встановлено, щоб почати роботу зайдіть на цей сайт з будь-якого сучасного браузера, наприклад з Google Chrome'))
+							}else{
+								choose_department()
+							}
+						}else{
+							display_downloads()
+						}
+					},
+					function(data, y, z){
+						console.log(data, y, z)
+						if (z.msg == "<class 'Exception'>:method \"directole\" is not supported"){
+							console.log('Клієнтська частина не знайшла підключеного РРО при запуску, чекаємо на підключення ПРРО')
+							return remote_call('FSC', ['id']).done(function(data){
+								console.log('FSC', data)
+								updateDepartmentsList(data[0], 'rkks')
+							}).fail(function(data){
+								return remote_call('getPrro').done(function(data){
+									console.log(data)
+									updateDepartmentsList(data[0], 'prro')
+								}).fail(function(data){
+									updateDepartmentsList(0, 'prro')
+								})
+							})
+						}else{
+							display_downloads()
+						}
+					}
+				)
+			}
+			{% if not config['CHECK_OLEWEB'] %}
+				updateDepartmentsList(0, 'rro')
+				//updateDepartmentsList(0, 'rro')
+			{% else %}
+				{% if current_user.check_oleweb %}
+					rro_identify()
+				{% else %}
+					updateDepartmentsList(0, 'rro')
+				{% endif %}
+			{% endif %}
+
+    		// rro_identify()
+			// choose_department()
+    	});
+	</script>
+{{ super() }}
+{% endblock %}
+
+{% block body_block %}
+
+<div class="row">
+  <div class="col-sm-4">
+  </div>
+  <div class="col-sm-4">
+<!--  	<div class="col-sm-12">-->
+<!--	  	<img style='margin-left: auto; margin-right: auto;' src="{{url_for('login.static', filename=config['WEBEX_LOGO'])}}" class="img-responsive">-->
+<!--	  	<br>-->
+<!--	</div>-->
+  	<div class="col-sm-12">
+		<div id='departments' class='text-center'>
+			<center><div class="loader-spinner"></div></center>
+		</div>
+		<div class='text-center'>
+			<br>
+			<p><a href="/login/logout">
+				<button class="exit-btn"><i class="fa fa-external-link"></i> Вийти</button>
+			</a></p>
+		</div>
+	</div>
+  </div>
+  <div class="col-sm-4">
+  </div>
+</div>
+{{ super() }}
+{% endblock %}

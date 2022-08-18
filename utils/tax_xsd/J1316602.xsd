@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:annotation>
+		<xs:documentation>ЗАЯВА про реєстрацію програмного реєстратора розрахункових операцій Форма № 1-ПРРО</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="common_types.xsd"/>
+	<xs:simpleType name="DGNumString">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="DECLAR" type="DeclarContent"/>
+	<xs:complexType name="DeclarContent">
+		<xs:sequence>
+			<xs:element name="DECLARHEAD" type="DHead"/>
+			<xs:element name="DECLARBODY" type="DBody"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DHead">
+		<xs:sequence>
+			<xs:element name="TIN" type="DGLong"/>
+			<xs:element name="C_DOC" type="xs:string" fixed="J13"/>
+			<xs:element name="C_DOC_SUB" type="xs:string" fixed="166"/>
+			<xs:element name="C_DOC_VER" type="xs:string" fixed="2"/>
+			<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_REG" type="DGsti"/>
+			<xs:element name="C_RAJ" type="DGsti"/>
+			<xs:element name="PERIOD_MONTH" type="DGMonth"/>
+			<xs:element name="PERIOD_TYPE" type="DGPType"/>
+			<xs:element name="PERIOD_YEAR" type="DGYear"/>
+			<xs:element name="C_STI_ORIG" type="DGc_dpi"/>
+			<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+			<xs:element name="LINKED_DOCS" nillable="true" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="DOC" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="C_DOC" type="DGC_DOC"/>
+									<xs:element name="C_DOC_SUB" type="DGC_DOC_SUB"/>
+									<xs:element name="C_DOC_VER" type="DGC_DOC_VER"/>
+									<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+									<xs:element name="FILENAME" type="DGFilename"/>
+								</xs:sequence>
+								<xs:attribute name="NUM" type="xs:nonNegativeInteger"/>
+								<xs:attribute name="TYPE" type="DGTypeLinkDoc"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="UH_DOC_NUM">
+					<xs:selector xpath="DOC"/>
+					<xs:field xpath="@NUM"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="D_FILL" type="DGDate"/>
+			<xs:element name="SOFTWARE" type="xs:string" nillable="true" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DBody">
+		<xs:sequence>
+			<!--HEAD-->
+			<xs:choice>
+				<xs:element name="M011" type="DGchk"/>
+				<xs:element name="M012" type="DGchk"/>
+				<xs:element name="M013" type="DGchk"/>
+				<xs:element name="M014" type="DGchk"/>
+				<xs:element name="M015" type="DGchk"/>
+			</xs:choice>
+			<xs:element name="HNAME" type="DGHNAME"/>
+			<xs:element name="HTIN" type="DGHTINJ"/>
+			<xs:element name="HNPDV" type="DGHNPDV" nillable="true" minOccurs="0"/>
+			<!--BODY-->
+			<xs:element name="R03G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="HKOATUU" type="DGKOATUU" nillable="true" minOccurs="0"/>
+			<xs:element name="R03G3S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R03G4S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R03G5S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:choice>
+				<xs:element name="M041" type="DGchk"/>
+				<xs:element name="M042" type="DGchk"/>
+				<xs:element name="M043" type="DGchk"/>
+				<xs:element name="M044" type="DGchk"/>
+			</xs:choice>
+			<xs:element name="R04G11S" type="DGstring"/>
+			<xs:element name="R04G12S" type="DGNumString"/>
+			<xs:element name="R04G2S" type="DGNumString" nillable="true" minOccurs="0"/>
+			<xs:choice>
+				<xs:element name="M051" type="DGchk"/>
+				<xs:element name="M052" type="DGchk"/>
+				<xs:element name="M053" type="DGchk"/>
+			</xs:choice>
+			<xs:element name="R06G1" type="xs:nonNegativeInteger" nillable="true" minOccurs="0"/>
+			<!--FOOTER-->
+			<xs:choice>
+				<xs:element name="M11" type="DGchk"/>
+				<xs:element name="M12" type="DGchk"/>
+			</xs:choice>
+			<xs:element name="HKBOS" type="DGDRFO_10"/>
+			<xs:element name="HBOS" type="DGHBOS"/>
+			<xs:element name="HFILL" type="DGDate"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
+<!--Розробник: відділ проектування та розробки АІС ГУ ДПС у Черкаській області-->

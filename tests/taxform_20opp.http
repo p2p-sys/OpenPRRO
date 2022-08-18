@@ -1,0 +1,22 @@
+POST http://127.0.0.1:5000/api/taxform_20opp
+Content-Type: application/json
+
+{
+  "key_id":73,
+  "values": [
+    {
+      "T1RXXXXG2": 1,
+      "T1RXXXXG3": 274,
+      "T1RXXXXG4S":"Кафе Поплавок",
+      "T1RXXXXG5": 24700001,
+      "T1RXXXXG6S": "UA48040230080020671",
+      "T1RXXXXG8S": "вулиця Євгена Коновальця, 36В",
+      "T1RXXXXG9": 8,
+      "T1RXXXXG10": 7,
+      "T1RXXXXG11": true,
+      "T1RXXXXG12S": ""
+    }
+  ]
+}
+
+###

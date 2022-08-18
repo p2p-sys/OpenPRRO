@@ -1,0 +1,135 @@
+{% extends 'admin/base.html' %}
+
+{% block head %}   
+	<link href="/admin/static/vendor/select2/select2.css?v=3.5.2" rel="stylesheet">
+	<link href="/admin/static/vendor/select2/select2-bootstrap3.css?v=1.4.6" rel="stylesheet">
+	<link href="/admin/static/vendor/bootstrap-daterangepicker/daterangepicker-bs3.css?v=1.3.22" rel="stylesheet">
+	<style type="text/css">
+		.badge-checkboxes .checkbox input[type="checkbox"],
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"] {
+			/*  Hide the checkbox, but keeps tabbing to it possible. */
+		    position: absolute;
+		    clip: rect(0 0 0 0);
+		}
+
+		.badge-checkboxes .checkbox label,
+		.badge-checkboxes label.checkbox-inline {
+		    padding-left:0; /* Remove space normally used for the checkbox */
+		}
+
+		.badge-checkboxes .checkbox input[type="checkbox"]:checked:focus + .badge,
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"]:checked:focus + .badge {
+		    box-shadow:0 0 2pt 1pt #333;  /* Outline when checkbox is focused/tabbed to */
+		}
+
+		.badge-checkboxes .checkbox input[type="checkbox"]:focus + .badge,
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"]:focus + .badge {
+		    box-shadow:0 0 2pt 1pt #999;  /* Outline when checkbox is focused/tabbed to */
+		}
+
+		.badge-checkboxes .checkbox input[type="checkbox"] + .badge,
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"] + .badge {
+		    border:1px solid #999; /* Add outline to badge */
+		    /* Make text in badge not selectable */
+		   -webkit-touch-callout: none;
+		    -webkit-user-select: none;
+		    -khtml-user-select: none;
+		    -moz-user-select: none;
+		    -ms-user-select: none;
+		    user-select: none;
+		}
+
+		/* Give badges for disabled checkboxes an opacity of 50% */
+		.badge-checkboxes .checkbox input[type="checkbox"]:disabled + .badge,
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"]:disabled + .badge
+		{
+		  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
+		  filter: alpha(opacity=50);
+		  -moz-opacity: 0.5;
+		  -khtml-opacity: 0.5;
+		  opacity: 0.5;   
+		}
+
+		/* Remove badge background-color and set text color for not checked options */
+		.badge-checkboxes .checkbox input[type="checkbox"]:not(:checked) + .badge,
+		.badge-checkboxes label.checkbox-inline input[type="checkbox"]:not(:checked) + .badge{
+		    background-color:Transparent;
+		    color:#999;
+		}
+
+		/*The following css only required for Bootstrap <= 3.1.0 */
+		.badge-checkboxes .checkbox {
+		    padding-left:0; /* Remove space normally used for the checkbox */
+		}
+		.badge-checkboxes .disabled label,
+		.badge-checkboxes label.checkbox-inline.disabled {
+		    cursor:not-allowed
+		}
+		.badge-checkboxes label .badge{			
+			font-size: 120%;
+		}
+    </style>
+	{{ super() }}
+{% endblock %}
+
+{% block tail_js %}
+<!--<script src="/admin/static/vendor/jquery.min.js?v=2.1.4" type="text/javascript"></script>-->
+<!--<script src="/admin/static/bootstrap/bootstrap3/js/bootstrap.min.js?v=3.3.5" type="text/javascript"></script>-->
+<!--<script src="{{ url_for('static', filename='js/moment-ua.js') }}"></script>-->
+<!--<script src="{{ url_for('static', filename='js/lib.js') }}"></script>-->
+<!--<script src="/admin/static/vendor/select2/select2.min.js?v=3.5.2" type="text/javascript"></script>-->
+<!--<script src="/admin/static/vendor/bootstrap-daterangepicker/daterangepicker.js?v=1.3.22"></script>-->
+<!--<script src="/admin/static/admin/js/form.js?v=1.0.1"></script>-->
+
+{{ super() }}
+
+<script src="{{ url_for(static_endpoint, filename='shim.min.js') }}"></script>
+<script src="{{ url_for(static_endpoint, filename='xlsx.full.min.js') }}"></script>
+<script src="{{ url_for(static_endpoint, filename='jquery.tablesorter.js') }}"></script>
+<script src="{{ url_for(static_endpoint, filename='leftover.js') }}"></script>
+<script src="{{ url_for(static_endpoint, filename='rates.js') }}"></script>
+
+<script>
+$(window).on('load', function(){
+	$("#mainview table").tablesorter({ 
+	    widgets: ['zebra']
+	});
+
+	$('select[name=departments]').select2({
+		placeholder: "Всі активні відділення ...",
+		allowClear: true
+	});
+	dirty_drp.case_datepicker($('#start'))
+	dirty_drp.case_datepicker($('#end'))
+})
+</script>
+{% endblock %}
+
+{% block body %}
+	<div id='controls'>
+		<div class="col-md-12 container" style='float:None;margin:auto'>
+			<form role="form" class='form-horizontal' id='{{form.js_id}}' method="POST">
+				{{ form.csrf_token }}
+				<div class='form-group'>
+						{{ render_field(form.start) }}
+						{{ render_field(form.end) }}
+						{{ render_field(form.departments) }}
+					<div class="col-sm-3">
+						<label class="control-label" for="recalculate">&nbsp</label>
+						<button class='btn btn-primary form-control' name='recalculate'>Пошук</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<div id='mainview'>
+		{{ table |safe}}
+	</div>
+{% endblock %}
+
+{% macro render_field(field) %}
+	<div class="col-sm-3">
+		{{ field.label(class_="control-label") }}
+		{{ field(class_="form-control")|safe }}
+	</div>
+{% endmacro %}

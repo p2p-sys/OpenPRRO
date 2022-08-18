@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:annotation>
+		<xs:documentation>Повідомлення про надання інформації щодо кваліфікованого сертифіката відкритого ключа (для повідомлень щодо сертифікатів відкритих ключів, які застосовуються в ПРРО)</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="common_types.xsd"/>
+	<xs:simpleType name="DGJ13918Tin">
+		<xs:annotation>
+			<xs:documentation>Податковий номер (5-8 цифр з лідируючими нулями) або реєстраційний номер облікової картки платника податків (10 цифр з лідируючим нулем) або серія та номер паспорта або номер паспорта у вигляді ID картки (9 цифр з лідируючими нулями)</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="10"/>
+			<xs:pattern value="([0-9]{5,10}|[АБВГДЕЄЖЗИІКЛМНОПРСТУФХЦЧШЩЮЯ]{2}[0-9]{6})"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="J13918TinColumn">
+		<xs:annotation>
+			<xs:documentation>Податковий номер (5-8 цифр з лідируючими нулями) або реєстраційний номер облікової картки платника податків (10 цифр з лідируючим нулем) або серія та номер паспорта або номер паспорта у вигляді ID картки (9 цифр з лідируючими нулями) в колонці</xs:documentation>
+		</xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="DGJ13918Tin">
+				<xs:attribute name="ROWNUM" type="rowInt" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:element name="DECLAR" type="DeclarContent"/>
+	<xs:complexType name="DeclarContent">
+		<xs:sequence>
+			<xs:element name="DECLARHEAD" type="DHead"/>
+			<xs:element name="DECLARBODY" type="DBody">
+				<xs:unique name="UT1RXXXXG1S">
+					<xs:selector xpath="T1RXXXXG1S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG2S">
+					<xs:selector xpath="T1RXXXXG2S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG3S">
+					<xs:selector xpath="T1RXXXXG3S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG4S">
+					<xs:selector xpath="T1RXXXXG4S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DHead">
+		<xs:sequence>
+			<xs:element name="TIN" type="DGLong"/>
+			<xs:element name="C_DOC" type="xs:string" fixed="J13"/>
+			<xs:element name="C_DOC_SUB" type="xs:string" fixed="918"/>
+			<xs:element name="C_DOC_VER" type="xs:string" fixed="1"/>
+			<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_REG" type="DGsti"/>
+			<xs:element name="C_RAJ" type="DGsti"/>
+			<xs:element name="PERIOD_MONTH" type="DGMonth"/>
+			<xs:element name="PERIOD_TYPE" type="DGPType"/>
+			<xs:element name="PERIOD_YEAR" type="DGYear"/>
+			<xs:element name="C_STI_ORIG" type="DGc_dpi"/>
+			<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+			<xs:element name="LINKED_DOCS" nillable="true" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="DOC" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="C_DOC" type="DGC_DOC"/>
+									<xs:element name="C_DOC_SUB" type="DGC_DOC_SUB"/>
+									<xs:element name="C_DOC_VER" type="DGC_DOC_VER"/>
+									<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+									<xs:element name="FILENAME" type="DGFilename"/>
+								</xs:sequence>
+								<xs:attribute name="NUM" type="xs:nonNegativeInteger"/>
+								<xs:attribute name="TYPE" type="DGTypeLinkDoc"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="UH_DOC_NUM">
+					<xs:selector xpath="DOC"/>
+					<xs:field xpath="@NUM"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="D_FILL" type="DGDate"/>
+			<xs:element name="SOFTWARE" type="xs:string" nillable="true" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DBody">
+		<xs:sequence>
+			<!--HEAD-->
+			<xs:element name="HFILL" type="DGDate"/>
+			<xs:element name="HNUM" type="DGInom"/>
+			<xs:element name="HSTI" type="DGHSTI"/>
+			<xs:element name="HNAME" type="DGHNAME"/>
+			<xs:element name="HTIN" type="DGHTINJ"/>
+			<!--BODY-->
+			<!--TABLE №1-->
+			<xs:element name="T1RXXXXG1S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG2S" type="J13918TinColumn" nillable="true" minOccurs="1" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG3S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG4S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="9999"/>
+			<!--/TABLE №1-->
+			<!--FOOTER-->
+			<xs:element name="HBOS" type="DGHBOS"/>
+			<xs:element name="HPOST" type="DGstring"/>
+			<xs:element name="HEXECUTOR" type="DGstring"/>
+			<xs:element name="HTEL" type="DGHTEL"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
+<!--Розробник: відділ проектування та розробки АІС ГУ ДПС у Черкаській області-->

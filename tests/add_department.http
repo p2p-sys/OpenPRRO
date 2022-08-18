@@ -1,0 +1,11 @@
+POST http://127.0.0.1:5000/api/add_department
+Content-Type: application/json
+
+{
+  "name": "4000371348",
+  "rro_id": "4000371348",
+  "prro_key_id": 209
+}
+
+###
+

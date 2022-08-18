@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:annotation>
+		<xs:documentation>Заява про реєстрацію реєстратора розрахункових операцій. Форма № 1-РРО.</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="common_types.xsd"/>
+	<xs:element name="DECLAR" type="DeclarContent"/>
+	<xs:complexType name="DeclarContent">
+		<xs:sequence>
+			<xs:element name="DECLARHEAD" type="DHead"/>
+			<xs:element name="DECLARBODY" type="DBody">
+				<xs:unique name="UT3RXXXXG1S">
+					<xs:selector xpath="T3RXXXXG1S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG2">
+					<xs:selector xpath="T3RXXXXG2"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG3S">
+					<xs:selector xpath="T3RXXXXG3S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG4S">
+					<xs:selector xpath="T3RXXXXG4S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG5S">
+					<xs:selector xpath="T3RXXXXG5S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG6S">
+					<xs:selector xpath="T3RXXXXG6S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG7S">
+					<xs:selector xpath="T3RXXXXG7S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG8S">
+					<xs:selector xpath="T3RXXXXG8S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG9S">
+					<xs:selector xpath="T3RXXXXG9S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG10S">
+					<xs:selector xpath="T3RXXXXG10S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG11">
+					<xs:selector xpath="T3RXXXXG11"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG11S">
+					<xs:selector xpath="T3RXXXXG11S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG12S">
+					<xs:selector xpath="T3RXXXXG12S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG13">
+					<xs:selector xpath="T3RXXXXG13"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT3RXXXXG13S">
+					<xs:selector xpath="T3RXXXXG13S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DHead">
+		<xs:sequence>
+			<xs:element name="TIN" type="DGLong"/>
+			<xs:element name="C_DOC" type="xs:string" fixed="J13"/>
+			<xs:element name="C_DOC_SUB" type="xs:string" fixed="114"/>
+			<xs:element name="C_DOC_VER" type="xs:string" fixed="5"/>
+			<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_REG" type="DGsti"/>
+			<xs:element name="C_RAJ" type="DGsti"/>
+			<xs:element name="PERIOD_MONTH" type="DGMonth"/>
+			<xs:element name="PERIOD_TYPE" type="DGPType"/>
+			<xs:element name="PERIOD_YEAR" type="DGYear"/>
+			<xs:element name="C_STI_ORIG" type="DGc_dpi"/>
+			<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+			<xs:element name="LINKED_DOCS" nillable="true" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="DOC" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="C_DOC" type="DGC_DOC"/>
+									<xs:element name="C_DOC_SUB" type="DGC_DOC_SUB"/>
+									<xs:element name="C_DOC_VER" type="DGC_DOC_VER"/>
+									<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+									<xs:element name="FILENAME" type="DGFilename"/>
+								</xs:sequence>
+								<xs:attribute name="NUM" type="xs:nonNegativeInteger"/>
+								<xs:attribute name="TYPE" type="DGTypeLinkDoc"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="UH_DOC_NUM">
+					<xs:selector xpath="DOC"/>
+					<xs:field xpath="@NUM"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="D_FILL" type="DGDate"/>
+			<xs:element name="SOFTWARE" type="xs:string" nillable="true" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DBody">
+		<xs:sequence>
+			<!--HEAD-->
+			<xs:choice>
+				<xs:element name="HMN" type="DGchk"/>
+				<xs:element name="HRS" type="DGchk"/>
+			</xs:choice>
+			<xs:choice>
+				<xs:element name="HR" type="DGchk"/>
+				<xs:sequence>
+					<xs:element name="HPR" type="DGchk"/>
+					<xs:element name="H01G1S" type="DGstring"/>
+				</xs:sequence>
+			</xs:choice>
+			<xs:element name="HKSTI" type="DGc_dpi"/>
+			<xs:element name="HSTI" type="DGHSTI"/>
+			<xs:element name="HNAME" type="DGHNAME"/>
+			<xs:element name="HTIN" type="DGHTINJ"/>
+			<!--BODY-->
+			<!--TABLE №3-->
+			<xs:element name="T3RXXXXG1S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG2" type="ZipColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG3S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG4S" type="StrColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG5S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG6S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG7S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG8S" type="StrColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG9S" type="StrColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG10S" type="StrColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG11" type="KOATUUColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG11S" type="KATOTTGColumn" nillable="true" minOccurs="0" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG12S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG13" type="C_dpiColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<xs:element name="T3RXXXXG13S" type="StrColumn" nillable="true" minOccurs="1" maxOccurs="99"/>
+			<!--/TABLE №3-->
+			<xs:element name="R0401G1" type="DGI4nom"/>
+			<xs:element name="R0401G1S" type="DGstring"/>
+			<xs:element name="R0402G1S" type="DGstring"/>
+			<xs:element name="R0403G1" type="DGI4nom"/>
+			<xs:element name="R0403G1S" type="DGstring"/>
+			<xs:element name="R0404G1S" type="DGstring"/>
+			<xs:element name="R0405G1D" type="DGDate"/>
+			<xs:element name="R0406G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R0407G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R0408G1S" type="DGstring"/>
+			<xs:element name="R0409G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R0501G1S" type="DGstring"/>
+			<xs:element name="R0601G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R0602G1" type="DGInom" nillable="true" minOccurs="0"/>
+			<xs:element name="R0603G1S" type="DGstring" nillable="true" minOccurs="0"/>
+			<xs:element name="R0604G1" type="DGInom" nillable="true" minOccurs="0"/>
+			<xs:element name="R0701G1S" type="DGstring"/>
+			<xs:element name="R0702G1S" type="DGstring"/>
+			<xs:element name="R0703G1S" type="DGstring"/>
+			<xs:element name="R0703G2D" type="DGDate"/>
+			<xs:element name="R0703G3D" type="DGDate"/>
+			<xs:element name="M01" type="DGchk" nillable="true" minOccurs="0"/>
+			<xs:choice>
+				<xs:element name="M02" type="DGchk"/>
+				<xs:element name="M03" type="DGchk"/>
+				<xs:element name="M07" type="DGchk"/>
+				<xs:sequence>
+					<xs:element name="M04" type="DGchk"/>
+					<xs:element name="R0901G1S" type="DGstring"/>
+				</xs:sequence>
+			</xs:choice>
+			<xs:choice>
+				<xs:element name="M05" type="DGchk"/>
+				<xs:element name="M06" type="DGchk"/>
+			</xs:choice>
+			<!--FOOTER-->
+			<xs:element name="HKBOS" type="DGDRFO_10"/>
+			<xs:element name="HBOS" type="DGHBOS"/>
+			<xs:element name="HFILL" type="DGDate"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
+<!--Розробник: відділ проектування та розробки АІС ГУ ДПС у Черкаській області-->
