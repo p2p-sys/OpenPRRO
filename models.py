@@ -61,6 +61,12 @@ def get_sender(req):
         key_id = data['key_id']
         key = DepartmentKeys.query.get(key_id)
 
+        if not rro_id:
+            department = Departments.query \
+                .filter(Departments.prro_key_id == key_id) \
+                .first()
+            rro_id = department.rro_id
+
     if not rro_id:
         msg = 'Не вказано жодного з обов\'язкових параметрів:department_id або rro_id!'
         raise Exception(msg)
