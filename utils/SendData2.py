@@ -247,6 +247,10 @@ class SendData2(object):
         '''
         print(answer.status_code)
         # print(answer.text)
+
+        if answer.text.find('наразі відкрито особою') != -1:
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(answer.text))
+
         if answer.status_code == 204:
             raise Exception('{}'.format("На фіскальному сервері немає об'єктів для роботи, якщо недавно були відправлені форми реєстрації, чекайте, потрібен час для синхронізації між серверами податкового кабінету"))
 
