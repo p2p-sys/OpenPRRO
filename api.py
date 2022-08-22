@@ -1345,7 +1345,7 @@ class ApiView(FlaskView):
                                           tsp=tsp, ocsp=ocsp)
             except Exception as e:
                 signer.update_bid(db, department_key)
-                signed_data = signer.sign(department_key.box_id, unsigned_data, role=department_key.key_role, tax=False,
+                signed_data = signer.sign(signer.box_id, unsigned_data, role=department_key.key_role, tax=False,
                                           tsp=tsp, ocsp=ocsp)
 
             # with open('signed_data.signed', 'wb') as file:
