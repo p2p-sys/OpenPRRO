@@ -61,12 +61,6 @@ def get_sender(req):
         key_id = data['key_id']
         key = DepartmentKeys.query.get(key_id)
 
-        if not rro_id:
-            department = Departments.query \
-                .filter(Departments.prro_key_id == key_id) \
-                .first()
-            rro_id = department.rro_id
-
     if not rro_id:
         msg = 'Не вказано жодного з обов\'язкових параметрів:department_id або rro_id!'
         raise Exception(msg)
@@ -80,6 +74,26 @@ def get_sender(req):
 
     return sender, department
 
+def get_sender_by_key(req):
+    data = req.get_json()
+    if not data:
+        msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: application/json'
+        raise Exception(msg)
+
+    key = None
+
+    if 'key_id' in data:
+        key_id = data['key_id']
+        key = DepartmentKeys.query.get(key_id)
+
+    if not key:
+        msg = 'Не вказано жодного з обов\'язкових параметрів: key_id!'
+        raise Exception(msg)
+
+    from utils.SendData2 import SendData2
+    sender = SendData2(db, key, 0, "")
+
+    return sender
 
 def get_department(data):
 

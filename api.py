@@ -6,7 +6,7 @@ from flask_classy import route, FlaskView
 from lxml import etree
 
 from manage import csrf
-from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department
+from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department, get_sender_by_key
 
 import base64
 
@@ -1593,7 +1593,7 @@ class ApiView(FlaskView):
 
         try:
 
-            sender, department = get_sender(request)
+            sender = get_sender_by_key(request)
 
             """ Запит переліку операторів (касирів) для суб’єкта господарювання """
             cmd = {"Command": "Operators"}
