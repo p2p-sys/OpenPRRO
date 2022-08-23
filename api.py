@@ -1494,10 +1494,9 @@ class ApiView(FlaskView):
 
         try:
 
-            sender, department = get_sender(request)
+            sender = get_sender_by_key(request)
 
             server_state = sender.ServerState()
-            # print(server_state)
 
             return jsonify(status='success', time=server_state, error_code=0)
 
