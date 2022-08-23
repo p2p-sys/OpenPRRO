@@ -96,7 +96,8 @@ def get_sender_by_key(req):
 
         return sender
     else:
-        return get_sender(req)
+        sender, department = get_sender(req)
+        return sender
 
 
 def get_department(data):

@@ -4,3 +4,23 @@ Content-Type: application/json
 {
   "key_id":100
 }
+
+###
+
+POST http://127.0.0.1:5000/api/operators
+Content-Type: application/json
+
+{
+  "rro_id":4000026723
+}
+
+###
+
+POST http://127.0.0.1:5000/api/operators
+Content-Type: application/json
+
+{
+  "department_id":9
+}
+
+###
