@@ -6,8 +6,7 @@ from lxml import etree
 from lxml.builder import ElementMaker
 import requests
 
-# from config import TAX_NAME, TAX_OBL, TAX_RAYON, TAX_EMAIL
-from models import db, DepartmentKeys
+from models import db
 from utils.Sign import Sign
 
 
@@ -21,8 +20,6 @@ class TaxForms(object):
             self.signer = signer
 
         self.company_key = company_key
-
-        self.doc_cnt = company_key.taxform_count
 
         self.TAX_EMAIL = '{}@tax.gov.ua'.format(company_key.edrpou)
 
@@ -130,8 +127,7 @@ class TaxForms(object):
 
         return xml.encode('utf-8')
 
-    @staticmethod
-    def get_messages_ex_xml(signed_EDRPOU):
+    def get_messages_ex_xml(self, signed_EDRPOU):
 
         SOAP_ENV = "http://www.w3.org/2003/05/soap-envelope"
         XSD = "http://www.w3.org/2001/XMLSchema"
@@ -150,7 +146,7 @@ class TaxForms(object):
         signedEDRPOU.text = signed_EDRPOU
 
         senderEmail = etree.SubElement(command, "senderEmail")  # base64Binary
-        senderEmail.text = TAX_EMAIL
+        senderEmail.text = self.TAX_EMAIL
 
         envelope = soap.Envelope(
             soap.Body(command)
@@ -242,7 +238,7 @@ class TaxForms(object):
 
         box_id = self.signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
         # signed_EDRPOU = self.signer.sign(box_id, '{:010.0f}'.format(int(EDRPOU)).encode('windows-1251'), "director", True)
-        signed_EDRPOU = self.signer.sign(box_id, EDRPOU.encode('windows-1251'), "director", True)
+        signed_EDRPOU = self.signer.sign(box_id, self.EDRPOU.encode('windows-1251'), "director", True)
 
         signed_EDRPOU_base64 = base64.b64encode(signed_EDRPOU)
 
@@ -273,7 +269,8 @@ class TaxForms(object):
     def tax_get_messages_ex(self, m):
 
         box_id = self.signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-        signed_EDRPOU = self.signer.sign(box_id, '{:010.0f}'.format(int(EDRPOU)).encode('windows-1251'), "director",
+        signed_EDRPOU = self.signer.sign(box_id, '{:010.0f}'.format(int(self.EDRPOU)).encode('windows-1251'),
+                                         "director",
                                          True)
 
         signed_EDRPOU_base64 = base64.b64encode(signed_EDRPOU)
@@ -309,10 +306,12 @@ class TaxForms(object):
     def tax_delete(self, m, id):
 
         try:
-            signed_id = self.signer.sign(self.company_key.box_id, str(id).encode('windows-1251'), role=self.company_key.key_role, tax=True)
+            signed_id = self.signer.sign(self.company_key.box_id, str(id).encode('windows-1251'),
+                                         role=self.company_key.key_role, tax=True)
         except Exception as e:
             box_id = self.signer.update_bid(db, self.company_key)
-            signed_id = self.signer.sign(box_id, str(id).encode('windows-1251'), role=self.company_key.key_role, tax=True)
+            signed_id = self.signer.sign(box_id, str(id).encode('windows-1251'), role=self.company_key.key_role,
+                                         tax=True)
             self.company_key.box_id = box_id
             db.session.commit()
 
@@ -333,10 +332,12 @@ class TaxForms(object):
     def tax_receive_all(self, need_delete=True):
 
         try:
-            signed_email = self.signer.sign(self.company_key.box_id, self.TAX_EMAIL.encode('windows-1251'), role=self.company_key.key_role, tax=True)
+            signed_email = self.signer.sign(self.company_key.box_id, self.TAX_EMAIL.encode('windows-1251'),
+                                            role=self.company_key.key_role, tax=True)
         except Exception as e:
             box_id = self.signer.update_bid(db, self.company_key)
-            signed_email = self.signer.sign(box_id, self.TAX_EMAIL.encode('windows-1251'), role=self.company_key.key_role, tax=True)
+            signed_email = self.signer.sign(box_id, self.TAX_EMAIL.encode('windows-1251'),
+                                            role=self.company_key.key_role, tax=True)
             self.company_key.box_id = box_id
             db.session.commit()
 
@@ -444,9 +445,9 @@ class TaxForms(object):
                         status = result.decode('windows-1251')
                         filename_pos = answer.find(b'FILENAME=')
                         if filename_pos > -1:
-                            filename = answer[filename_pos+9:]
+                            filename = answer[filename_pos + 9:]
                             filename_end_pos = filename.find(b'.XML\r\n')
-                            filename = filename[:filename_end_pos+4]
+                            filename = filename[:filename_end_pos + 4]
                             filename = filename.decode('windows-1251')
 
                         s = status.find('Файл оброблений')
@@ -472,14 +473,17 @@ class TaxForms(object):
                         local_id = str_arr[3].strip()
                         rro_id = str_arr[5].strip()
                         # message['rro_id'] = rro_id
-                        ret_messages.append({'filename': filename, 'message': status, 'status': form_status, 'local_id': int(local_id), 'rro_id': int(rro_id)})
+                        ret_messages.append(
+                            {'filename': filename, 'message': status, 'status': form_status, 'local_id': int(local_id),
+                             'rro_id': int(rro_id)})
                     elif 'з фіскальним номером' in status:
-                            str_arr = status.split("'")
-                            # print(str_arr)
-                            # local_id = str_arr[3].strip()
-                            rro_id = str_arr[1].strip()
-                            # message['rro_id'] = rro_id
-                            ret_messages.append({'filename': filename, 'message': status, 'status': form_status, 'rro_id': int(rro_id)})
+                        str_arr = status.split("'")
+                        # print(str_arr)
+                        # local_id = str_arr[3].strip()
+                        rro_id = str_arr[1].strip()
+                        # message['rro_id'] = rro_id
+                        ret_messages.append(
+                            {'filename': filename, 'message': status, 'status': form_status, 'rro_id': int(rro_id)})
                     else:
                         ret_messages.append({'filename': filename, 'message': status, 'status': form_status})
                 except:
@@ -541,15 +545,18 @@ class TaxForms(object):
         try:
             print(key247221_pem_cert)
             print(form_xml)
-            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml, role=self.company_key.key_role, tax=True, cert=key247221_pem_cert,
-                                                     headers=headers, tsp="signature", ocsp=False)
+            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml,
+                                                         role=self.company_key.key_role, tax=True,
+                                                         cert=key247221_pem_cert,
+                                                         headers=headers, tsp="signature", ocsp=False)
         except Exception as e:
             print(e)
             box_id = self.signer.update_bid(db, self.company_key)
             self.company_key.box_id = box_id
             db.session.commit()
-            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True, cert=key247221_pem_cert,
-                                                     headers=headers, tsp="signature", ocsp=False)
+            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True,
+                                                         cert=key247221_pem_cert,
+                                                         headers=headers, tsp="signature", ocsp=False)
 
         print(encrypted_form_xml)
 
@@ -611,10 +618,13 @@ class TaxForms(object):
         }
 
         try:
-            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml, role=self.company_key.key_role, tax=True, cert=cert, tsp='signature', ocsp=False)
+            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml,
+                                                         role=self.company_key.key_role, tax=True, cert=cert,
+                                                         tsp='signature', ocsp=False)
         except Exception as e:
             box_id = self.signer.update_bid(db, self.company_key)
-            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True, cert=cert, tsp="signature", ocsp=False)
+            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True,
+                                                         cert=cert, tsp="signature", ocsp=False)
             self.company_key.box_id = box_id
             db.session.commit()
 
@@ -710,9 +720,76 @@ class TaxForms(object):
         else:
             raise Exception('{}'.format(data['error_description']))
 
+    def tax_reg_doc(self, period_year, period_month):
+
+        import requests
+
+        from utils.Sign import Sign
+
+        signer = Sign()
+
+        tsp = False
+        ocsp = False
+
+        unsigned_data = self.company_key.edrpou.encode()
+
+        try:
+            signed_data = signer.sign(self.company_key.box_id, unsigned_data, role=self.company_key.key_role, tax=False,
+                                      tsp=tsp, ocsp=ocsp)
+        except Exception as e:
+            box_id = signer.update_bid(db, self.company_key)
+            signed_data = signer.sign(box_id, unsigned_data, role=self.company_key.key_role, tax=False,
+                                      tsp=tsp, ocsp=ocsp)
+            self.company_key.box_id = box_id
+            db.session.commit()
+
+        signed_data_base64 = base64.b64encode(signed_data)
+
+        url = 'https://cabinet.tax.gov.ua/ws/public_api/reg_doc/list?periodYear={}&periodMonth={}'.format(period_year,
+                                                                                                          period_month)
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': signed_data_base64,
+            'Accept': 'application/json',
+        }
+
+        answer = requests.get(url, headers=headers, timeout=100)
+
+        data = json.loads(answer.content.decode())
+
+        if answer.status_code == 200:
+            return data
+        else:
+            raise Exception('{}'.format(data['error_description']))
+
+    def get_last_number(self, period_year, period_month, doc, doc_sub, doc_ver):
+
+        answer = self.tax_reg_doc(period_year, period_month)
+
+        doc_cnt = 0
+        if 'content' in answer:
+            content = answer['content']
+            for report in content:
+                if 'cDoc' in report:
+                    if doc == report['cDoc']:
+                        if 'cdocSub' in report:
+                            if doc_sub == report['cdocSub']:
+                                if 'cdocVer' in report:
+                                    if doc_ver == report['cdocVer']:
+                                        # print(report)
+                                        if 'cdocCnt' in report:
+                                            c_doc_cnt = report['cdocCnt']
+                                            if c_doc_cnt > doc_cnt:
+                                                doc_cnt = c_doc_cnt
+
+        doc_cnt += 1
+
+        return doc_cnt
+
     def send_5PRRO(self, public_key, T1RXXXXG4S_text=None):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
-        #J1391802
+        # J1391802
 
         if 'ФОП' in self.company_key.name:
             doc = 'F13'
@@ -752,7 +829,7 @@ class TaxForms(object):
 
         doc_type = 0
 
-        doc_cnt = self.doc_cnt
+        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
 
         period_type = 1
 
@@ -777,7 +854,8 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),  # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(self.company_key.edrpou),
+            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -993,7 +1071,7 @@ class TaxForms(object):
 
         doc_type = 0
 
-        doc_cnt = self.doc_cnt
+        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
 
         period_type = 1
 
@@ -1018,7 +1096,8 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),  # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(self.company_key.edrpou),
+            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -1187,7 +1266,8 @@ class TaxForms(object):
 
             ''' Прошу взяти на облік за неосновним місцем обліку за місцезнаходженням об’єкта оподаткування '''
             if value['T1RXXXXG11']:
-                etree.SubElement(DECLARBODY, "T1RXXXXG11", {"ROWNUM": str(line), "{http://www.w3.org/2001/XMLSchema-instance}nil": "true"})
+                etree.SubElement(DECLARBODY, "T1RXXXXG11",
+                                 {"ROWNUM": str(line), "{http://www.w3.org/2001/XMLSchema-instance}nil": "true"})
             else:
                 T1RXXXXG11 = etree.SubElement(DECLARBODY, "T1RXXXXG11", ROWNUM=str(line))
                 T1RXXXXG11.text = '{}'.format(value['T1RXXXXG11'])
@@ -1224,7 +1304,7 @@ class TaxForms(object):
     # Заява про реєстрацію програмного реєстратора розрахункових операцій за формою № 1-ПРРО
     def send_1PRRO(self, dpi_id, R03G3S_value=None, R04G11S_value=None, R04G2S_value=None, values=None):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
-        #J1316604
+        # J1316604
 
         if 'ФОП' in self.company_key.name:
             doc = 'F13'
@@ -1272,7 +1352,6 @@ class TaxForms(object):
         for value in values:
             TO_CODE = value["TO_CODE"]
             if TO_CODE == dpi_id:
-
                 # if value["D_ACC_END"]:
                 #     raise Exception('{}'.format(''))
 
@@ -1283,7 +1362,8 @@ class TaxForms(object):
                 break
 
         if C_TERRIT == None:
-            msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, спробуйте надіслати форму ще раз'.format(dpi_id)
+            msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, спробуйте надіслати форму ще раз'.format(
+                dpi_id)
             print(msg)
             raise Exception(msg)
 
@@ -1298,13 +1378,13 @@ class TaxForms(object):
 
         doc_sub = '166'
 
-        doc_ver = 4 # с 1 декабря 2021 г.
+        doc_ver = 4  # с 1 декабря 2021 г.
 
         doc_stan = 1
 
         doc_type = 0
 
-        doc_cnt = self.doc_cnt
+        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
 
         period_type = 1
 
@@ -1329,7 +1409,8 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),  # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(self.company_key.edrpou),
+            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -1468,7 +1549,9 @@ class TaxForms(object):
             R03G1S = etree.SubElement(DECLARBODY, "R03G1S")
             R03G1S.text = '{}'.format(TO_CODE)
         else:
-            raise Exception("Ну вдалося отримати дані з податкового кабінету, ідентифікатор об’єкта оподаткування {}".format(dpi_id))
+            raise Exception(
+                "Ну вдалося отримати дані з податкового кабінету, ідентифікатор об’єкта оподаткування {}".format(
+                    dpi_id))
 
         ''' КОАТУУ '''
         HKOATUU = etree.SubElement(DECLARBODY, "HKOATUU")
@@ -1509,7 +1592,6 @@ class TaxForms(object):
         #     ''' Дані щодо ПРРО: фіскальний номер '''
         #     R04G2S = etree.SubElement(DECLARBODY, "R04G2S")
         #     R04G2S.text = '{}'.format(department.rro_id)
-
 
         # elif department.status != 3 and not department.rro_id:
         #     ''' Дія: Реєстрація '''
