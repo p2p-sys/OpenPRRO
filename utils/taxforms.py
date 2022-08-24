@@ -808,11 +808,11 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        if self.company_key.taxform_count:
-            self.company_key.taxform_count = self.doc_cnt + 1
-        else:
-            self.company_key.taxform_count = 1
-        db.session.commit()
+        # if self.company_key.taxform_count:
+        #     self.company_key.taxform_count = self.doc_cnt + 1
+        # else:
+        #     self.company_key.taxform_count = 1
+        # db.session.commit()
 
         # department = Departments.query.get(m.department_id)
 
@@ -1049,11 +1049,11 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        if self.company_key.taxform_count:
-            self.company_key.taxform_count = self.doc_cnt + 1
-        else:
-            self.company_key.taxform_count = 1
-        db.session.commit()
+        # if self.company_key.taxform_count:
+        #     self.company_key.taxform_count = self.doc_cnt + 1
+        # else:
+        #     self.company_key.taxform_count = 1
+        # db.session.commit()
 
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
@@ -1368,8 +1368,8 @@ class TaxForms(object):
             raise Exception(msg)
 
         # department = Departments.query.get(m.department_id)
-        self.company_key.taxform_count = self.doc_cnt + 1
-        db.session.commit()
+        # self.company_key.taxform_count = self.doc_cnt + 1
+        # db.session.commit()
 
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
