@@ -246,10 +246,39 @@ class SendData2(object):
             CryptographyError = 12 Помилка криптографічних функцій        
         '''
         print(answer.status_code)
-        # print(answer.text)
 
-        if answer.text.find('наразі відкрито особою') != -1:
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(answer.text))
+        error = answer.text
+        print(error)
+
+        if error.find('ShiftAlreadyOpened') != -1:
+            # 4 ShiftAlreadyOpened Зміну на ПРРО з фіскальним номером 4000326084 наразі відкрито особою Петренко Віталій Анатолійович, ідентифікатор ключа суб'єкта b5613c1115874d0aab4bf1e4cedf145486873ac6dc01279762bf64d8d47ca49b
+            error_rro_pos = error.find('наразі відкрито особою')
+            if error_rro_pos > 0:
+                error_rro = error[error_rro_pos + 21:error_rro_pos + 31]
+
+                errr_key_pos = error.find("ідентифікатор ключа суб'єкта")
+                if error_rro_pos > 0:
+                    error_key = error[errr_key_pos + 29:errr_key_pos + 93]
+
+                    if error_rro == self.rro_fn and error_key == self.key.public_key:
+                        data = self.get_fiscal_data_by_local_number(self.local_number, data)
+                        print(data)
+                        if data:
+                            self.last_fiscal_error_txt = ''
+                            self.last_fiscal_error_code = 0
+                            return True
+
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+
+        if error.find('ZRepAlreadyRegistered') != -1:
+            data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            print(data)
+            if data:
+                self.last_fiscal_error_txt = ''
+                self.last_fiscal_error_code = 0
+                return True
+
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
         if answer.status_code == 204:
             raise Exception('{}'.format("На фіскальному сервері немає об'єктів для роботи, якщо недавно були відправлені форми реєстрації, чекайте, потрібен час для синхронізації між серверами податкового кабінету"))
@@ -257,42 +286,8 @@ class SendData2(object):
         if answer.status_code == 500:
             # return False
             raise Exception('{}'.format("Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
-            # raise Exception('{}'.format("Помилка надсилання даних на фіскальний сервер, спробуйте ще раз"))
 
         if answer.status_code >= 400:
-            print(answer.status_code)
-            # print(answer.content)
-            # print(answer.text)
-            error = answer.text
-            print(error)
-            if error.find('ShiftAlreadyOpened') != -1:
-                # 4 ShiftAlreadyOpened Зміну на ПРРО з фіскальним номером 4000326084 наразі відкрито особою Петренко Віталій Анатолійович, ідентифікатор ключа суб'єкта b5613c1115874d0aab4bf1e4cedf145486873ac6dc01279762bf64d8d47ca49b
-                error_rro_pos = error.find('з фіскальним номером')
-                if error_rro_pos > 0 :
-                    error_rro = error[error_rro_pos + 21:error_rro_pos + 31]
-
-                    errr_key_pos = error.find("ідентифікатор ключа суб'єкта")
-                    if error_rro_pos > 0 :
-                        error_key = error[errr_key_pos + 29:errr_key_pos + 93]
-
-                        if error_rro == self.rro_fn and error_key == self.key.public_key:
-                            data = self.get_fiscal_data_by_local_number(self.local_number, data)
-                            print(data)
-                            if data:
-                                self.last_fiscal_error_txt = ''
-                                self.last_fiscal_error_code = 0
-                                return True
-
-                raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
-
-            if error.find('ZRepAlreadyRegistered') != -1:
-                data = self.get_fiscal_data_by_local_number(self.local_number, data)
-                print(data)
-                if data:
-                    self.last_fiscal_error_txt = ''
-                    self.last_fiscal_error_code = 0
-                    return True
-
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
             # if error.find('CheckLocalNumberInvalid') != -1:
