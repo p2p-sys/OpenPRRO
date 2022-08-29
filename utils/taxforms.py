@@ -534,7 +534,7 @@ class TaxForms(object):
             'EDRPOU': self.company_key.edrpou,
             'ENCODING': 'WIN'
         }
-        print(headers)
+        # print(headers)
 
         # with open('{}'.format(filename), 'wb') as file:
         #     file.write(form_xml)
@@ -543,12 +543,12 @@ class TaxForms(object):
         #                                              headers=headers)
 
         try:
-            print(key247221_pem_cert)
-            print(form_xml)
+            # print(key247221_pem_cert)
+            # print(form_xml)
             encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml,
                                                          role=self.company_key.key_role, tax=True,
                                                          cert=key247221_pem_cert,
-                                                         headers=headers, tsp="signature", ocsp=False)
+                                                         headers=headers, tsp="all", ocsp=False)
         except Exception as e:
             print(e)
             box_id = self.signer.update_bid(db, self.company_key)
@@ -556,9 +556,9 @@ class TaxForms(object):
             db.session.commit()
             encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True,
                                                          cert=key247221_pem_cert,
-                                                         headers=headers, tsp="signature", ocsp=False)
+                                                         headers=headers, tsp="all", ocsp=False)
 
-        print(encrypted_form_xml)
+        # print(encrypted_form_xml)
 
         # with open('{}.signed'.format(filename), 'wb') as file:
         #     file.write(encrypted_form_xml)
@@ -758,6 +758,8 @@ class TaxForms(object):
 
         data = json.loads(answer.content.decode())
 
+        # print(data)
+
         if answer.status_code == 200:
             return data
         else:
@@ -777,9 +779,10 @@ class TaxForms(object):
                             if doc_sub == report['cdocSub']:
                                 if 'cdocVer' in report:
                                     if doc_ver == report['cdocVer']:
-                                        # print(report)
+                                        print(report)
                                         if 'cdocCnt' in report:
                                             c_doc_cnt = report['cdocCnt']
+                                            # print(c_doc_cnt)
                                             if c_doc_cnt > doc_cnt:
                                                 doc_cnt = c_doc_cnt
 

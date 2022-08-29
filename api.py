@@ -1344,12 +1344,11 @@ class ApiView(FlaskView):
                 signed_data = signer.sign(department_key.box_id, unsigned_data, role=department_key.key_role, tax=False,
                                           tsp=tsp, ocsp=ocsp)
             except Exception as e:
-                signer.update_bid(db, department_key)
-                signed_data = signer.sign(signer.box_id, unsigned_data, role=department_key.key_role, tax=False,
+                box_id = signer.update_bid(db, department_key)
+                signed_data = signer.sign(box_id, unsigned_data, role=department_key.key_role, tax=False,
                                           tsp=tsp, ocsp=ocsp)
-
-            # with open('signed_data.signed', 'wb') as file:
-            #     file.write(signed_data)
+                department_key.box_id = box_id
+                db.session.commit()
 
             signed_data_base64 = base64.b64encode(signed_data)
             return jsonify(status='success', signed_data=signed_data_base64, error_code=0)

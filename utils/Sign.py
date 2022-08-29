@@ -396,7 +396,7 @@ class Sign(object):
 
     def tax_encrypt(self, box_id, unsigned_data, role="director", tax=True, cert=None, headers=None, tsp=False, ocsp=False):
         # print('role={}'.format(role))
-        return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}, {"op": "encrypt", "forCert": cert, "addCert": True, "tax": tax}, {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}], headers)  # , "role": "stamp"  , "tsp": "signature"
+        return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}, {"op": "encrypt", "role": role, "forCert": cert, "addCert": True, "tax": tax}, {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}], headers)  # , "role": "stamp"  , "tsp": "signature"
 
     def unwrap(self, box_id, signed_data, tsp=None, ocsp=None):
         try:
