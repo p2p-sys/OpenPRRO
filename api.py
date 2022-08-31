@@ -230,6 +230,70 @@ class ApiView(FlaskView):
         except Exception as e:
             return jsonify(status='error', message=str(e))
 
+    @route('/departments', methods=['GET', 'POST'],
+           endpoint='departments')
+    @csrf.exempt
+    def departments(self):
+
+        try:
+            departments = Departments.query \
+                .all()
+
+            departments_arr = []
+            for department in departments:
+                d = {
+                    "department_id": department.id,
+                    "name": department.full_name,
+                    "rro_id": department.rro_id,
+                    "taxform_key_id": department.taxform_key_id,
+                    "prro_key_id": department.prro_key_id,
+                    "signer_type": department.signer_type,
+                    "key_tax_registered": department.key_tax_registered,
+                }
+                departments_arr.append(d)
+
+            return jsonify(status='success', departments=departments_arr, error_code=0)
+
+        except Exception as e:
+            return jsonify(status='error', message=str(e), error_code=-1)
+
+    @route('/department', methods=['GET', 'POST'],
+           endpoint='department')
+    @csrf.exempt
+    def department(self):
+
+        try:
+            data = request.get_json()
+            if not data:
+                msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: application/json'
+                return jsonify(status='error', message=msg, error_code=1)
+
+            if 'department_id' in data:
+                department_id = data['department_id']
+            else:
+                msg = 'Не вказано жодного з обов\'язкових параметрів: department_id'
+                return jsonify(status='error', message=msg, error_code=1)
+
+            department = Departments.query.get(department_id)
+            if not department:
+                msg = 'Об\'єкт з ідентифікатором {} не існує'.format(department_id)
+                return jsonify(status='error', message=msg, error_code=-1)
+
+            d = {
+                "department_id": department.id,
+                "name": department.full_name,
+                "rro_id": department.rro_id,
+                "taxform_key_id": department.taxform_key_id,
+                "prro_key_id": department.prro_key_id,
+                "signer_type": department.signer_type,
+                "key_tax_registered": department.key_tax_registered,
+            }
+
+            return jsonify(status='success', department=d, error_code=0)
+
+        except Exception as e:
+            return jsonify(status='error', message=str(e), error_code=-1)
+
     @route('/set_rro', methods=['POST', 'GET'],
            endpoint='set_rro')
     @csrf.exempt
@@ -1008,10 +1072,11 @@ class ApiView(FlaskView):
             else:
                 testing = False
 
-            tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(reals, taxes, pays, totals=totals,
-                                                                                    sales_ret=True,
-                                                                                    orderretnum=orderretnum, key=key,
-                                                                                    testing=testing, balance=balance)
+            tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
+                reals, taxes, pays, totals=totals,
+                sales_ret=True,
+                orderretnum=orderretnum, key=key,
+                testing=testing, balance=balance)
 
             message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(tax_id)
 
@@ -1083,8 +1148,9 @@ class ApiView(FlaskView):
             else:
                 balance = 0
 
-            z_report_data, z_report_tax_id, close_shift_tax_id, coded_string, tax_id_inkass, qr_inkass, visual_inkass = department.prro_get_xz(True, key=key,
-                                                                                                      testing=testing, balance=balance)
+            z_report_data, z_report_tax_id, close_shift_tax_id, coded_string, tax_id_inkass, qr_inkass, visual_inkass = department.prro_get_xz(
+                True, key=key,
+                testing=testing, balance=balance)
 
             stop = datetime.datetime.now()
             print('{} Отдали данные Z отчета через API, все заняло по времени {} секунд'.format(stop, (
@@ -1093,14 +1159,16 @@ class ApiView(FlaskView):
             if z_report_tax_id:
 
                 if tax_id_inkass:
-                    return jsonify(status='success', data=z_report_data, message='Зміна успішно закрита, Z звіт надіслано',
+                    return jsonify(status='success', data=z_report_data,
+                                   message='Зміна успішно закрита, Z звіт надіслано',
                                    error_code=0, z_report_tax_id=z_report_tax_id, close_shift_tax_id=close_shift_tax_id,
                                    z_report_visual=coded_string,
                                    tax_id_inkass=tax_id_inkass,
                                    qr_inkass=qr_inkass,
                                    visual_inkass=visual_inkass)
                 else:
-                    return jsonify(status='success', data=z_report_data, message='Зміна успішно закрита, Z звіт надіслано',
+                    return jsonify(status='success', data=z_report_data,
+                                   message='Зміна успішно закрита, Z звіт надіслано',
                                    error_code=0, z_report_tax_id=z_report_tax_id, close_shift_tax_id=close_shift_tax_id,
                                    z_report_visual=coded_string)
             else:
@@ -1615,7 +1683,7 @@ class ApiView(FlaskView):
                 documents_arr = []
                 for shift in shifts:
                     documents = sender.GetDocuments(shift['ShiftId'])
-                    documents_arr.append(dict({'shift_id':shift['ShiftId'], 'documents':documents}))
+                    documents_arr.append(dict({'shift_id': shift['ShiftId'], 'documents': documents}))
             else:
                 documents_arr = {}
                 for shift in shifts:
@@ -1716,7 +1784,7 @@ class ApiView(FlaskView):
                 #                         name = bodykey[key]['text']
                 #                         print(name)
 
-                            # print(checkbody)
+                # print(checkbody)
                 #
                 # [0]['CHECKBODY']['ROW']
                 # for bodyelement in row:
@@ -1987,9 +2055,11 @@ class ApiView(FlaskView):
             if 'dpi_id' in data:
                 dpi_id = data['dpi_id']
                 sender = TaxForms(company_key=key)
-                status, filename = sender.send_1PRRO(dpi_id, R03G3S_value=R03G3S, R04G11S_value=R04G11S, R04G2S_value=R04G2S_value)
+                status, filename = sender.send_1PRRO(dpi_id, R03G3S_value=R03G3S, R04G11S_value=R04G11S,
+                                                     R04G2S_value=R04G2S_value)
                 if status:
-                    return jsonify(status='success', message='Форму 1-ПРРО відправлено', filename=filename, error_code=0)
+                    return jsonify(status='success', message='Форму 1-ПРРО відправлено', filename=filename,
+                                   error_code=0)
                 else:
                     msg = 'Помилка надсилання форми 1-ПРРО'
                     return jsonify(status='error', message=msg, error_code=1)
@@ -2030,7 +2100,8 @@ class ApiView(FlaskView):
                 sender = TaxForms(company_key=key)
                 status, filename = sender.send_20OPP(values)
                 if status:
-                    return jsonify(status='success', message='Форму 20-ОПП відправлено', filename=filename, error_code=0)
+                    return jsonify(status='success', message='Форму 20-ОПП відправлено', filename=filename,
+                                   error_code=0)
                 else:
                     msg = 'Помилка надсилання форми 20-ОПП'
                     return jsonify(status='error', message=msg, error_code=1)

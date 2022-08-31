@@ -1,0 +1,8 @@
+GET http://127.0.0.1:5000/api/department
+Content-Type: application/json
+
+{
+  "department_id":9
+}
+
+###
