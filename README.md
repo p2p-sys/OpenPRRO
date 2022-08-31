@@ -79,8 +79,8 @@
      5. Команди надсилаються у форматі JSON. Див. розділ «Команди».
 
 Адреса серверу
-http://192.168.65.69/api/<command>
-наприклад http://192.168.65.69/api/add_key
+http://127.0.0.1:5000/api/<command>
+наприклад http://127.0.0.1:5000/api/add_key
 
 API команди:
 Список доданих ключів
@@ -146,6 +146,65 @@ URI: /api/keys
         },
         }
     ],
+    "status": "success"
+}
+
+**Список доданих ключів**
+
+Метод: GET 
+URI: /api/key
+
+Формат JSON запиту:
+{
+    "key_id": <>, # Ідентифікатор ключа
+}
+
+Приклад:
+{
+    "key_id": 74
+}
+
+Формат JSON відповіді:
+{
+    "error_code": <integer>,
+    "key":
+        {
+            "begin_time": <>,
+            "ceo_fio": <>,
+            "ceo_tin": <>,
+            "create_date": <>,
+            "edrpou": <>,
+            "encrypt": <>,
+            "end_time": <>,
+            "key_content": <>,
+            "key_id": <>,
+            "key_role": <>,
+            "name": <>,
+            "public_key": <>,
+            "sign": <>
+        }
+    "status": "success"
+}
+
+Приклад:
+{
+    "error_code": 0,
+    "key":
+        {
+            "begin_time": "2020-10-01T00:00:00",
+            "ceo_fio": "Тестовий платник 3 (Тестовий сертифікат)",
+            "ceo_tin": "",
+            "create_date": "2021-09-22T17:46:51",
+            "edrpou": "34554362",
+            "encrypt": true,
+            "end_time": "2022-09-30T23:59:59",
+            "key_content": [...],
+            "key_id": 33,
+            "key_role": "stamp",
+            "name": "Тестовий платник 3 (Тестовий сертифікат)",
+            "public_key": "a7037cdba891ebac46ba3f05cc4b4ba68ce86be9252ea1ab2cf5d626b274c11b",
+            "sign": true
+        }
     "status": "success"
 }
 

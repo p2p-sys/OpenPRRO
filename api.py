@@ -51,6 +51,50 @@ class ApiView(FlaskView):
         except Exception as e:
             return jsonify(status='error', message=str(e), error_code=-1)
 
+    @route('/key', methods=['GET', 'POST'],
+           endpoint='key')
+    @csrf.exempt
+    def key(self):
+
+        try:
+
+            data = request.get_json()
+            if not data:
+                msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: application/json'
+                return jsonify(status='error', message=msg, error_code=1)
+
+            if 'key_id' in data:
+                key_id = data['key_id']
+            else:
+                msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
+                return jsonify(status='error', message=msg, error_code=1)
+
+            key = DepartmentKeys.query.get(key_id)
+            if not key:
+                msg = 'Ключ з ідентифікатором {} не існує'.format(key_id)
+                return jsonify(status='error', message=msg, error_code=-1)
+
+            k = {
+                "key_id": key.id,
+                "name": key.name,
+                "public_key": key.public_key,
+                "create_date": key.create_date,
+                "begin_time": key.begin_time,
+                "end_time": key.end_time,
+                "key_role": key.key_role,
+                "edrpou": key.edrpou,
+                "ceo_fio": key.ceo_fio,
+                "ceo_tin": key.ceo_tin,
+                "sign": key.sign,
+                "encrypt": key.encrypt,
+                "key_content": key.key_data_txt
+            }
+
+            return jsonify(status='success', key=k, error_code=0)
+
+        except Exception as e:
+            return jsonify(status='error', message=str(e), error_code=-1)
+
     @route('/rro', methods=['GET', 'POST'],
            endpoint='rro')
     @csrf.exempt
