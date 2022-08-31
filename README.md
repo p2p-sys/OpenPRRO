@@ -83,7 +83,7 @@ http://127.0.0.1:5000/api/<command>
 наприклад http://127.0.0.1:5000/api/add_key
 
 API команди:
-Список доданих ключів
+**Список доданих ключів**
 
 Метод: GET 
 URI: /api/keys
@@ -149,7 +149,7 @@ URI: /api/keys
     "status": "success"
 }
 
-**Список доданих ключів**
+**Дані по одному раніше доданому ключу**
 
 Метод: GET 
 URI: /api/key
@@ -208,7 +208,7 @@ URI: /api/key
     "status": "success"
 }
 
-Список доданих підрозділів (РРО)
+**Список доданих підрозділів (РРО) /застаріла команда/**
 
 Метод: GET 
 URI: /api/rro
@@ -247,7 +247,93 @@ URI: /api/rro
     "status": "success"
 }
 
-Додавання ключа для підпису
+**Список раніше доданих об'єктів (підрозділів/РРО)**
+
+Метод: GET 
+URI: /api/departments
+
+Формат JSON відповіді:
+{
+    "error_code": <integer>,
+    "departments": [
+        {
+            "department_id": <>,
+            "key_tax_registered": <>,
+            "name": <>,
+            "prro_key_id": <>,
+            "rro_id": <>,
+            "signer_type": <>,
+            "taxform_key_id": <>
+        },
+    ],
+    "status": "success"
+}
+
+Приклад:
+{
+    "error_code": 0,
+    "departments": [
+        {
+            "department_id": 1,
+            "key_tax_registered": true,
+            "name": "Тест",
+            "prro_key_id": 54,
+            "rro_id": "4000046372",
+            "signer_type": "Старший касир",
+            "taxform_key_id": 61
+        },
+    ],
+    "status": "success"
+}
+
+**Дані одного раніше доданого об'єкта (підрозділу/РРО)**
+
+Метод: GET 
+URI: /api/department
+
+Формат JSON запиту:
+{
+    "department_id": <>, # Ідентифікатор
+}
+
+Приклад:
+{
+    "department_id": 74
+}
+
+Формат JSON відповіді:
+{
+    "error_code": <integer>,
+    "department":
+        {
+            "department_id": <>,
+            "key_tax_registered": <>,
+            "name": <>,
+            "prro_key_id": <>,
+            "rro_id": <>,
+            "signer_type": <>,
+            "taxform_key_id": <>
+        },
+    "status": "success"
+}
+
+Приклад:
+{
+    "error_code": 0,
+    "department":
+        {
+            "department_id": 1,
+            "key_tax_registered": true,
+            "name": "Тест",
+            "prro_key_id": 54,
+            "rro_id": "4000046372",
+            "signer_type": "Старший касир",
+            "taxform_key_id": 61
+        },
+    "status": "success"
+}
+
+**Додавання ключа для підпису**
 
 Метод: POST 
 URI: /api/add_key
