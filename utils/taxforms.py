@@ -25,6 +25,19 @@ class TaxForms(object):
 
         self.EDRPOU = self.company_key.edrpou
 
+        if self.company_key.taxform_count:
+            if self.company_key.taxform_count < 100000:
+                self.company_key.taxform_count = 100000
+
+        else:
+            self.company_key.taxform_count = 100000
+
+        self.company_key.taxform_count = self.company_key.taxform_count + 1
+
+        db.session.commit()
+
+        self.doc_cnt = company_key.taxform_count
+
     @staticmethod
     def get_send_xml(filename, signer_email, base64data):
 
@@ -811,12 +824,6 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        # if self.company_key.taxform_count:
-        #     self.company_key.taxform_count = self.doc_cnt + 1
-        # else:
-        #     self.company_key.taxform_count = 1
-        # db.session.commit()
-
         # department = Departments.query.get(m.department_id)
 
         dt = datetime.now()
@@ -832,7 +839,8 @@ class TaxForms(object):
 
         doc_type = 0
 
-        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        # doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        doc_cnt = self.doc_cnt
 
         period_type = 1
 
@@ -1052,12 +1060,6 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        # if self.company_key.taxform_count:
-        #     self.company_key.taxform_count = self.doc_cnt + 1
-        # else:
-        #     self.company_key.taxform_count = 1
-        # db.session.commit()
-
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%-m")
@@ -1074,7 +1076,8 @@ class TaxForms(object):
 
         doc_type = 0
 
-        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        # doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        doc_cnt = self.doc_cnt
 
         period_type = 1
 
@@ -1370,10 +1373,6 @@ class TaxForms(object):
             print(msg)
             raise Exception(msg)
 
-        # department = Departments.query.get(m.department_id)
-        # self.company_key.taxform_count = self.doc_cnt + 1
-        # db.session.commit()
-
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%-m")
@@ -1387,7 +1386,8 @@ class TaxForms(object):
 
         doc_type = 0
 
-        doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        # doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
+        doc_cnt = self.doc_cnt
 
         period_type = 1
 
