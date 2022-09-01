@@ -1357,10 +1357,7 @@ class TaxForms(object):
         print(values)
         for value in values:
             TO_CODE = value["TO_CODE"]
-            if TO_CODE == dpi_id:
-                # if value["D_ACC_END"]:
-                #     raise Exception('{}'.format(''))
-
+            if TO_CODE == int(dpi_id):
                 C_TERRIT = value["C_TERRIT"]
                 OBJECT_NAME_NAME = value["NAME"]
                 TYPE_OBJECT_NAME = value["TYPE_OBJECT_NAME"]

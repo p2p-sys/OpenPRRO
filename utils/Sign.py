@@ -236,10 +236,10 @@ class Sign(object):
         try:
 
             if key.key_content and key.cert1_content:
-                print(key.key_content.encode('latin1'))
-                print(key.encrypt_content.encode('latin1'))
-                print(key.cert1_content.encode('latin1'))
-                print(key.cert2_content.encode('latin1'))
+                # print(key.key_content.encode('latin1'))
+                # print(key.encrypt_content.encode('latin1'))
+                # print(key.cert1_content.encode('latin1'))
+                # print(key.cert2_content.encode('latin1'))
                 if key.encrypt_content:
                     self.box_id = self.add_keys([key.key_content.encode('latin1'), key.encrypt_content.encode('latin1')])
                 else:
