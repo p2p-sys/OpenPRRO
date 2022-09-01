@@ -254,7 +254,7 @@ class SendData2(object):
             # 4 ShiftAlreadyOpened Зміну на ПРРО з фіскальним номером 4000326084 наразі відкрито особою Петренко Віталій Анатолійович, ідентифікатор ключа суб'єкта b5613c1115874d0aab4bf1e4cedf145486873ac6dc01279762bf64d8d47ca49b
             error_rro_pos = error.find('наразі відкрито особою')
             if error_rro_pos > 0:
-                error_rro = error[error_rro_pos + 21:error_rro_pos + 31]
+                error_rro = error[error_rro_pos - 11:error_rro_pos - 1]
 
                 errr_key_pos = error.find("ідентифікатор ключа суб'єкта")
                 if error_rro_pos > 0:
