@@ -1326,21 +1326,24 @@ class ApiView(FlaskView):
                 status = 'success'
                 error_code = 0
 
-                allow_duplicates = False
-                if 'allow_duplicates' in data:
-                    allow_duplicates = data['allow_duplicates']
-                    if allow_duplicates:
-                        db.session.commit()
-
-                if not allow_duplicates:
-                    old_key = DepartmentKeys.query \
-                        .filter(DepartmentKeys.public_key == public_key) \
-                        .first()
-                    if old_key:
-                        if old_key.id != department_key.id:
-                            department_key = old_key
-                        else:
+                if 'key_id' in data:
+                    db.session.commit()
+                else:
+                    allow_duplicates = False
+                    if 'allow_duplicates' in data:
+                        allow_duplicates = data['allow_duplicates']
+                        if allow_duplicates:
                             db.session.commit()
+
+                    if not allow_duplicates:
+                        old_key = DepartmentKeys.query \
+                            .filter(DepartmentKeys.public_key == public_key) \
+                            .first()
+                        if old_key:
+                            if old_key.id != department_key.id:
+                                department_key = old_key
+                            else:
+                                db.session.commit()
 
             else:
                 status = 'error'
