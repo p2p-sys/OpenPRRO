@@ -1,0 +1,9 @@
+POST http://127.0.0.1:5000/api/encrypt
+Content-Type: application/json
+
+{
+  "key_id": 136,
+  "unsigned_data": "0KLQtdGB0YI="
+}
+
+###

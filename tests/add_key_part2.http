@@ -1,0 +1,9 @@
+POST http://127.0.0.1:5000/api/add_key
+Content-Type: application/json
+
+{
+  "key_id": 137,
+  "password": "testplat2021"
+}
+
+###

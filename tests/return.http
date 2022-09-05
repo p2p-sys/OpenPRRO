@@ -1,0 +1,42 @@
+POST http://127.0.0.1:5000/api/return
+Content-Type: application/json
+
+{
+  "rro_id": 4000096193,
+  "tax_id": 154920049,
+   "reals": [{
+    "BARCODE": 7622300274801,
+    "NAME": "Групповой секс",
+    "UNITNM": "Поштучно",
+    "AMOUNT": 5,
+    "PRICE": 2700,
+    "LETTERS": "А",
+    "COST": 13500
+  }],
+  "pays": [{
+    "PAYFORMCD": 1,
+    "PAYFORMNM": "Готівка",
+    "SUM": 13500,
+    "PROVIDED": 13500,
+    "REMAINS": 0
+  }],
+  "taxes": [{
+    "TYPE": 0,
+    "NAME": "ПДВ",
+    "LETTER": "А",
+    "PRC": 20,
+    "SIGN": false,
+    "TURNOVER": 13500,
+    "TURNOVERDISCOUNT": 0,
+    "SOURCESUM": 13500,
+    "SUM": 2700
+  }],
+  "totals": {
+    "SUM": 13500,
+    "RNDSUM": 0,
+    "NORNDSUM": 13500
+  }
+}
+
+###
+

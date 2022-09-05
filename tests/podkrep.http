@@ -1,0 +1,9 @@
+POST http://127.0.0.1:5000/api/podkrep
+Content-Type: application/json
+
+{
+  "rro_id": 4000096193,
+  "sum": 1000
+}
+
+###

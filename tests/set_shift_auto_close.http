@@ -1,0 +1,9 @@
+POST http://127.0.0.1:5000/api/set_shift_auto_close
+Content-Type: application/json
+
+{
+  "rro_id": 4000066455,
+   "auto_close_time": "23:55:00"
+}
+
+###

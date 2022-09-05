@@ -1,0 +1,72 @@
+POST http://127.0.0.1:5000/api/real
+Content-Type: application/json
+
+{
+  "rro_id": 4000096193,
+  "reals": [
+    {
+      "CODE": "Код 13",
+      "BARCODE": 978020137962,
+      "DKPP": "18.11.1",
+      "NAME": "Товар с НДС 20% без акциза",
+      "UNITCD": 2009,
+      "UNITNM": "шт",
+      "AMOUNT": 1,
+      "PRICE": 100,
+      "LETTERS": "A",
+      "COST": 100
+    },
+    {
+      "CODE": "Код 13",
+      "BARCODE": 978020137962,
+      "DKPP": "18.11.1",
+      "NAME": "Товар с НДС 20% и акцизом",
+      "DESCRIPTION": "морква червона",
+      "UNITCD": 2009,
+      "UNITNM": "шт",
+      "AMOUNT": 1,
+      "PRICE": 100,
+      "LETTERS": "AГ",
+      "COST": 100,
+      "EXCISELABELS": [
+        {
+          "EXCISELABEL": "123132132"
+        }
+      ]
+    }
+
+  ],
+  "pays": [
+    {
+      "PAYFORMCD": 0,
+      "PAYFORMNM": "ГОТІВКА",
+      "SUM": 200
+    }
+  ],
+  "taxes": [
+    {
+      "TYPE": 0,
+      "NAME": "ПДВ 20%",
+      "LETTER": "A",
+      "PRC": 20,
+      "SIGN": false,
+      "TURNOVER": 200,
+      "SOURCESUM": 200,
+      "SUM": 40
+    },
+    {
+      "TYPE": 4,
+      "NAME": "Акциз 5%",
+      "LETTER": "Г",
+      "PRC": 5,
+      "SIGN": false,
+      "TURNOVER": 100,
+      "SOURCESUM": 100,
+      "SUM": 5
+    }
+
+  ]
+}
+
+###
+

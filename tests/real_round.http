@@ -1,0 +1,49 @@
+POST http://127.0.0.1:5000/api/real
+Content-Type: application/json
+
+{
+  "rro_id": 4000096193,
+  "totals":
+  {
+      "SUM": 12.60,
+      "RNDSUM": -0.03,
+      "NORNDSUM": 12.57
+  },
+  "reals": [
+    {
+      "CODE": "Код 13",
+      "BARCODE": 978020137962,
+      "DKPP": "18.11.1",
+      "NAME": "морква",
+      "DESCRIPTION": "морква червона",
+      "UNITCD": 2009,
+      "UNITNM": "шт",
+      "AMOUNT": 1,
+      "PRICE": 12.57,
+      "LETTERS": "A",
+      "COST": 12.57
+    }
+  ],
+  "pays": [
+    {
+      "PAYFORMCD": 0,
+      "PAYFORMNM": "ГОТІВКА",
+      "SUM": 12.60,
+      "PROVIDED": 20.00,
+      "REMAINS": 7.40
+    }
+  ],
+  "taxes": [
+    {
+      "TYPE": 0,
+      "NAME": "ПДВ 20%",
+      "LETTER": "A",
+      "PRC": 20,
+      "TURNOVER": 12.57,
+      "SUM": 2.09
+    }
+  ]
+}
+
+###
+

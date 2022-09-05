@@ -1525,12 +1525,11 @@ class ApiView(FlaskView):
                 signed_data = signer.encrypt(department_key.box_id, unsigned_data, role=department_key.key_role,
                                              tax=False, tsp=tsp, ocsp=ocsp)
             except Exception as e:
-                signer.update_bid(db, department_key)
-                signed_data = signer.encrypt(department_key.box_id, unsigned_data, role=department_key.key_role,
+                box_id = signer.update_bid(db, department_key)
+                signed_data = signer.encrypt(box_id, unsigned_data, role=department_key.key_role,
                                              tax=False, tsp=tsp, ocsp=ocsp)
-
-            with open('encrypted_data.signed', 'wb') as file:
-                file.write(signed_data)
+                department_key.box_id = box_id
+                db.session.commit()
 
             signed_data_base64 = base64.b64encode(signed_data)
             return jsonify(status='success', signed_data=signed_data_base64, error_code=0)
@@ -1591,8 +1590,10 @@ class ApiView(FlaskView):
             try:
                 (rdata, metadata) = signer.unwrap(department_key.box_id, signed_data, tsp=tsp, ocsp=ocsp)
             except Exception as e:
-                signer.update_bid(db, department_key)
-                (rdata, metadata) = signer.unwrap(department_key.box_id, signed_data, tsp=tsp, ocsp=ocsp)
+                box_id = signer.update_bid(db, department_key)
+                (rdata, metadata) = signer.unwrap(box_id, signed_data, tsp=tsp, ocsp=ocsp)
+                department_key.box_id = box_id
+                db.session.commit()
 
             unsigned_data_base64 = base64.b64encode(rdata)
 

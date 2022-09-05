@@ -1,0 +1,8 @@
+GET http://127.0.0.1:5000/api/shift_status
+Content-Type: application/json
+
+{
+  "rro_id": 4000371343
+}
+
+###

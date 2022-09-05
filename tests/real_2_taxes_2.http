@@ -1,0 +1,40 @@
+POST http://127.0.0.1:5000/api/real
+Content-Type: application/json
+
+{
+  "rro_id": 4000096193,
+  "reals": [
+    {
+      "CODE": 54321,
+      "NAME": "Товар с НДС 0%",
+      "UNITCD": 2009,
+      "UNITNM": "шт",
+      "AMOUNT": 1,
+      "PRICE": 200,
+      "LETTERS": "Б",
+      "COST": 200
+    }
+  ],
+  "pays": [
+    {
+      "PAYFORMCD": 0,
+      "PAYFORMNM": "ГОТІВКА",
+      "SUM": 200
+    }
+  ],
+  "taxes": [
+    {
+      "TYPE": 3,
+      "NAME": "ПДВ 0%",
+      "LETTER": "Б",
+      "PRC": 0,
+      "SIGN": false,
+      "TURNOVER": 200,
+      "SOURCESUM": 200,
+      "SUM": 0
+    }
+  ]
+}
+
+###
+

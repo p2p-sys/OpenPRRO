@@ -1,0 +1,11 @@
+POST https://127.0.0.1:5000/api/operations
+Content-Type: application/json
+
+{
+  "rro_id": 4000104696,
+  "from": "2021-12-15T16:57:22",
+  "to": "2022-12-15T16:57:22",
+  "formatted": true
+}
+
+###

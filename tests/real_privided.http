@@ -1,0 +1,44 @@
+POST http://127.0.0.1:5000/api/real
+Content-Type: application/json
+
+{
+  "rro_id": 4000046372,
+  "reals": [
+    {
+      "CODE": "1000493",
+      "NAME": "Прокладка масляного насоса Lanos/Nexia/Aveo/Lac1,6/1,8LDA/Cruz1,6 GM (металл)",
+      "UNITCD": 2009,
+      "UNITNM": "шт",
+      "AMOUNT": 1.0,
+      "PRICE": 100.0,
+      "COST": 100.0,
+      "DISCOUNTTYPE": 0,
+      "DISCOUNTPERCENT": 0.0,
+      "DISCOUNTSUM": 0.0,
+      "LETTERS": "Д"
+    }
+  ],
+  "pays": [
+    {
+      "PAYFORMCD": 0,
+      "PAYFORMNM": "готівкою",
+      "SUM": 100.0
+    }
+  ],
+  "taxes": [
+    {
+      "TYPE": 5,
+      "NAME": "Не є об'єктом ПДВ",
+      "LETTER": "Д",
+      "PRC": 0.0,
+      "SIGN": false,
+      "TURNOVER": 100.0,
+      "SOURCESUM": 100.0,
+      "SUM": 0.0
+    }
+  ],
+  "tax_id": 0
+}
+
+###
+
