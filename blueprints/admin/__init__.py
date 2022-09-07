@@ -206,15 +206,15 @@ class DepartmentsAdmin(Filters, ModelView):
 
     can_view_details = True
 
-    column_filters = ('id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered')
+    column_filters = ('id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
 
-    column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered']
+    column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline']
 
-    column_sortable_list = ('id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered')
+    column_sortable_list = ('id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered', 'offline')
 
     column_searchable_list = ['id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered']
 
-    form_columns = ('full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type')
+    form_columns = ('full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'offline')
 
     form_excluded_columns = ('key_tax_registered')
 
@@ -237,6 +237,10 @@ class DepartmentsAdmin(Filters, ModelView):
             ('Припинення роботи', 'Припинення роботи'),
             (None, 'Не вказано'),
         ],
+        'offline': [
+            (0, 'Відключений'),
+            (1, 'Включений')
+        ]
     }
 
     _signer_type_choices = [(choice, label) for choice, label in [
@@ -247,7 +251,13 @@ class DepartmentsAdmin(Filters, ModelView):
         (None, 'Не вказано'),
     ]]
 
-    column_choices = {'signer_type': _signer_type_choices}
+    _offline_choices = [(choice, label) for choice, label in [
+        (0, 'Відключений'),
+        (1, 'Включений')
+    ]]
+
+    column_choices = {'signer_type': _signer_type_choices,
+                      'offline': _offline_choices}
 
     def is_accessible(self):
         if not current_user.is_anonymous and current_user.is_permissions(10):
@@ -295,7 +305,8 @@ class DepartmentsAdmin(Filters, ModelView):
             flash('У вас немає доступу для даної операції!', 'error')
 
     @action('tax_send_5PRRO',
-            lazy_gettext('Відправити форму про надання інформації щодо кваліфікованого сертифіката відкритого ключа 5-ПРРО'),
+            lazy_gettext(
+                'Відправити форму про надання інформації щодо кваліфікованого сертифіката відкритого ключа 5-ПРРО'),
             lazy_gettext(
                 'Ви впевнені, що хочете відправити форму про надання інформації щодо кваліфікованого сертифіката відкритого ключа 5-ПРРО?'))
     def tax_send_5PRRO(self, ids):
@@ -362,7 +373,7 @@ class DepartmentsAdmin(Filters, ModelView):
                     from utils.SendData2 import SendData2
                     sender = SendData2(db, key, rro_id, "")
 
-                        # try:
+                    # try:
                     registrar_state = sender.TransactionsRegistrarState()
 
                     if not registrar_state:
@@ -472,7 +483,8 @@ class DepartmentsAdmin(Filters, ModelView):
                                             registrar_state["NextLocalNum"])
                                         if shift.operation_type == 1:
                                             # print('Исправляем номер {} на {}'.format(shift.pid, registrar_state['NextLocalNum']))
-                                            print('Исправляем номер prro_localnumber {} на {}'.format(shift.prro_localnumber, registrar_state['NextLocalNum']))
+                                            print('Исправляем номер prro_localnumber {} на {}'.format(
+                                                shift.prro_localnumber, registrar_state['NextLocalNum']))
                                             shift.pid = registrar_state['NextLocalNum']
                                             shift.prro_localnumber = registrar_state['NextLocalNum']
                                             db.session.commit()
@@ -495,7 +507,6 @@ class DepartmentsAdmin(Filters, ModelView):
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
-
 
     @action('prro_fix_numbers', lazy_gettext('Виправити номери пакетів'),
             lazy_gettext('Ви впевнені, що хочете виправити номери пакетів?'))
@@ -544,7 +555,8 @@ class DepartmentsAdmin(Filters, ModelView):
                                         if shift.operation_type == 1:
                                             operation_time = datetime.datetime.now()
 
-                                            msg = '{} {}'.format(msg, 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем. ')
+                                            msg = '{} {}'.format(msg,
+                                                                 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем. ')
                                             shift.p_offline = False
                                             local_number = registrar_state['NextLocalNum']
                                             sender.local_number = local_number
@@ -581,7 +593,6 @@ class DepartmentsAdmin(Filters, ModelView):
                                                                          shift.prro_localnumber,
                                                                          registrar_state['NextLocalNum']))
                                                 shift.prro_localnumber = registrar_state['NextLocalNum']
-
 
                                             NumLocal = int(
                                                 registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
@@ -694,7 +705,8 @@ class DepartmentsAdmin(Filters, ModelView):
                     tax_id, shift, shift_opened, qr, coded_string, offline = department.prro_advances(1000)
                     decoded_string = base64.b64decode(coded_string).decode('UTF-8')
                     flash(
-                        '{} Відправлено чек службового внесення (аванс), отримано фіскальний номер {}, данные чека: {} ссылка QR кода {}'.format(department.full_name, tax_id, decoded_string, qr))
+                        '{} Відправлено чек службового внесення (аванс), отримано фіскальний номер {}, данные чека: {} ссылка QR кода {}'.format(
+                            department.full_name, tax_id, decoded_string, qr))
                 except Exception as e:
                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
@@ -711,10 +723,12 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_podkrep(1000)
+                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_podkrep(
+                        1000)
                     decoded_string = base64.b64decode(coded_string).decode('UTF-8')
                     flash(
-                        '{} отправлено подкрепление, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(department.full_name, tax_id, decoded_string, qr))
+                        '{} отправлено подкрепление, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(
+                            department.full_name, tax_id, decoded_string, qr))
                 except Exception as e:
                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
@@ -747,10 +761,12 @@ class DepartmentsAdmin(Filters, ModelView):
                         print(LastFiscalNum)
 
                         try:
-                            tax_id, shift, shift_opened, qr, coded_string, offline = department.prro_storno(LastFiscalNum)
+                            tax_id, shift, shift_opened, qr, coded_string, offline = department.prro_storno(
+                                LastFiscalNum)
                             decoded_string = base64.b64decode(coded_string).decode('UTF-8')
                             flash(
-                                '{} отправлено сторно последнего чека, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(department.full_name, tax_id, decoded_string, qr))
+                                '{} отправлено сторно последнего чека, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(
+                                    department.full_name, tax_id, decoded_string, qr))
                         except Exception as e:
                             return flash('{} помилка: {}'.format(department.full_name, e), 'error')
                 else:
@@ -770,10 +786,12 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_inkass(1000)
+                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_inkass(
+                        1000)
                     decoded_string = base64.b64decode(coded_string).decode('UTF-8')
                     flash(
-                        '{} отправлена инкассация, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(department.full_name, tax_id, decoded_string, qr))
+                        '{} отправлена инкассация, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(
+                            department.full_name, tax_id, decoded_string, qr))
                 except Exception as e:
                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
@@ -852,17 +870,19 @@ class DepartmentsAdmin(Filters, ModelView):
                         'PRC': 20,
                         'SIGN': False,
                         'TURNOVER': 298.16,
-                        'SUM': 298.16*0.20,
+                        'SUM': 298.16 * 0.20,
                     }
                     taxes.append(tax)
 
                     # summa = 298.16
 
-                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(reals, taxes, pays)
+                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
+                        reals, taxes, pays)
                     decoded_string = base64.b64decode(coded_string).decode('UTF-8')
                     # print(decoded_string)
                     flash(
-                        '{} отправлен чек, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(department.full_name, tax_id, decoded_string, qr))
+                        '{} отправлен чек, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(
+                            department.full_name, tax_id, decoded_string, qr))
                 except Exception as e:
                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
@@ -879,7 +899,8 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    z_report_data, z_report_tax_id, close_shift_tax_id, coded_string, tax_id_inkass, qr_inkass, visual_inkass = department.prro_get_xz(True)
+                    z_report_data, z_report_tax_id, close_shift_tax_id, coded_string, tax_id_inkass, qr_inkass, visual_inkass = department.prro_get_xz(
+                        True)
                     flash(
                         '{} надіслано Z звіт'.format(department.full_name))
                 except Exception as e:
@@ -1218,159 +1239,160 @@ class DepartmentsAdmin(Filters, ModelView):
         else:
             flash('У вас немає доступу для даної операції!', 'error')
 
-   # @action('prro_open_shift', lazy_gettext('Открыть смену пРРО'),
-    #         lazy_gettext('Ви впевнені, що хочете открыть смену пРРО?'))
-    # def prro_open_shift(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #         # count = 0
-    #         for m in query.all():
-    #
-    #             if m.department_id:
-    #                 department = Departments.query.get(m.department_id)
-    #                 if department.rro_type == "prro":
-    #                     shift = department.prro_open_shift(True, False)
-    #                     try:
-    #                         shift = department.prro_open_shift(True, False)
-    #                         if shift:
-    #                             flash(
-    #                                 'Отделение {} смена успешно открыта, идентификатор {}'.format(department.full_name,
-    #                                                                                               shift.id))
-    #                         else:
-    #                             flash('Отделение {} смену не удалось открыть'.format(department.full_name), 'error')
-    #
-    #                     except Exception as e:
-    #                         return flash('Отделение {} помилка: {}'.format(department.full_name, e), 'error')
-    #                 else:
-    #                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-    #
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
 
-    # @action('prro_send_fiscal_data', lazy_gettext('Зафискализировать нефискальные операции на пРРО'),
-    #         lazy_gettext('Ви впевнені, що хочете зафискализировать нефискальные операции на пРРО?'))
-    # def prro_send_fiscal_data(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #         # count = 0
-    #         for m in query.all():
-    #
-    #             if m.department_id:
-    #                 department = Departments.query.get(m.department_id)
-    #                 if department.rro_type == "prro":
-    #                     try:
-    #
-    #                         exchange_operations = db.session.query(literal_column('1').label('type'),
-    #                                                                ExchangeOperations.real_id.label('id'),
-    #                                                                ExchangeOperations.operation_time.label(
-    #                                                                    'operation_time')) \
-    #                             .filter(ExchangeOperations.department_id == department.id) \
-    #                             .filter(ExchangeOperations.operation_time != None) \
-    #                             .filter(ExchangeOperations.fiscal_time == None) \
-    #                             .filter(ExchangeOperations.storno_time == None) \
-    #                             .filter(ExchangeOperations.rate_time != None) \
-    #                             .filter(ExchangeOperations.fiscal_storno_time == None)
-    #
-    #                         exchange_operations_storno = db.session.query(literal_column('2').label('type'),
-    #                                                                       ExchangeOperations.real_id.label('id'),
-    #                                                                       ExchangeOperations.operation_time.label(
-    #                                                                           'operation_time')) \
-    #                             .filter(ExchangeOperations.department_id == department.id) \
-    #                             .filter(ExchangeOperations.operation_time != None) \
-    #                             .filter(ExchangeOperations.fiscal_time != None) \
-    #                             .filter(ExchangeOperations.storno_time != None) \
-    #                             .filter(ExchangeOperations.rate_time != None) \
-    #                             .filter(ExchangeOperations.fiscal_storno_time == None)
-    #
-    #                         cashflow_operations = db.session.query(literal_column('3').label('type'),
-    #                                                                CashflowOperations.real_id.label('id'),
-    #                                                                CashflowOperations.operation_time.label(
-    #                                                                    'operation_time')) \
-    #                             .filter(CashflowOperations.department_id == department.id) \
-    #                             .filter(CashflowOperations.operation_time != None) \
-    #                             .filter(CashflowOperations.confirmation_time != None) \
-    #                             .filter(CashflowOperations.fiscal_time == None) \
-    #                             .filter(CashflowOperations.refusal_time == None)
-    #
-    #                         sub = union_all(exchange_operations, exchange_operations_storno, cashflow_operations).alias(
-    #                             'sub')
-    #
-    #                         operations = db.session.query(sub.c.type, sub.c.id) \
-    #                             .order_by(sub.c.operation_time) \
-    #                             .all()
-    #
-    #                         if operations:
-    #                             for operation in operations:
-    #
-    #                                 print('{} {}'.format(operation.type, operation.id))
-    #                                 try:
-    #                                     if operation.type == 1:
-    #                                         eop = ExchangeOperations.query.get(operation.id)
-    #                                         eop.operation_time = datetime.datetime.now()
-    #                                         exchange_data = department.prro_exchange(eop, 0, False)
-    #                                         flash(
-    #                                             'Отделение {} обменная операция успешно фискализована, идентификатор {}'.format(
-    #                                                 department.full_name,
-    #                                                 operation.id))
-    #                                     elif operation.type == 2:
-    #                                         eop = ExchangeOperations.query.get(operation.id)
-    #                                         eop.storno_time = datetime.datetime.now()
-    #                                         exchange_data = department.prro_storno_exchange(eop, 0, False)
-    #                                         flash(
-    #                                             'Отделение {} обменная операция сторно успешно фискализована, идентификатор {}'.format(
-    #                                                 department.full_name,
-    #                                                 operation.id))
-    #                                     elif operation.type == 3:
-    #                                         cfo = CashflowOperations.query.get(operation.id)
-    #                                         cfo.operation_time = datetime.datetime.now()
-    #                                         department.prro_cashflow(cfo, 0, False)
-    #                                         flash(
-    #                                             'Отделение {} операция подкрепления/инкассации успешно фискализована, идентификатор {}'.format(
-    #                                                 department.full_name,
-    #                                                 operation.id))
-    #                                     elif operation.type == 3:
-    #                                         flash('{} платежи пока не сделаны, пропущено'.format(department.full_name),
-    #                                               'warning')
-    #
-    #                                 except Exception as e:
-    #                                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-    #                         else:
-    #                             flash('{} нет операций для фискализации, пропущено'.format(department.full_name),
-    #                                   'warning')
-    #
-    #                     except Exception as e:
-    #                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-    #                 else:
-    #                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-    #
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
+# @action('prro_open_shift', lazy_gettext('Открыть смену пРРО'),
+#         lazy_gettext('Ви впевнені, що хочете открыть смену пРРО?'))
+# def prro_open_shift(self, ids):
+#     if not current_user.is_anonymous and current_user.is_permissions(10):
+#
+#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+#         # count = 0
+#         for m in query.all():
+#
+#             if m.department_id:
+#                 department = Departments.query.get(m.department_id)
+#                 if department.rro_type == "prro":
+#                     shift = department.prro_open_shift(True, False)
+#                     try:
+#                         shift = department.prro_open_shift(True, False)
+#                         if shift:
+#                             flash(
+#                                 'Отделение {} смена успешно открыта, идентификатор {}'.format(department.full_name,
+#                                                                                               shift.id))
+#                         else:
+#                             flash('Отделение {} смену не удалось открыть'.format(department.full_name), 'error')
+#
+#                     except Exception as e:
+#                         return flash('Отделение {} помилка: {}'.format(department.full_name, e), 'error')
+#                 else:
+#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
+#
+#     else:
+#         flash('У вас немає доступу для даної операції!', 'error')
 
-    # @action('prro_post_z_post_close_shift', lazy_gettext('Отправить Z отчет и закрыть смену на пРРО'),
-    #         lazy_gettext('Ви впевнені, що хочете отправить Z отчет и закрыть смену на пРРО?'))
-    # def prro_post_z_post_close_shift(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #         # count = 0
-    #         for m in query.all():
-    #
-    #             if m.department_id:
-    #                 department = Departments.query.get(m.department_id)
-    #
-    #                 if department.rro_type == "prro":
-    #                     try:
-    #                         z_report_data = department.prro_get_xz(True, 0, False)
-    #                         flash(
-    #                             '{} отправлен Z отчет номер {}'.format(department.full_name, z_report_data['z_number']))
-    #                     except Exception as e:
-    #                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-    #                 else:
-    #                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
+# @action('prro_send_fiscal_data', lazy_gettext('Зафискализировать нефискальные операции на пРРО'),
+#         lazy_gettext('Ви впевнені, що хочете зафискализировать нефискальные операции на пРРО?'))
+# def prro_send_fiscal_data(self, ids):
+#     if not current_user.is_anonymous and current_user.is_permissions(10):
+#
+#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+#         # count = 0
+#         for m in query.all():
+#
+#             if m.department_id:
+#                 department = Departments.query.get(m.department_id)
+#                 if department.rro_type == "prro":
+#                     try:
+#
+#                         exchange_operations = db.session.query(literal_column('1').label('type'),
+#                                                                ExchangeOperations.real_id.label('id'),
+#                                                                ExchangeOperations.operation_time.label(
+#                                                                    'operation_time')) \
+#                             .filter(ExchangeOperations.department_id == department.id) \
+#                             .filter(ExchangeOperations.operation_time != None) \
+#                             .filter(ExchangeOperations.fiscal_time == None) \
+#                             .filter(ExchangeOperations.storno_time == None) \
+#                             .filter(ExchangeOperations.rate_time != None) \
+#                             .filter(ExchangeOperations.fiscal_storno_time == None)
+#
+#                         exchange_operations_storno = db.session.query(literal_column('2').label('type'),
+#                                                                       ExchangeOperations.real_id.label('id'),
+#                                                                       ExchangeOperations.operation_time.label(
+#                                                                           'operation_time')) \
+#                             .filter(ExchangeOperations.department_id == department.id) \
+#                             .filter(ExchangeOperations.operation_time != None) \
+#                             .filter(ExchangeOperations.fiscal_time != None) \
+#                             .filter(ExchangeOperations.storno_time != None) \
+#                             .filter(ExchangeOperations.rate_time != None) \
+#                             .filter(ExchangeOperations.fiscal_storno_time == None)
+#
+#                         cashflow_operations = db.session.query(literal_column('3').label('type'),
+#                                                                CashflowOperations.real_id.label('id'),
+#                                                                CashflowOperations.operation_time.label(
+#                                                                    'operation_time')) \
+#                             .filter(CashflowOperations.department_id == department.id) \
+#                             .filter(CashflowOperations.operation_time != None) \
+#                             .filter(CashflowOperations.confirmation_time != None) \
+#                             .filter(CashflowOperations.fiscal_time == None) \
+#                             .filter(CashflowOperations.refusal_time == None)
+#
+#                         sub = union_all(exchange_operations, exchange_operations_storno, cashflow_operations).alias(
+#                             'sub')
+#
+#                         operations = db.session.query(sub.c.type, sub.c.id) \
+#                             .order_by(sub.c.operation_time) \
+#                             .all()
+#
+#                         if operations:
+#                             for operation in operations:
+#
+#                                 print('{} {}'.format(operation.type, operation.id))
+#                                 try:
+#                                     if operation.type == 1:
+#                                         eop = ExchangeOperations.query.get(operation.id)
+#                                         eop.operation_time = datetime.datetime.now()
+#                                         exchange_data = department.prro_exchange(eop, 0, False)
+#                                         flash(
+#                                             'Отделение {} обменная операция успешно фискализована, идентификатор {}'.format(
+#                                                 department.full_name,
+#                                                 operation.id))
+#                                     elif operation.type == 2:
+#                                         eop = ExchangeOperations.query.get(operation.id)
+#                                         eop.storno_time = datetime.datetime.now()
+#                                         exchange_data = department.prro_storno_exchange(eop, 0, False)
+#                                         flash(
+#                                             'Отделение {} обменная операция сторно успешно фискализована, идентификатор {}'.format(
+#                                                 department.full_name,
+#                                                 operation.id))
+#                                     elif operation.type == 3:
+#                                         cfo = CashflowOperations.query.get(operation.id)
+#                                         cfo.operation_time = datetime.datetime.now()
+#                                         department.prro_cashflow(cfo, 0, False)
+#                                         flash(
+#                                             'Отделение {} операция подкрепления/инкассации успешно фискализована, идентификатор {}'.format(
+#                                                 department.full_name,
+#                                                 operation.id))
+#                                     elif operation.type == 3:
+#                                         flash('{} платежи пока не сделаны, пропущено'.format(department.full_name),
+#                                               'warning')
+#
+#                                 except Exception as e:
+#                                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
+#                         else:
+#                             flash('{} нет операций для фискализации, пропущено'.format(department.full_name),
+#                                   'warning')
+#
+#                     except Exception as e:
+#                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
+#                 else:
+#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
+#
+#     else:
+#         flash('У вас немає доступу для даної операції!', 'error')
+
+# @action('prro_post_z_post_close_shift', lazy_gettext('Отправить Z отчет и закрыть смену на пРРО'),
+#         lazy_gettext('Ви впевнені, що хочете отправить Z отчет и закрыть смену на пРРО?'))
+# def prro_post_z_post_close_shift(self, ids):
+#     if not current_user.is_anonymous and current_user.is_permissions(10):
+#
+#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+#         # count = 0
+#         for m in query.all():
+#
+#             if m.department_id:
+#                 department = Departments.query.get(m.department_id)
+#
+#                 if department.rro_type == "prro":
+#                     try:
+#                         z_report_data = department.prro_get_xz(True, 0, False)
+#                         flash(
+#                             '{} отправлен Z отчет номер {}'.format(department.full_name, z_report_data['z_number']))
+#                     except Exception as e:
+#                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
+#                 else:
+#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
+#     else:
+#         flash('У вас немає доступу для даної операції!', 'error')
 
 
 class DepartmentKeysAdmin(Filters, ModelView):
@@ -1651,8 +1673,9 @@ def connect_admin_panel(app, db):
     add_view(admin, UsersAdmin(session=db.session, name='Користувачі', category='Доступи', menu_icon_type='fa',
                                menu_icon_value='fa-users'), template_folder='templates')
 
-    admin.add_view(DepartmentsAdmin(db.session, name='Об\'єкти господарювання', category='Довідники', menu_icon_type='fa',
-                                    menu_icon_value='fa-building-o'))
+    admin.add_view(
+        DepartmentsAdmin(db.session, name='Об\'єкти господарювання', category='Довідники', menu_icon_type='fa',
+                         menu_icon_value='fa-building-o'))
 
     add_view(admin, DepartmentKeysAdmin(db.session, name='КЕП', category='Довідники', static_folder='static',
                                         endpoint='department_keys', menu_icon_type='fa',

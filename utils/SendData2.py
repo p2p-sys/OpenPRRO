@@ -228,8 +228,7 @@ class SendData2(object):
             #         return True
             # return False
 
-            # return False
-            raise Exception('{}'.format("Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+            return False
 
         '''
             TransactionsRegistrarAbsent=1, ПРРО не зареєстрований
@@ -284,8 +283,7 @@ class SendData2(object):
             raise Exception('{}'.format("На фіскальному сервері немає об'єктів для роботи, якщо недавно були відправлені форми реєстрації, чекайте, потрібен час для синхронізації між серверами податкового кабінету"))
 
         if answer.status_code == 500:
-            # return False
-            raise Exception('{}'.format("Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+            return False
 
         if answer.status_code >= 400:
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))

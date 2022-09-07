@@ -1954,7 +1954,7 @@ class ApiView(FlaskView):
                 if 'size' in data:
                     size = data['size']
                 else:
-                    size = None
+                    size = 1000000
 
                 sender = TaxForms(company_key=key)
                 data = sender.tax_infos(group, page, size)
