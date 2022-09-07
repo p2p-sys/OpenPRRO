@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
-import struct
-
 from manage import create_app
 from flask_sqlalchemy import SQLAlchemy
 
@@ -11,6 +8,7 @@ from utils.Sign import Sign
 
 app = create_app()
 db = SQLAlchemy(app)
+
 from models import *
 
 db.app = app
@@ -25,7 +23,6 @@ def fucli():
 
 @fucli.command('close_shifts')
 def close_shifts():
-
     list_msgs = []
 
     try:
@@ -64,7 +61,6 @@ def close_shifts():
 
 @fucli.command('to_online')
 def to_online():
-
     from lxml import etree
 
     from utils.Sign import Sign
@@ -163,7 +159,7 @@ def to_online():
                                 revoke = True
 
                             xml, signed_xml, offline_tax_id = sender.to_offline(operation_time,
-                                                                                     testing=testing, revoke=revoke)
+                                                                                testing=testing, revoke=revoke)
 
                             offline_check.offline_fiscal_xml_signed = signed_xml
                             print('Переформировали чек открытия сессии оффлайн')
@@ -181,7 +177,8 @@ def to_online():
                     department.sender.local_number = shift.prro_localnumber
                     department.sender.offline_local_number = shift.prro_offline_local_number
 
-                    offline_tax_number = department.sender.calculate_offline_tax_number(offline_dt, prev_hash=shift.prev_hash)
+                    offline_tax_number = department.sender.calculate_offline_tax_number(offline_dt,
+                                                                                        prev_hash=shift.prev_hash)
 
                     """ Коніц офлайн сесії """
                     CHECK = department.sender.get_check_xml(103, offline=True, dt=offline_dt, prev_hash=shift.prev_hash,
@@ -300,103 +297,6 @@ def to_online():
 
         except Exception as e:
             print('{} ошибка {}'.format(department.rro_id, e))
-
-
-@fucli.command('get_certs')
-def get_certs():
-
-    import requests
-
-    key_id = 12
-    key = DepartmentKeys.query \
-        .filter(DepartmentKeys.id == key_id) \
-        .first()
-
-    servers = [
-        'http://uakey.com.ua',
-        # 'http://acskidd.gov.ua',
-        # 'http://masterkey.ua',
-    ]
-
-    for server in servers:
-        url = '{}/services/cmp/'
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
-
-        answer = requests.get(url, headers=headers, timeout=100)
-
-        data = json.loads(answer.content.decode())
-        print(data)
-        # if answer.status_code == 200:
-
-
-@fucli.command('get_b64')
-def get_b64():
-
-    key_id = 57
-    key = DepartmentKeys.query \
-        .filter(DepartmentKeys.id == key_id) \
-        .first()
-
-    key_data = key.key_data
-    cert1_data = key.cert1_data
-    cert2_data = key.cert2_data
-
-    key_data = base64.b64encode(key_data)
-    # cert1_data = base64.b64encode(cert1_data)
-    # cert2_data = base64.b64encode(cert2_data)
-    #
-    print(key_data)
-    # print(cert1_data)
-    # print(cert2_data)
-
-    # with open('signer-agent/key-6.dat', 'wb') as file:
-    #     file.write(key_data)
-
-    # with open('1.cer', 'wb') as file:
-    #     file.write(cert1_data)
-    #
-    # with open('2.cer', 'wb') as file:
-    #     file.write(cert2_data)
-
-
-@fucli.command('encrypt')
-def encrypt():
-    file = 'incoming.encrypted_'
-    with open(file, "r") as file:
-        contrentbase64 = file.read()
-
-        message = base64.b64decode(contrentbase64)
-        s = message.find(b'TRANSPORTABLE')
-        answer = message[s:]
-
-        with open('incoming.encrypted_wo_begin', 'wb') as file:
-            file.write(answer)
-
-        key_id = 7
-        company_key = DepartmentKeys.query \
-            .filter(DepartmentKeys.id == key_id) \
-            .first()
-
-        signer = Sign()
-        box_id = signer.update_bid(db, company_key)
-
-        (result, meta) = signer.unwrap(box_id, answer)
-
-        print(result)
-        print(meta)
-
-
-@fucli.command('get_objects')
-def get_objects():
-
-    key_id = 57
-    key = DepartmentKeys.query \
-        .filter(DepartmentKeys.id == key_id) \
-        .first()
 
 
 if __name__ == '__main__':

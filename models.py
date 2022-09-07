@@ -264,8 +264,6 @@ class Departments(Base):
 
     address = Column('address', String(300), comment='Адрес отделения')
 
-    # edrpou = Column('edrpou', String(10), comment='EDRPOU отделения')
-
     rro_id = Column('rro_id', String(128), default=None, comment='Идентификатор РРО привязанного до отделения',
                     nullable=True)
 
@@ -289,6 +287,37 @@ class Departments(Base):
                              nullable=True)
 
     offline = Column('offline', SmallInteger, default=1, nullable=False, comment='Режим офлайн')
+
+    offline_supported = Column('offline_supported', SmallInteger, default=1, nullable=True, comment='Дозвіл переходу в режим офлайн по податковій')
+
+    next_local_number = Column('next_local_number', Integer, comment='Наступний локальний номер документа', nullable=True)
+
+    org_name = Column('org_name', String(256), comment='Найменування продавця (256 символів)', nullable=True)
+
+    name = Column('name', String(256), comment='Найменування точки продаж (256 символів)', nullable=True)
+
+    prro_name = Column('prro_name', String(256), comment='Найменування ПРРО (256 символів)', nullable=True)
+
+    tin = Column('tin', String(10), comment='ЄДРПОУ/ДРФО/№ паспорта продавця (10 символів)', nullable=True)
+
+    ipn = Column('ipn', String(12),
+                      comment='Податковий номер або Індивідуальний номер платника ПДВ (12 символів)', nullable=True)
+
+    entity = Column('entity', Integer, comment='Ідентифікатор запису ГО', nullable=True)
+
+    zn = Column('zn', Integer, comment='Локальний номер реєстратора розрахункових операцій (64 символи)', nullable=True)
+
+    single_tax = Column('single_tax', Boolean, default=False, nullable=True, comment='Єдиний податок')
+
+    tax_obj_guid = Column('tax_obj_guid', String(32), comment='Ідентифікатор запису ОО', nullable=True)
+
+    tax_obj_id = Column('tax_obj_id', Integer, comment='Код запису ОО', nullable=True)
+
+    shift_state = Column('shift_state', SmallInteger, default=0, nullable=True, comment='Стан зміни')
+
+    closed = Column('closed', Boolean, default=False, nullable=True, comment='Стан ПРРО')
+
+    chief_cashier = Column('chief_cashier', Boolean, comment='Старший касир', nullable=True)
 
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.full_name)

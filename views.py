@@ -1,10 +1,11 @@
 import os
 
-from flask import render_template, send_from_directory, current_app
+from flask import send_from_directory
 from flask_classy import FlaskView, route
 from flask_login import login_required
 
-from flask import Blueprint, render_template, request, jsonify, session, url_for, redirect, current_app
+from flask import url_for, redirect, current_app
+
 
 class IndexView(FlaskView):
     route_base = ''
@@ -19,11 +20,4 @@ class IndexView(FlaskView):
     @route('/', methods=['GET'], endpoint='index')
     @login_required
     def index(self):
-
         return redirect(url_for('admin.index'))
-    #     forms = {
-    #     }
-    #
-    #     return render_template(
-    #         "change/change-main.html",
-    #         forms=forms)

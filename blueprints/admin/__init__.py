@@ -1,18 +1,16 @@
 import os
 
 from flask_admin import Admin, BaseView, expose
-from flask_login import current_user
 from flask_wtf import FlaskForm
 
-from flask import redirect, url_for, request, session, jsonify, flash, send_file, current_app, Blueprint
+from flask import redirect, url_for, request, flash
 
-from flask_admin.contrib.sqla import filters, ModelView
+from flask_admin.contrib.sqla import ModelView
 from flask_admin.actions import action
-from flask_admin.babel import gettext, ngettext, lazy_gettext
-from flask_admin.contrib.sqla import form, filters as sqla_filters, tools as sqla_tools
+from flask_admin.babel import lazy_gettext
+from flask_admin.contrib.sqla import tools as sqla_tools
 from sqlalchemy import func
 
-from config import PRRO_KEY_STORAGE, TAX_EMAIL
 from models import *
 from utils.taxforms import TaxForms
 
@@ -33,11 +31,6 @@ class Filters():
         is_curator = not current_user.is_anonymous and current_user.role and current_user.is_permissions(8)
         is_admin = current_user.is_permissions(9)
 
-        # import pdb
-        # pdb.set_trace()
-
-        # is_curator = not current_user.is_anonymous and len(current_user.curating_groups)>0
-
         user_abilities = {x.name for x in current_user.role.permissions} if hasattr(current_user, 'role') else set([])
         has_required_permissions = (set(self.required_permissions) - user_abilities) == set([])
 
@@ -53,18 +46,11 @@ class adminOnly():
     column_labels = TRANSLATIONS
 
     def is_accessible(self):
-        # import pdb
-        # pdb.set_trace()
         try:
             is_admin = not current_user.is_anonymous and current_user.role and current_user.is_permissions(9)
             return is_admin
         except AttributeError:
             return False
-
-        # if current_app.config['ADMIN_PANEL_FREE_ACCESS']:
-        #     return True
-        # else:
-        #     return current_user.is_permissions(9)
 
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login.auth', next=request.url))
@@ -126,11 +112,8 @@ class UsersAdmin(Filters, ModelView):
     can_create = True
     can_edit = True
     can_view_details = True
-    # can_export = True
-    # export_max_rows = 2
 
     column_searchable_list = ['login']
-    # column_editable_list = ['login']
     column_sortable_list = ('login', 'id')
     edit_template = 'custom-edit.html'
 
@@ -206,9 +189,11 @@ class DepartmentsAdmin(Filters, ModelView):
 
     can_view_details = True
 
-    column_filters = ('id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
+    column_filters = (
+    'id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
 
-    column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline']
+    column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
+                   'offline']
 
     column_sortable_list = ('id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered', 'offline')
 
@@ -221,12 +206,10 @@ class DepartmentsAdmin(Filters, ModelView):
     column_exclude_list = form_excluded_columns
 
     column_details_exclude_list = form_excluded_columns
+
     column_export_exclude_list = form_excluded_columns
 
-    # column_default_sort = ['full_name']
     column_default_sort = [('id', False)]
-
-    # column_default_sort = [[(cast(Departments.legal_number, Integer), False)]
 
     column_editable_list = ['full_name']
 
@@ -329,32 +312,6 @@ class DepartmentsAdmin(Filters, ModelView):
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
-
-    # @action('tax_send_1PRRO',
-    #         lazy_gettext('Відправити заяву про реєстрацію програмного реєстратора розрахункових операцій за формою № 1-ПРРО'),
-    #         lazy_gettext(
-    #             'Ви впевнені, що хочете відправити заяву про реєстрацію програмного реєстратора розрахункових операцій за формою № 1-ПРРО?'))
-    # def tax_send_1PRRO(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #
-    #         for department in query.all():
-    #             department = Departments.query.get(department.id)
-    #
-    #             if department.taxform_key_id:
-    #                 company_key = department.taxform_key
-    #                 sender = TaxForms(company_key=company_key)
-    #                 status = sender.send_1PRRO(department)
-    #                 if status:
-    #                     flash('{}: форма отправлена!'.format(department.full_name))
-    #
-    #             else:
-    #                 flash('Не задан ключ для подписи налоговых форм!', 'error')
-    #
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
-    #
 
     @action('status_prro', lazy_gettext('Перевірити статус пРРО'),
             lazy_gettext('Ви впевнені, що хочете перевірити статус пРРО?'))
