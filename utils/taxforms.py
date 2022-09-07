@@ -711,12 +711,14 @@ class TaxForms(object):
 
         signed_data_base64 = base64.b64encode(signed_data)
 
+        if not size:
+            size = 1000000
+
         url = 'https://cabinet.tax.gov.ua/ws/public_api/payer_card'
         if group:
-            url = '{}/{}?page='.format(url, group, page)
+            url = '{}/{}?page={}'.format(url, group, page)
 
-        if size:
-            url = '{}&size={}'.format(url, size)
+        url = '{}&size={}'.format(url, size)
 
         headers = {
             'Content-Type': 'application/json',
