@@ -3,7 +3,6 @@ import os
 CONFIG_PATH = os.path.abspath(os.path.dirname(__file__))
 TESTING = False
 DEBUG = False
-PORT = 80
 
 SQLALCHEMY_RECORD_QUERIES = True
 SQLALCHEMY_TRACK_MODIFICATIONS = True
