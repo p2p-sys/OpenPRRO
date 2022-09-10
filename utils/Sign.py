@@ -349,17 +349,16 @@ class Sign(object):
         self.cn.add_cert(box_id, cert1)
         self.cn.add_cert(box_id, cert2)
 
-    def get_role(self, box_id):
+    def get_role(self, box_id, roles=None):
 
-        roles = ['personal', 'director', 'stamp', 'fop', 'other']
+        if not roles:
+            roles = ['fop', 'director', 'stamp', 'other', 'corporate', 'personal']
+
         for role in roles:
             unsigned_data = b'test'
-            # print(role)
             try:
-                # print(unsigned_data)
                 signed_data = self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
                 rdata, meta = self.cn.unwrap(box_id, signed_data, ocsp=None)
-                # print(role, rdata, unsigned_data)
                 if rdata == unsigned_data:
                     return role
 

@@ -536,6 +536,9 @@ class Departments(Base):
 
             if not open_shift:
                 return last_shift, False
+        else:
+            if not open_shift:
+                raise Exception('{}'.format("Зміни у системі відсутні"))
 
         if not self.sender.org_name:
             prev_shift = Shifts.query \
@@ -2895,13 +2898,7 @@ class DepartmentKeys(Base):
 
     encrypt = Column('encrypt', Boolean, nullable=True, comment='Ключ для шифрування')
 
-    # email = Column('email', String(50), comment='Електронна пошта для надсилання звітів', nullable=True)
-
-    # tax_sti_code = Column('tax_sti_code', String(4), comment='Код інспекції, в яку подається оригінал документа', nullable=True)
-    #
-    # tax_sti_name = Column('tax_sti_name', String(512), comment='Назва органу ДПС де зареєстрований платник', nullable=True)
-    #
-    # tax_phone = Column('tax_phone', String(64), comment='Телефон платника', nullable=True)
+    key_role_tax_form = Column('key_role_tax_form', String(10), comment='Роль ключа для підписання податкових форм', nullable=True)
 
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.name)

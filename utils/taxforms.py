@@ -19,7 +19,22 @@ class TaxForms(object):
         else:
             self.signer = signer
 
+        if not company_key:
+            raise Exception('Не вказано ключ для підпису податкових форм')
+        else:
+            self.box_id = self.signer.update_bid(db, company_key)
+            if not company_key.key_role_tax_form:
+                roles = ['fop', 'director', 'other', 'corporate']
+                role = self.signer.get_role(self.box_id, roles)
+                if role:
+                    company_key.key_role_tax_form = role
+                else:
+                    company_key.key_role_tax_form = company_key.key_role
+                company_key.box_id = self.box_id
+
         self.company_key = company_key
+
+        self.key_role_tax_form = self.company_key.key_role_tax_form
 
         self.TAX_EMAIL = '{}@tax.gov.ua'.format(company_key.edrpou)
 
@@ -170,7 +185,6 @@ class TaxForms(object):
                                                encoding='utf-8').decode('utf-8')
 
         return xml.encode('utf-8')
-
     @staticmethod
     def get_delete_xml(signed_id):
 
@@ -249,9 +263,7 @@ class TaxForms(object):
 
     def tax_get_messages(self, m):
 
-        box_id = self.signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-        # signed_EDRPOU = self.signer.sign(box_id, '{:010.0f}'.format(int(EDRPOU)).encode('windows-1251'), "director", True)
-        signed_EDRPOU = self.signer.sign(box_id, self.EDRPOU.encode('windows-1251'), "director", True)
+        signed_EDRPOU = self.signer.sign(self.box_id, self.EDRPOU.encode('windows-1251'), self.key_role_tax_form, True)
 
         signed_EDRPOU_base64 = base64.b64encode(signed_EDRPOU)
 
@@ -281,16 +293,11 @@ class TaxForms(object):
 
     def tax_get_messages_ex(self, m):
 
-        box_id = self.signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-        signed_EDRPOU = self.signer.sign(box_id, '{:010.0f}'.format(int(self.EDRPOU)).encode('windows-1251'),
-                                         "director",
+        signed_EDRPOU = self.signer.sign(self.box_id, '{:010.0f}'.format(int(self.EDRPOU)).encode('windows-1251'),
+                                         self.key_role_tax_form,
                                          True)
 
         signed_EDRPOU_base64 = base64.b64encode(signed_EDRPOU)
-
-        # signed_email = self.signer.sign(box_id, TAX_EMAIL.encode('windows-1251'), "director", True)
-
-        # signed_email_base64 = base64.b64encode(signed_email)
 
         xml = self.get_messages_ex_xml(signed_EDRPOU_base64)
 
@@ -318,15 +325,8 @@ class TaxForms(object):
 
     def tax_delete(self, m, id):
 
-        try:
-            signed_id = self.signer.sign(self.company_key.box_id, str(id).encode('windows-1251'),
-                                         role=self.company_key.key_role, tax=True)
-        except Exception as e:
-            box_id = self.signer.update_bid(db, self.company_key)
-            signed_id = self.signer.sign(box_id, str(id).encode('windows-1251'), role=self.company_key.key_role,
-                                         tax=True)
-            self.company_key.box_id = box_id
-            db.session.commit()
+        signed_id = self.signer.sign(self.box_id, str(id).encode('windows-1251'),
+                                     role=self.company_key.key_role_tax_form, tax=True)
 
         signed_id_base64 = base64.b64encode(signed_id)
 
@@ -344,15 +344,8 @@ class TaxForms(object):
 
     def tax_receive_all(self, need_delete=True):
 
-        try:
-            signed_email = self.signer.sign(self.company_key.box_id, self.TAX_EMAIL.encode('windows-1251'),
-                                            role=self.company_key.key_role, tax=True)
-        except Exception as e:
-            box_id = self.signer.update_bid(db, self.company_key)
-            signed_email = self.signer.sign(box_id, self.TAX_EMAIL.encode('windows-1251'),
-                                            role=self.company_key.key_role, tax=True)
-            self.company_key.box_id = box_id
-            db.session.commit()
+        signed_email = self.signer.sign(self.box_id, self.TAX_EMAIL.encode('windows-1251'),
+                                        role=self.key_role_tax_form, tax=True)
 
         signed_email_base64 = base64.b64encode(signed_email)
 
@@ -389,7 +382,7 @@ class TaxForms(object):
                 # with open('receive_all_answer_b64decode_before_uwwrap.signed', 'wb') as file:
                 #     file.write(answer)
                 try:
-                    (result, meta) = self.signer.unwrap(self.company_key.box_id, answer)
+                    (result, meta) = self.signer.unwrap(self.box_id, answer)
                 except:
                     continue
 
@@ -509,9 +502,7 @@ class TaxForms(object):
 
     def tax_receive(self, m, id):
 
-        box_id = self.signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-
-        signed_id = self.signer.sign(box_id, str(id).encode('windows-1251'), "director", True)
+        signed_id = self.signer.sign(self.box_id, str(id).encode('windows-1251'), self.key_role_tax_form, True)
 
         signed_id_base64 = base64.b64encode(signed_id)
 
@@ -547,53 +538,15 @@ class TaxForms(object):
             'EDRPOU': self.company_key.edrpou,
             'ENCODING': 'WIN'
         }
-        # print(headers)
 
-        # with open('{}'.format(filename), 'wb') as file:
-        #     file.write(form_xml)
-
-        # encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, self.company_key.key_role, True, cert=key247221_pem_cert,
-        #                                              headers=headers)
-
-        try:
-            # print(key247221_pem_cert)
-            # print(form_xml)
-            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml,
-                                                         role=self.company_key.key_role, tax=True,
-                                                         cert=key247221_pem_cert,
-                                                         headers=headers, tsp="all", ocsp=False)
-        except Exception as e:
-            print(e)
-            box_id = self.signer.update_bid(db, self.company_key)
-            self.company_key.box_id = box_id
-            db.session.commit()
-            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True,
-                                                         cert=key247221_pem_cert,
-                                                         headers=headers, tsp="all", ocsp=False)
-
-        # print(encrypted_form_xml)
-
-        # with open('{}.signed'.format(filename), 'wb') as file:
-        #     file.write(encrypted_form_xml)
-
-        # filename = '26550034554363J1391802100000000711220212655.XML'
-        # with open('1.xml.sign', "rb") as file:
-        #     encrypted_form_xml = file.read()
-
-        # print(encrypted_form_xml)
-        # return False
+        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml,
+                                                     role=self.key_role_tax_form, tax=True,
+                                                     cert=key247221_pem_cert,
+                                                     headers=headers, tsp="all", ocsp=False)
 
         signed_form_xml_base64 = base64.b64encode(encrypted_form_xml)
 
         xml = self.get_send_xml(filename, email, signed_form_xml_base64)
-
-        # with open('{}.signed.xml'.format(filename), 'wb') as file:
-        #     file.write(xml)
-
-        # print(xml.decode('windows-1251'))
-        # answer = None
-
-        # return True
 
         answer = self.post_data(xml)
 
@@ -620,42 +573,19 @@ class TaxForms(object):
          
         '''
 
-        headers = {
-            'PRG_TYPE': 'OpenPRRO',
-            'PRG_VER': "20220204",
-            'CERTYPE': 'UA1',
-            'RCV_NAME': 'test',
-            'FILENAME': filename,
-            'EDRPOU': self.company_key.edrpou,
-            'ENCODING': 'WIN'
-        }
-
-        try:
-            encrypted_form_xml = self.signer.tax_encrypt(self.company_key.box_id, form_xml,
-                                                         role=self.company_key.key_role, tax=True, cert=cert,
-                                                         tsp='signature', ocsp=False)
-        except Exception as e:
-            box_id = self.signer.update_bid(db, self.company_key)
-            encrypted_form_xml = self.signer.tax_encrypt(box_id, form_xml, role=self.company_key.key_role, tax=True,
-                                                         cert=cert, tsp="signature", ocsp=False)
-            self.company_key.box_id = box_id
-            db.session.commit()
+        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml,
+                                                     role=self.key_role_tax_form, tax=True, cert=cert,
+                                                     tsp='signature', ocsp=False)
 
         FISCAL_API_HOST = 'https://cabinet.tax.gov.ua'
 
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-        };
+        }
 
         signed_form_xml_base64 = base64.b64encode(encrypted_form_xml)
         print(signed_form_xml_base64.decode())
-
-        # with open('{}'.format(filename), 'wb') as file:
-        #     file.write(form_xml)
-        #
-        # with open('{}.signed'.format(filename), 'wb') as file:
-        #     file.write(encrypted_form_xml)
 
         response = requests.post(
             '{}/cabinet/public/api/exchange/report'.format(FISCAL_API_HOST),
@@ -668,23 +598,6 @@ class TaxForms(object):
         print(response.content)
         print(response.text)
         return True
-
-        # url = 'http://soap.tax.gov.ua/WebSrvGate/gate.asmx'
-        # headers = {'Content-Type': 'application/soap+xml; charset=utf-8'}
-        #
-        # try:
-        #     answer = requests.post(url, data=data, headers=headers)
-        #     # print(answer)
-        #     # print(answer.status_code)
-        #     # print(answer.content)
-        #     # print(answer.text)
-        #     if answer.status_code == 200:
-        #         return answer.content
-        #     else:
-        #         return False
-        #
-        # except Exception as e:
-        #     raise Exception('Помилка: {}'.format(e))
 
     def tax_infos(self, group=None, page=None, size=None):
 
@@ -699,15 +612,8 @@ class TaxForms(object):
 
         unsigned_data = self.company_key.edrpou.encode()
 
-        try:
-            signed_data = signer.sign(self.company_key.box_id, unsigned_data, role=self.company_key.key_role, tax=False,
-                                      tsp=tsp, ocsp=ocsp)
-        except Exception as e:
-            box_id = signer.update_bid(db, self.company_key)
-            signed_data = signer.sign(box_id, unsigned_data, role=self.company_key.key_role, tax=False,
-                                      tsp=tsp, ocsp=ocsp)
-            self.company_key.box_id = box_id
-            db.session.commit()
+        signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form, tax=False, tsp=tsp,
+                                  ocsp=ocsp)
 
         signed_data_base64 = base64.b64encode(signed_data)
 
@@ -748,15 +654,9 @@ class TaxForms(object):
 
         unsigned_data = self.company_key.edrpou.encode()
 
-        try:
-            signed_data = signer.sign(self.company_key.box_id, unsigned_data, role=self.company_key.key_role, tax=False,
-                                      tsp=tsp, ocsp=ocsp)
-        except Exception as e:
-            box_id = signer.update_bid(db, self.company_key)
-            signed_data = signer.sign(box_id, unsigned_data, role=self.company_key.key_role, tax=False,
-                                      tsp=tsp, ocsp=ocsp)
-            self.company_key.box_id = box_id
-            db.session.commit()
+        signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form,
+                                  tax=False,
+                                  tsp=tsp, ocsp=ocsp)
 
         signed_data_base64 = base64.b64encode(signed_data)
 
