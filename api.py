@@ -975,6 +975,11 @@ class ApiView(FlaskView):
             else:
                 balance = 0
 
+            if 'UID' in data:
+                doc_uid = data['UID']
+            else:
+                doc_uid = None
+
             tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
                 reals,
                 taxes,
@@ -982,13 +987,8 @@ class ApiView(FlaskView):
                 totals=totals,
                 key=key,
                 testing=testing,
-                balance=balance)
-
-            # from utils.SendData2 import SendData2
-            # sender = SendData2(db, key, department.rro_id, "")
-            # registrar_state = sender.TransactionsRegistrarState()
-            # print(registrar_state)
-            # shift_opened = registrar_state[]
+                balance=balance,
+                doc_uid=doc_uid)
 
             stop = datetime.datetime.now()
             print('{} Отдали данные чека продажи через API, все заняло по времени {} секунд'.format(stop, (

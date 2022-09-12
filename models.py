@@ -1975,7 +1975,7 @@ class Departments(Base):
     '''Отправим чек'''
 
     def prro_sale(self, reals, taxes, pays, sales_ret=False, orderretnum=None, key=None, testing=False, totals=None,
-                  balance=0):
+                  balance=0, doc_uid=None):
 
         shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
@@ -2006,7 +2006,8 @@ class Departments(Base):
             if not shift.offline:
 
                 ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
-                                            sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing)
+                                            sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
+                                            doc_uid=doc_uid)
                 if not ret:
                     if self.offline:
                         offline = True
@@ -2027,7 +2028,8 @@ class Departments(Base):
                         db.session.commit()
 
                         ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
-                                                    sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing)
+                                                    sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
+                                                    doc_uid=doc_uid)
                         if not ret:
                             if self.offline:
                                 offline = True
@@ -2155,7 +2157,8 @@ class Departments(Base):
                 offline_fiscal_xml_signed=signed_xml,
                 offline=offline,
                 offline_tax_id=offline_tax_id,
-                offline_session_id=shift.prro_offline_session_id
+                offline_session_id=shift.prro_offline_session_id,
+                doc_uid=doc_uid
             )
             db.session.add(sale)
             db.session.commit()
@@ -3155,6 +3158,8 @@ class Shifts(Base):
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
 
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
+
 
 class OfflineChecks(Base):
     '''Таблица данных о чеках открытия / закрытия офлайн режима'''
@@ -3268,6 +3273,8 @@ class Advances(Base):
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
 
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
+
 
 class Podkreps(Base):
     '''Таблица данных о подкреплениях'''
@@ -3329,9 +3336,11 @@ class Podkreps(Base):
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
 
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
+
 
 class Incasses(Base):
-    '''Таблица данных о инкассациях'''
+    '''Таблица данных об инкассациях'''
     __tablename__ = 'inkasses'
     __table_args__ = {"comment": __doc__}
 
@@ -3389,6 +3398,8 @@ class Incasses(Base):
 
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
+
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
 
 
 class Stornos(Base):
@@ -3451,6 +3462,8 @@ class Stornos(Base):
 
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
+
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
 
 
 class Sales(Base):
@@ -3517,6 +3530,8 @@ class Sales(Base):
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
 
+    doc_uid = Column('doc_uid', String(36), comment='UID', nullable=True)
+
 
 class SalesTaxes(Base):
     '''Таблица данных о налогах в розничных продажах'''
@@ -3528,11 +3543,17 @@ class SalesTaxes(Base):
     sales_id = Column("sales_id", Integer, ForeignKey("sales.id"), comment='Идентификатор операции')
 
     type = Column('type', SmallInteger, comment='Код виду податку/збору')
+
     name = Column('name', String(64), comment='Найменування виду податку/збору')
+
     letter = Column('letter', String(1), comment='Літерне позначення виду і ставки податку/збору')
+
     prc = Column('prc', Numeric(precision=15, scale=2), comment='Відсоток податку/збору')
+
     sign = Column('sign', Boolean, comment='Ознака податку/збору, не включеного у вартість')
+
     turnover = Column('turnover', Numeric(precision=15, scale=2), comment='Сума для розрахування податку/збору')
+
     sum = Column('sum', Numeric(precision=15, scale=2), comment='Сума податку/збору')
 
 
@@ -3546,9 +3567,13 @@ class SalesPays(Base):
     sales_id = Column("sales_id", Integer, ForeignKey("sales.id"), comment='Идентификатор операции')
 
     payformcd = Column('type', SmallInteger, comment='Код форми оплати (числовий): 0–Готівка, 1–Банківська картка')
+
     payformname = Column('name', String(64), comment='Найменування виду податку/збору')
+
     sum = Column('sum', Numeric(precision=15, scale=2), comment='Загальна сума')
+
     provided = Column('provided', Numeric(precision=15, scale=2), comment='Сума внесених коштів')
+
     remains = Column('remains', Numeric(precision=15, scale=2), comment='Решта')
 
 
@@ -3562,12 +3587,19 @@ class SalesCheck(Base):
     sales_id = Column("sales_id", Integer, ForeignKey("sales.id"), comment='Идентификатор операции')
 
     code = Column('code', String(64), comment='Внутрішній код товару')
+
     uktzed = Column('uktzed', String(15), comment='Код товару згідно з УКТЗЕД')
+
     name = Column('name', String(512), comment='Найменування товару, послуги або операції')
+
     unitcd = Column('unitcd', String(5), comment='Код одиниці виміру згідно класифікатора')
+
     unitnm = Column('unitnm', String(64), comment='Найменування одиниці виміру')
+
     amount = Column('amount', Numeric(precision=15, scale=3), comment='Кількість/об’єм товару')
+
     price = Column('price', Numeric(precision=15, scale=2), comment='Ціна за одиницю товару')
+
     letters = Column('letters', String(15), comment='Літерні позначення видів і ставок податків/зборів')
 
     cost = Column('cost', Numeric(precision=15, scale=2), comment='Сума операції')
@@ -3579,28 +3611,42 @@ class ZReports(Base):
     __table_args__ = {"comment": __doc__}
 
     id = Column('id', Integer, primary_key=True, autoincrement=True, comment='Идентификатор')
+
     department_id = Column("department_id", Integer, ForeignKey("departments.id"), comment='Идентификатор отделения')
+
     operator_id = Column('operator_id', Integer, ForeignKey("users.id"), comment='Идентификатор оператора')
+
     operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
                             comment='Время совершения операции')
+
     rro_type = Column('rro_type', String(4), comment='Тип РРО, що зараз використовується(rro, rkks, prro, none)')
+
     rro_id = Column('rro_id', String(16), default=None, comment='Идентификатор РРО привязанного до отделения')
+
     z_number = Column('z_number', Integer, comment='Номер Z отчета')
 
     fn = Column('fn', String(10), comment='Фискальный номер регистратора')
+
     zn = Column('zn', String(64), comment='Заводской номер регистратора')
+
     fsn = Column('fsn', String(16), comment='Версия программы эквайера')
+
     tn = Column('tn', String(16), comment='Налоговый номер (EDRPOU)')
 
     pid = Column('pid', Integer, comment='Фискальный номер чека')
+
     qr = Column('qr', String(100), comment='Содержимое QR кода чека')
+
     fiscal_time = Column('fiscal_time', DateTime, comment='Фискальное время чека')
 
     op_cnt = Column('op_cnt', Integer, comment='Количество операций в чеке')
+
     sum_reinf = Column('sum_reinf', Numeric(precision=20, scale=2),
                        comment='Сумма подкреплений')
+
     sum_collect = Column('sum_collect', Numeric(precision=20, scale=2),
                          comment='Сумма инкассаций')
+
     sum_adv = Column('sum_adv', Numeric(precision=20, scale=2),
                      comment='Сумма авансов')
 

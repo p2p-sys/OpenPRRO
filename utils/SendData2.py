@@ -32,7 +32,7 @@ class SendData2(object):
         self.rro_fn = rro_fn
 
         self.tn = ''
-        self.zn = None #Локальний номер реєстратора
+        self.zn = None  # Локальний номер реєстратора
         self.ipn = ''
 
         self.org_name = ''
@@ -114,14 +114,18 @@ class SendData2(object):
 
         if prev_hash:
             if doc_sum:
-                str = '{},{},{},{},{},{},{:.2f},{}'.format(self.offline_seed, check_date, check_time, self.local_number, self.rro_fn, self.zn, doc_sum, prev_hash)
+                str = '{},{},{},{},{},{},{:.2f},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
+                                                           self.rro_fn, self.zn, doc_sum, prev_hash)
             else:
-                str = '{},{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number, self.rro_fn, self.zn, prev_hash)
+                str = '{},{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
+                                                    self.rro_fn, self.zn, prev_hash)
         else:
             if doc_sum:
-                str = '{},{},{},{},{},{},{:.2f}'.format(self.offline_seed, check_date, check_time, self.local_number, self.rro_fn, self.zn, doc_sum)
+                str = '{},{},{},{},{},{},{:.2f}'.format(self.offline_seed, check_date, check_time, self.local_number,
+                                                        self.rro_fn, self.zn, doc_sum)
             else:
-                str = '{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number, self.rro_fn, self.zn)
+                str = '{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
+                                                 self.rro_fn, self.zn)
 
         print(str)
         # Від текстового рядку розраховується геш за алгоритмом CRC32
@@ -280,7 +284,8 @@ class SendData2(object):
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
         if answer.status_code == 204:
-            raise Exception('{}'.format("На фіскальному сервері немає об'єктів для роботи, якщо недавно були відправлені форми реєстрації, чекайте, потрібен час для синхронізації між серверами податкового кабінету"))
+            raise Exception('{}'.format(
+                "На фіскальному сервері немає об'єктів для роботи, якщо недавно були відправлені форми реєстрації, чекайте, потрібен час для синхронізації між серверами податкового кабінету"))
 
         if answer.status_code == 500:
             return False
@@ -848,7 +853,8 @@ class SendData2(object):
         }
         return self.post_data("doc", data)
 
-    def get_check_xml(self, doc_type, doc_sub_type=None, offline=False, dt=None, orderretnum=None, orderstornum=None, prev_hash=None, offline_tax_number=None, revoke=None, testing=False):
+    def get_check_xml(self, doc_type, doc_sub_type=None, offline=False, dt=None, orderretnum=None, orderstornum=None,
+                      prev_hash=None, offline_tax_number=None, revoke=None, testing=False, doc_uid=None):
 
         if not dt:
             dt = datetime.now()
@@ -876,9 +882,12 @@ class SendData2(object):
             DOCSUBTYPE = etree.SubElement(CHECKHEAD, "DOCSUBTYPE")
             DOCSUBTYPE.text = str(doc_sub_type)
 
+        if not doc_uid:
+            doc_uid = uuid.uuid1()
+
         #   <!--Унікальний ідентифікатор документа (GUID)-->
         UID = etree.SubElement(CHECKHEAD, "UID")
-        UID.text = '{}'.format(uuid.uuid1())
+        UID.text = '{}'.format(doc_uid)
 
         #   <!--ЄДРПОУ/ДРФО/№ паспорта продавця (10 символів)-->
         TIN = etree.SubElement(CHECKHEAD, "TIN")
@@ -1014,7 +1023,8 @@ class SendData2(object):
 
         offline_tax_number = self.calculate_offline_tax_number(dt)
 
-        CHECK = self.get_check_xml(102, offline=True, dt=dt, prev_hash=None, offline_tax_number=offline_tax_number, revoke=revoke, testing=testing)
+        CHECK = self.get_check_xml(102, offline=True, dt=dt, prev_hash=None, offline_tax_number=offline_tax_number,
+                                   revoke=revoke, testing=testing)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
@@ -1028,11 +1038,11 @@ class SendData2(object):
 
         try:
             signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                      tsp=False, ocsp=False)
+                                           tsp=False, ocsp=False)
         except Exception as e:
             box_id = self.signer.update_bid(self.db, self.key)
             signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
-                                      tsp=False, ocsp=False)
+                                           tsp=False, ocsp=False)
             self.key.box_id = box_id
             self.db.session.commit()
 
@@ -1046,7 +1056,8 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(0, 5, dt=dt, orderstornum=tax_id, testing=testing, offline=offline, prev_hash=prev_hash, offline_tax_number=offline_tax_number)
+        CHECK = self.get_check_xml(0, 5, dt=dt, orderstornum=tax_id, testing=testing, offline=offline,
+                                   prev_hash=prev_hash, offline_tax_number=offline_tax_number)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
@@ -1061,11 +1072,11 @@ class SendData2(object):
         if offline:
             try:
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
                 signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1092,7 +1103,8 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(0, 2, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash, offline_tax_number=offline_tax_number)
+        CHECK = self.get_check_xml(0, 2, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash,
+                                   offline_tax_number=offline_tax_number)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
@@ -1115,11 +1127,11 @@ class SendData2(object):
         if offline:
             try:
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
                 signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1146,7 +1158,8 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(0, 4, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash, offline_tax_number=offline_tax_number)
+        CHECK = self.get_check_xml(0, 4, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash,
+                                   offline_tax_number=offline_tax_number)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
@@ -1169,11 +1182,11 @@ class SendData2(object):
         if offline:
             try:
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1200,7 +1213,8 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(0, 3, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash, offline_tax_number=offline_tax_number)
+        CHECK = self.get_check_xml(0, 3, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash,
+                                   offline_tax_number=offline_tax_number)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
@@ -1223,11 +1237,11 @@ class SendData2(object):
         if offline:
             try:
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
                 signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1246,7 +1260,8 @@ class SendData2(object):
 
         return False
 
-    def post_sale(self, summa, discount, reals, taxes, pays, dt, totals=None, sales_ret=False, orderretnum=None, testing=False, offline=False, prev_hash=None):
+    def post_sale(self, summa, discount, reals, taxes, pays, dt, totals=None, sales_ret=False, orderretnum=None,
+                  testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек (форма №3-ПРРО) """
 
         op = 0
@@ -1263,12 +1278,12 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(0, op, dt=dt, orderretnum=orderretnum, testing=testing, offline=offline, prev_hash=prev_hash, offline_tax_number=offline_tax_number)
+        CHECK = self.get_check_xml(0, op, dt=dt, orderretnum=orderretnum, testing=testing, offline=offline,
+                                   prev_hash=prev_hash, offline_tax_number=offline_tax_number, doc_uid=doc_uid)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
         CHECKTOTAL.text = ''
-
 
         if totals:
             if 'SUM' in totals:
@@ -1310,7 +1325,7 @@ class SendData2(object):
 
                 if 'PAYFORMCD' in pay:
                     # <!--Код форми оплати (числовий):-->
-                    #<!--0–Готівка, 1–Банківська картка...-->
+                    # <!--0–Готівка, 1–Банківська картка...-->
                     PAYFORMCD = etree.SubElement(ROW, "PAYFORMCD")
                     PAYFORMCD.text = '{:d}'.format(pay['PAYFORMCD'])
 
@@ -1609,11 +1624,11 @@ class SendData2(object):
         if offline:
             try:
                 signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
                 signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
-                                          tsp=False, ocsp=False)
+                                               tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1637,7 +1652,7 @@ class SendData2(object):
 
         CHECK = self.get_check_xml(2, 0, dt=dt)
 
-        #<!-- Дата та час встановлення курсу (присутній тільки для чеку-довідки) (ддммррррггххсс)
+        # <!-- Дата та час встановлення курсу (присутній тільки для чеку-довідки) (ддммррррггххсс)
         kurs_datetime = check_data['kurs_datetime']
 
         CHECKBODY = etree.SubElement(CHECK, "CHECKBODY")
@@ -1677,7 +1692,7 @@ class SendData2(object):
 
         ''' <!--Дата та час встановлення курсу (присутній тільки для чеку-довідки) (64 символи)--> '''
         VALCOURSEDATE = etree.SubElement(ROW, "VALCOURSEDATE")
-        VALCOURSEDATE.text = '{}'.format(kurs_datetime) #check_data['kurs_datetime']
+        VALCOURSEDATE.text = '{}'.format(kurs_datetime)  # check_data['kurs_datetime']
 
         ''' <!--Сума валюти по типу операцій вказаної у атрибуті ‘TYPEOPERATION’ (іноземна валюта) (15.2 цифри)--> '''
         VALFOREIGNSUM = etree.SubElement(ROW, "VALFOREIGNSUM")
@@ -2350,7 +2365,7 @@ class SendData2(object):
 
                                 if 'OrdersCount' in real:
                                     ORDERSCNT = etree.SubElement(ZREPREALIZ, "ORDERSCNT")
-                                    ORDERSCNT.text =  "{:d}".format(real['OrdersCount'])
+                                    ORDERSCNT.text = "{:d}".format(real['OrdersCount'])
 
                                 if 'TotalCurrencyCost' in real:
                                     ''' <!--Кількість операцій переказу коштів (числовий)--> '''

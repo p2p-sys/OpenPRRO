@@ -352,7 +352,7 @@ class Sign(object):
     def get_role(self, box_id, roles=None):
 
         if not roles:
-            roles = ['fop', 'director', 'stamp', 'other', 'corporate', 'personal']
+            roles = ['fop', 'director', 'stamp', 'corporate', 'personal', 'other']
 
         for role in roles:
             unsigned_data = b'test'

@@ -24,7 +24,7 @@ class TaxForms(object):
         else:
             self.box_id = self.signer.update_bid(db, company_key)
             if not company_key.key_role_tax_form:
-                roles = ['fop', 'director', 'other', 'corporate']
+                roles = ['fop', 'director', 'corporate', 'other']
                 role = self.signer.get_role(self.box_id, roles)
                 if role:
                     company_key.key_role_tax_form = role
