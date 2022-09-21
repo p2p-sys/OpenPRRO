@@ -2829,7 +2829,7 @@ class Departments(Base):
 
                 return x_data, z_report.tax_id, close_shift_tax_id, z_visual_data, tax_id_inkass, qr_inkass, visual_inkass
             else:
-                return x_data, None, None
+                return x_data, None, None, None, None, None, None
             # if send_z:
             #     raise Exception(
             #         'Неможливо зробити Z-звіт. Робота йде у автономному режимі, спробуйте пізніше або роздрукуєте його копію наступного дня!')
