@@ -1275,6 +1275,14 @@ class ApiView(FlaskView):
                     key_file_content = base64.b64decode(key)
                     key_data = key_file_content
 
+                if 'cert1' in data:
+                    cert1 = data['cert1']
+                    cert1_data = base64.b64decode(cert1)
+
+                if 'cert2' in data:
+                    cert2 = data['cert2']
+                    cert2_data = base64.b64decode(cert2)
+
             if 'password' in data:
                 key_password = data['password']
             else:

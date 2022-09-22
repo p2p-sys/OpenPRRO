@@ -3,6 +3,7 @@ import datetime
 import json
 from hashlib import sha256
 
+from dateutil import tz
 from flask import jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -16,6 +17,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from flask_login import current_user
 
+from config import TIMEZONE
 from utils.SendData2 import SendData2
 
 db = SQLAlchemy()
@@ -491,7 +493,7 @@ class Departments(Base):
 
     def prro_open_shift(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
 
-        operation_time = datetime.datetime.now()
+        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
         server_time = None
 
         shift_opened = False
@@ -640,7 +642,7 @@ class Departments(Base):
 
             p_offline = True
 
-            fiscal_time = datetime.datetime.now()
+            fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
             self.sender.local_number += 1
             self.sender.local_check_number += 1
@@ -735,7 +737,7 @@ class Departments(Base):
 
     def prro_open_shift2(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
 
-        operation_time = datetime.datetime.now()
+        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
         server_time = None
 
         shift_opened = False
@@ -1029,7 +1031,7 @@ class Departments(Base):
         shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline = shift.offline
@@ -1262,7 +1264,7 @@ class Departments(Base):
                 visual_advance = None
                 tax_id_advance = None
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
             prev_hash = shift.prev_hash
 
@@ -1496,7 +1498,7 @@ class Departments(Base):
                 visual_advance = None
                 tax_id_advance = None
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline = shift.offline
@@ -1720,7 +1722,7 @@ class Departments(Base):
         shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline = shift.offline
@@ -1989,7 +1991,7 @@ class Departments(Base):
                 visual_advance = None
                 tax_id_advance = None
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline = shift.offline
@@ -2395,7 +2397,7 @@ class Departments(Base):
 
     def prro_close_shift(self, shift):
 
-        operation_time = datetime.datetime.now()
+        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
         ret = self.sender.close_shift(testing=shift.testing)
 
@@ -2446,7 +2448,7 @@ class Departments(Base):
                 '%d%m%Y %H%M%S')
             print('{}: {} закрыли смену в режиме онлайн '.format(operation_time, self.full_name))
         else:
-            fiscal_time = datetime.datetime.now()
+            fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             print('{}: {} закрыли смену в режиме псевдо-офлайн '.format(operation_time, self.full_name))
 
         operation_type = 0
@@ -2542,7 +2544,7 @@ class Departments(Base):
                 visual_inkass = None
                 tax_id_inkass = None
 
-            operation_time = datetime.datetime.now()
+            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
             # if shift.p_offline:
             #     x_data = self.prro_get_x_data_base(shift)
@@ -2793,7 +2795,7 @@ class Departments(Base):
                         '%d%m%Y %H%M%S')
                     print('{}: {} отправили Z отчет в режиме онлайн'.format(operation_time, self.full_name))
                 else:
-                    fiscal_time = datetime.datetime.now()
+                    fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
                     print('{}: {} отправили Z отчет в режиме псевдо-офлайн'.format(operation_time, self.full_name))
 
                 z_report.fiscal_time = fiscal_time
@@ -2938,6 +2940,7 @@ class DepartmentKeys(Base):
                         'http://uakey.com.ua/services/cmp/',
                         'http://masterkey.ua/services/cmp/',
                         'http://ca.informjust.ua/services/cmp/',
+                        # 'http://ca.oschadbank.ua/public/cmp/',
                         # 'http://ca.csd.ua/public/x509/cmp/',
                         # 'http://ca.gp.gov.ua/cmp/'
                     ]

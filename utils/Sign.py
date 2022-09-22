@@ -236,10 +236,14 @@ class Sign(object):
         try:
 
             if key.key_content and key.cert1_content:
-                # print(key.key_content.encode('latin1'))
-                # print(key.encrypt_content.encode('latin1'))
-                # print(key.cert1_content.encode('latin1'))
-                # print(key.cert2_content.encode('latin1'))
+                print(key.key_content.encode('latin1'))
+                if key.encrypt_content:
+                    print(key.encrypt_content.encode('latin1'))
+
+                print(key.cert1_content.encode('latin1'))
+                if key.cert2_content:
+                    print(key.cert2_content.encode('latin1'))
+
                 if key.encrypt_content:
                     self.box_id = self.add_keys([key.key_content.encode('latin1'), key.encrypt_content.encode('latin1')])
                 else:
@@ -345,9 +349,10 @@ class Sign(object):
     def add_cert(self, box_id, cert1):
         self.cn.add_cert(box_id, cert1)
 
-    def add_certs(self, box_id, cert1, cert2):
+    def add_certs(self, box_id, cert1, cert2=None):
         self.cn.add_cert(box_id, cert1)
-        self.cn.add_cert(box_id, cert2)
+        if cert2:
+            self.cn.add_cert(box_id, cert2)
 
     def get_role(self, box_id, roles=None):
 
@@ -355,12 +360,9 @@ class Sign(object):
             roles = ['fop', 'director', 'stamp', 'corporate', 'personal', 'other']
 
         for role in roles:
-            unsigned_data = b'test'
             try:
-                signed_data = self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
-                rdata, meta = self.cn.unwrap(box_id, signed_data, ocsp=None)
-                if rdata == unsigned_data:
-                    return role
+                self.cn.pipe(box_id, b'test', [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
+                return role
 
             except Exception as e:
                 print(e)

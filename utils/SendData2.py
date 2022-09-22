@@ -4,11 +4,13 @@ import requests
 import json
 from datetime import datetime
 
+from dateutil import tz
 from lxml import etree
 
 import uuid
 import zlib
 
+from config import TIMEZONE
 from utils.Sign import Sign
 
 import dateutil.parser
@@ -171,7 +173,7 @@ class SendData2(object):
 
             self.last_fiscal_error_code = 999
 
-            self.server_time = datetime.now()
+            self.server_time = datetime.now(tz.gettz(TIMEZONE))
 
             return True
         else:
@@ -189,7 +191,7 @@ class SendData2(object):
             self.server_time = None
 
         # проверим актуальность ключа криптографии
-        print('{} {}'.format(datetime.now(), 'Начинаю подписывать'))
+        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Начинаю подписывать'))
         try:
             try:
                 signed_data = self.signer.sign(self.key.box_id, data, role=self.key.key_role)
@@ -205,7 +207,7 @@ class SendData2(object):
             raise Exception('{}'.format(
                 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-        print('{} {}'.format(datetime.now(), 'Закончил подписывать'))
+        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закончил подписывать'))
         request_body = zlib.compress(signed_data)
 
         try:
@@ -213,11 +215,11 @@ class SendData2(object):
             #     return True
             # else:
             # return False
-            start = datetime.now()
-            print('{} {}'.format(datetime.now(), 'Начинаю отправлять в налоговую'))
+            start = datetime.now(tz.gettz(TIMEZONE))
+            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Начинаю отправлять в налоговую'))
             answer = requests.post(url, data=request_body, headers=headers, timeout=15)
-            print('{} {}'.format(datetime.now(), 'Закончил отправлять в налоговую'))
-            stop = datetime.now()
+            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закончил отправлять в налоговую'))
+            stop = datetime.now(tz.gettz(TIMEZONE))
             print('{} Все заняло по времени {} секунд'.format(stop, (stop - start).total_seconds()))
             # return False
 
@@ -475,7 +477,7 @@ class SendData2(object):
                             self.fiscal_time = datetime.strptime(
                                 '{} {}'.format(self.last_taxorderdate, self.last_taxordertime),
                                 '%d%m%Y %H%M%S')
-                            self.server_time = datetime.now()
+                            self.server_time = datetime.now(tz.gettz(TIMEZONE))
 
                             return True
                         else:
@@ -857,7 +859,7 @@ class SendData2(object):
                       prev_hash=None, offline_tax_number=None, revoke=None, testing=False, doc_uid=None):
 
         if not dt:
-            dt = datetime.now()
+            dt = datetime.now(tz.gettz(TIMEZONE))
 
         check_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         check_time = dt.strftime("%H%M%S")  # hhmmss
@@ -1999,7 +2001,7 @@ class SendData2(object):
         if x_data:
             print(x_data)
 
-            dt = datetime.now()
+            dt = datetime.now(tz.gettz(TIMEZONE))
             check_date = dt.strftime("%d%m%Y")  # ddmmyyyy
             check_time = dt.strftime("%H%M%S")  # hhmmss
 

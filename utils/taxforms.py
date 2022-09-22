@@ -726,8 +726,6 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        # department = Departments.query.get(m.department_id)
-
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%m")
@@ -1272,6 +1270,14 @@ class TaxForms(object):
             print(msg)
             raise Exception(msg)
 
+        # ІПН (для платників ПДВ)
+        data_pdv = self.tax_infos(5)
+        pdv_values = data_pdv['values']
+        KOD_PDV = None
+        for pdv_value in pdv_values:
+            KOD_PDV = pdv_value["KOD_PDV"]
+            break
+
         dt = datetime.now()
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%-m")
@@ -1445,6 +1451,11 @@ class TaxForms(object):
         ''' Идентификационный (регистрационный) номер учетной карточки предприятия  или предпринимателя. Проще говоря - его ИНН (ИИН для предпринимателя) '''
         HTIN = etree.SubElement(DECLARBODY, "HTIN")
         HTIN.text = '{}'.format(self.company_key.edrpou)
+
+        if KOD_PDV:
+            ''' ІПН (для платників ПДВ) '''
+            HNPDV = etree.SubElement(DECLARBODY, "HNPDV")
+            HNPDV.text = '{}'.format(KOD_PDV)
 
         ''' ідентифікатор об’єкта оподаткування '''
         if TO_CODE:
