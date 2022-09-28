@@ -789,11 +789,17 @@ class ApiView(FlaskView):
             else:
                 balance = 0
 
+            if 'UID' in data:
+                doc_uid = data['UID']
+            else:
+                doc_uid = None
+
             tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_podkrep(
                 sum,
                 key=key,
                 testing=testing,
-                balance=balance)
+                balance=balance,
+                doc_uid=doc_uid)
 
             message = 'Відправлено підкріплення, отримано фіскальний номер {}'.format(tax_id)
 
@@ -853,11 +859,17 @@ class ApiView(FlaskView):
             else:
                 balance = 0
 
+            if 'UID' in data:
+                doc_uid = data['UID']
+            else:
+                doc_uid = None
+
             tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_inkass(
                 sum,
                 key=key,
                 testing=testing,
-                balance=balance)
+                balance=balance,
+                doc_uid=doc_uid)
 
             message = 'Відправлено інкасацію, отримано фіскальний номер {}'.format(tax_id)
 

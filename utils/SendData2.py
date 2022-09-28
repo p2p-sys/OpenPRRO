@@ -1152,7 +1152,7 @@ class SendData2(object):
 
         return False
 
-    def post_inkass(self, summa, dt, testing=False, offline=False, prev_hash=None):
+    def post_inkass(self, summa, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек (форма №3-ПРРО) """
 
         if offline:
@@ -1161,7 +1161,7 @@ class SendData2(object):
             offline_tax_number = None
 
         CHECK = self.get_check_xml(0, 4, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash,
-                                   offline_tax_number=offline_tax_number)
+                                   offline_tax_number=offline_tax_number, doc_uid=doc_uid)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
@@ -1207,7 +1207,7 @@ class SendData2(object):
 
         return False
 
-    def post_podkrep(self, summa, dt, testing=False, offline=False, prev_hash=None):
+    def post_podkrep(self, summa, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек (форма №3-ПРРО) """
 
         if offline:
@@ -1216,7 +1216,7 @@ class SendData2(object):
             offline_tax_number = None
 
         CHECK = self.get_check_xml(0, 3, dt=dt, testing=testing, offline=offline, prev_hash=prev_hash,
-                                   offline_tax_number=offline_tax_number)
+                                   offline_tax_number=offline_tax_number, doc_uid=doc_uid)
 
         ''' <!--Підсумок по чеку--> '''
         CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
