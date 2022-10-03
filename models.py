@@ -1250,7 +1250,7 @@ class Departments(Base):
 
     '''Отправим подкрепления'''
 
-    def prro_podkrep(self, summa, key=None, testing=False, balance=0):
+    def prro_podkrep(self, summa, key=None, testing=False, balance=0, doc_uid=None):
 
         shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
@@ -1272,7 +1272,7 @@ class Departments(Base):
 
             if not shift.offline:
 
-                ret = self.sender.post_podkrep(summa, operation_time, testing=shift.testing)
+                ret = self.sender.post_podkrep(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
                 if not ret:
                     if self.offline:
                         offline = True
@@ -1292,7 +1292,7 @@ class Departments(Base):
                         shift.prro_zn = self.sender.zn
                         db.session.commit()
 
-                        ret = self.sender.post_podkrep(summa, operation_time, testing=shift.testing)
+                        ret = self.sender.post_podkrep(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
 
                         if not ret:
                             if self.offline:
@@ -1414,7 +1414,8 @@ class Departments(Base):
                 offline_fiscal_xml_signed=signed_xml,
                 offline=offline,
                 offline_tax_id=offline_tax_id,
-                offline_session_id=shift.prro_offline_session_id
+                offline_session_id=shift.prro_offline_session_id,
+                doc_uid=doc_uid
             )
             db.session.add(adv)
 
@@ -1484,7 +1485,7 @@ class Departments(Base):
 
     '''Отправим инкассации'''
 
-    def prro_inkass(self, summa, key=None, testing=False, balance=0):
+    def prro_inkass(self, summa, key=None, testing=False, balance=0, doc_uid=None):
 
         shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
@@ -1506,7 +1507,7 @@ class Departments(Base):
 
             if not shift.offline:
 
-                ret = self.sender.post_inkass(summa, operation_time, testing=shift.testing)
+                ret = self.sender.post_inkass(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
                 if not ret:
                     if self.offline:
                         offline = True
@@ -1526,7 +1527,7 @@ class Departments(Base):
                         shift.prro_zn = self.sender.zn
                         db.session.commit()
 
-                        ret = self.sender.post_inkass(summa, operation_time, testing=shift.testing)
+                        ret = self.sender.post_inkass(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
                         if not ret:
                             if self.offline:
                                 offline = True
@@ -1647,7 +1648,8 @@ class Departments(Base):
                 offline_fiscal_xml_signed=signed_xml,
                 offline=offline,
                 offline_tax_id=offline_tax_id,
-                offline_session_id=shift.prro_offline_session_id
+                offline_session_id=shift.prro_offline_session_id,
+                doc_uid=doc_uid
             )
             db.session.add(adv)
 
