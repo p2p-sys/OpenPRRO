@@ -2947,17 +2947,20 @@ class DepartmentKeys(Base):
                         # 'http://ca.gp.gov.ua/cmp/'
                     ]
 
-                    certs = signer.cert_fetch(box_id, urls)
+                    try:
+                        certs = signer.cert_fetch(box_id, urls)
 
-                    if certs == 0:
-                        return False, 'Помилка ключа криптографії, можливо надані невірні ключ або пароль', None
+                        if certs == 0:
+                            return False, 'Не вдалося отримати сертифікати з ЦБК', None
+                    except Exception as e:
+                        return False, 'Не вдалося отримати сертифікати з ЦБК ({})'.format(e), None
 
                 else:
                     box_id = signer.add_key(self.key_data, self.key_password)
 
             except Exception as e:
                 print('CryproError update_key_data {}'.format(e))
-                return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(
+                return False, 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(
                     e), None
 
         try:

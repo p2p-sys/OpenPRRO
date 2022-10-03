@@ -1,10 +1,12 @@
 import datetime
 import json
 
+from dateutil import tz
 from flask import request, session, jsonify
 from flask_classy import route, FlaskView
 from lxml import etree
 
+from config import TIMEZONE
 from manage import csrf
 from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department, get_sender_by_key
 
@@ -596,12 +598,15 @@ class ApiView(FlaskView):
                                                        tax_id='{}'.format(shift.tax_id),
                                                        error_code=0,
                                                        tax_visual=visual,
-                                                       offline=offline)
+                                                       offline=offline,
+                                                       testing=shift.testing
+                                                       )
                                     else:
                                         return jsonify(status='success', message=shift_state, error_code=0,
                                                        shift_opened_datetime=shift.operation_time,
                                                        shift_opened=shift_opened,
-                                                       tax_id=shift.tax_id)
+                                                       tax_id=shift.tax_id,
+                                                       testing=shift.testing)
                             else:
                                 shift_state = "Стан зміни невідомо. "
                                 return jsonify(status='error', message=shift_state, error_code=-1)
@@ -1134,6 +1139,170 @@ class ApiView(FlaskView):
             msg = str(e)
             return jsonify(status='error', message=msg, error_code=-1)
 
+    @route('/xrep', methods=['POST', 'GET'],
+           endpoint='xrep')
+    @csrf.exempt
+    def xrep(self):
+
+        try:
+
+            sender, department = get_sender(request)
+
+            x_data = sender.LastShiftTotals()
+            '''
+            ТОВ "КАСА.БЛАНКА"
+Варенична 008
+Київська область, Вишгородський район, м. Вишгород, вул. Симоненка, 1-
+А
+		ІД 44539717
+ПРРО   ФН 4000371338         ВН 11
+Z-ЗВІТ ФН 531852974          ВН 29 онлайн
+ТЕСТОВИЙ НЕФІСКАЛЬНИЙ ДОКУМЕНТ
+Касир Тест
+----------------------------------------------------------------------
+СЛУЖБОВЕ ВНЕСЕННЯ:                               1000.00
+----------------------------------------------------------------------
+	ПІДСУМКИ РЕАЛІЗАЦІЇ
+Загальна сума:                                    200.00
+- Готівка:                                        200.00
+
+Чеків:                                                 1
+----------------------------------------------------------------------
+03-10-2022 18:15:49
+		ТЕСТОВИЙ НЕФІСКАЛЬНИЙ Z-ЗВІТ
+		ФСКО ЄВПЕЗ
+Державна податкова служба України
+
+            '''
+            if x_data:
+                if 'ShiftState' in x_data:
+                    if x_data['ShiftState'] == 0:
+                        return jsonify(status='error', totals=x_data, error_code=-1)
+
+                operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+
+                shift, shift_opened = department.prro_open_shift(False, key=department.prro_key, testing=False)
+
+                check_visual = '{}'.format(shift.prro_org_name)
+                if shift.prro_department_name:
+                    check_visual = '{}\r\n{}'.format(check_visual, shift.prro_department_name)
+                if shift.prro_address:
+                    check_visual = '{}\r\n{}'.format(check_visual, shift.prro_address)
+                if shift.prro_tn:
+                    check_visual = '{}\r\n		ІД {}'.format(check_visual, shift.prro_tn)
+                if shift.prro_ipn:
+                    check_visual = '{}\r\n		ПН {}'.format(check_visual, shift.prro_ipn)
+
+                # if sales_ret:
+                #     check_visual = '{}\r\n		{}'.format(check_visual, "Видатковий чек (повернення)")
+                #
+                # check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
+                #
+                # check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, shift.prro_zn)
+                # check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, pid, "офлайн")
+                # if shift.cashier:
+                #     check_visual = '{}\r\nКасир {}'.format(check_visual, shift.cashier)
+                # else:
+                #     check_visual = '{}\r\nКасир {}'.format(check_visual, self.prro_key.ceo_fio)
+                #
+                # check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                #     check_visual)
+                #
+                # if sales_ret:
+                #     check_visual = '{}Повернення для документу № {}'.format(check_visual, orderretnum)
+                #     check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                #         check_visual)
+                #
+                # if reals:
+                #     for real in reals:
+                #         if 'CODE' in real:
+                #             check_visual = '{}АРТ.№ {} '.format(check_visual, real['CODE'])
+                #         if 'NAME' in real:
+                #             check_visual = '{}{}'.format(check_visual, real['NAME'])
+                #         if 'AMOUNT' in real:
+                #             check_visual = '{}\r\n{:.3f}         x         {:.2f} =                  {:.2f}'.format(
+                #                 check_visual, real['AMOUNT'], real['PRICE'], real['COST'])
+                #         if 'LETTERS' in real:
+                #             check_visual = '{} {}\r\n'.format(check_visual, real['LETTERS'])
+                #         if 'DISCOUNTSUM' in real:
+                #             check_visual = '{}	Дисконт: {:.2f}\r\n'.format(check_visual, real['DISCOUNTSUM'])
+                #         if 'DKPP' in real:
+                #             check_visual = '{}	Код ДКПП: {}\r\n'.format(check_visual, real['DKPP'])
+                #         if 'EXCISELABELS' in real:
+                #             for labels_item in real['EXCISELABELS']:
+                #                 check_visual = '{}	Акцизна марка: {}\r\n'.format(check_visual,
+                #                                                                     labels_item['EXCISELABEL'])
+                #         if 'COMMENT' in real:
+                #             check_visual = '{}{}\r\n'.format(check_visual, real['COMMENT'])
+                #
+                # check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                #     check_visual)
+                # if discount > 0:
+                #     check_visual = '{}ДИСКОНТ:                                           {:.2f}\r\n'.format(
+                #         check_visual, discount)
+                # if pays:
+                #     paysum = 0
+                #     for pay in pays:
+                #         paysum = pay['SUM']
+                #     if paysum > 0:
+                #         check_visual = '{}СУМА ДО СПЛАТИ:                                           {:.2f}\r\n'.format(
+                #             check_visual, paysum)
+                #
+                # if pays:
+                #     for pay in pays:
+                #         check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                #             check_visual)
+                #         if 'PAYFORMNM' in pay:
+                #             check_visual = '{}{}: {: <40s}{:.2f}\r\n'.format(check_visual, pay['PAYFORMNM'], "",
+                #                                                              pay['SUM'])
+                #         if 'PROVIDED' in pay:
+                #             check_visual = '{}Сплачено: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['PROVIDED'])
+                #         if 'REMAINS' in pay:
+                #             check_visual = '{}Решта: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['REMAINS'])
+                #
+                # if taxes:
+                #     for tax in taxes:
+                #         check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                #             check_visual)
+                #         if 'SOURCESUM' in tax:
+                #             check_visual = '{}{} {}                {:.2f}% від    {:.2f}: {:.2f}\r\n'.format(
+                #                 check_visual, tax['NAME'], tax['LETTER'], tax['PRC'], tax['SOURCESUM'], tax['SUM'])
+                #         else:
+                #             check_visual = '{}{} {}                {:.2f}% від    {:.2f}\r\n'.format(check_visual,
+                #                                                                                      tax['NAME'],
+                #                                                                                      tax['LETTER'],
+                #                                                                                      tax['PRC'],
+                #                                                                                      tax['SUM'])
+
+                # check_visual = '{}\r\nСУМА:                                            {:.2f}'.format(check_visual, summa)
+
+                check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                    check_visual)
+
+                check_visual = '{}\r\n----------------------------------------------------------------------'.format(
+                    check_visual)
+
+                check_visual = '{}\r\n{}'.format(check_visual, operation_time.strftime("%d-%m-%Y %H:%M:%S"))
+
+                check_visual = '{}\r\n		НЕФІСКАЛЬНИЙ ЧЕК'.format(check_visual)
+
+                check_visual = '{}\r\n		ФСКО ЄВПЕЗ'.format(check_visual)
+
+                check_visual = '{}\r\nДержавна податкова служба України'.format(check_visual)
+
+                print(check_visual)
+
+                coded_string = base64.b64encode(check_visual.encode('UTF-8'))
+
+                return jsonify(status='success', x_report_visual=coded_string, error_code=0)
+
+            else:
+                return jsonify(status='error', totals=None, error_code=-1)
+
+        except Exception as e:
+            msg = str(e)
+            return jsonify(status='error', message=msg, error_code=-1)
+
     @route('/close_shift', methods=['POST', 'GET'],
            endpoint='close_shift')
     @csrf.exempt
@@ -1377,6 +1546,7 @@ class ApiView(FlaskView):
                            message=update_key_data_text)
 
         except Exception as e:
+            e = 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(e)
             return jsonify(status='error', message=str(e), error_code=-1)
 
     @route('/delete_key', methods=['POST', 'GET'],
