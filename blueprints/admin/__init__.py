@@ -624,6 +624,14 @@ class DepartmentsAdmin(Filters, ModelView):
 
                                             shift.prro_offline_seed = OfflineSeed
 
+                                            Testing = registrar_state['Testing']
+                                            if shift.testing != Testing:
+                                                msg = '{} {}'.format(msg,
+                                                                     'Исправляем Testing с {} на {}'.format(
+                                                                         shift.testing,
+                                                                         Testing))
+                                            shift.testing = Testing
+
                                             db.session.commit()
 
                                 else:
