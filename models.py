@@ -140,6 +140,156 @@ def get_department(data):
     return department, key
 
 
+def fix_shift(registrar_state, department, sender):
+    msg = ''
+    if registrar_state:
+        # if registrar_state['ShiftState'] == 0:
+        shift, shift_opened = department.prro_open_shift(False)
+        registrar_state = sender.TransactionsRegistrarState()
+        print(registrar_state)
+        if registrar_state:
+            if registrar_state['ShiftState'] == 0:
+
+                # msg = '{} {}'.format(msg, 'Смена есть, статус {}'.format(shift.operation_type))
+                if shift.operation_type == 1:
+                    operation_time = datetime.datetime.now()
+
+                    msg = '{} {}'.format(msg, 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем. ')
+                    shift.p_offline = False
+                    local_number = registrar_state['NextLocalNum']
+                    sender.local_number = local_number
+                    sender.open_shift(operation_time)
+                    shift.pid = local_number
+                    shift.local_number = sender.local_number
+                    # last_shift.operation_type = 0
+                    db.session.commit()
+
+                msg = '{} {}'.format(msg, "Стан зміни: закрита, сл. лок. ном. {}".format(
+                    registrar_state["NextLocalNum"]))
+            else:
+                shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
+                    registrar_state["NextLocalNum"])
+                if shift.operation_type == 1:
+
+                    if shift.p_offline:
+                        shift.p_offline = False
+                        msg = '{} {}'.format(msg, 'Исправляем режим п-оффлайн')
+                    # if shift.offline:
+                    #     shift.offline = False
+                    if shift.offline:
+                        shift.offline = False
+                        msg = '{} {}'.format(msg, 'Исправляем режим оффлайн')
+
+                    # print('Исправляем номер {} на {}'.format(shift.pid, registrar_state['NextLocalNum']))
+                    # if shift.pid != registrar_state['NextLocalNum']:
+                    #     msg = '{} {}'.format(msg, 'Исправляем номер pid с {} на {}'.format(shift.pid, registrar_state['NextLocalNum']))
+                    #     shift.pid = registrar_state['NextLocalNum']
+
+                    if shift.prro_localnumber != registrar_state['NextLocalNum']:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем номер prro_localnumber {} на {}'.format(
+                                                 shift.prro_localnumber,
+                                                 registrar_state['NextLocalNum']))
+                        shift.prro_localnumber = registrar_state['NextLocalNum']
+
+
+                    NumLocal = int(
+                        registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
+
+                    if shift.prro_zn:
+                        shift_prro_zn = int(shift.prro_zn)
+                    else:
+                        shift_prro_zn = 0
+
+                    if shift_prro_zn != NumLocal:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем заводской номер с {} на {}'.format(
+                                                 shift.prro_zn,
+                                                 NumLocal))
+                        shift.prro_zn = NumLocal
+
+                    address = registrar_state['TaxObject']['Address']
+                    if shift.prro_address != address:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем адрес с {} на {}'.format(
+                                                 shift.prro_address,
+                                                 address))
+                        shift.prro_address = address
+
+                    Tin = registrar_state['TaxObject']['Tin']
+                    if shift.prro_tn != Tin:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем TIN с {} на {}'.format(
+                                                 shift.prro_tn,
+                                                 Tin))
+                        shift.prro_tn = Tin
+
+                    Ipn = registrar_state['TaxObject']['Ipn']
+                    if shift.prro_ipn != Ipn:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем IPN с {} на {}'.format(
+                                                 shift.prro_ipn,
+                                                 Ipn))
+                    shift.prro_ipn = Ipn
+
+                    OrgName = registrar_state['TaxObject']['OrgName']
+                    if shift.prro_org_name != OrgName:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем назву с {} на {}'.format(
+                                                 shift.prro_org_name,
+                                                 OrgName))
+                    shift.prro_org_name = OrgName
+
+                    Name = registrar_state['TaxObject']['Name']
+                    if shift.prro_department_name != Name:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем назву ПРРО с {} на {}'.format(
+                                                 shift.prro_department_name,
+                                                 Name))
+                    shift.prro_department_name = Name
+
+                    OfflineSessionId = registrar_state['OfflineSessionId']
+                    if shift.prro_offline_session_id != OfflineSessionId:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем OfflineSessionId ПРРО с {} на {}'.format(
+                                                 shift.prro_offline_session_id,
+                                                 OfflineSessionId))
+
+                    shift.prro_offline_session_id = OfflineSessionId
+
+                    OfflineSeed = registrar_state['OfflineSeed']
+                    if shift.prro_offline_seed != OfflineSeed:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем OfflineSeed ПРРО с {} на {}'.format(
+                                                 shift.prro_offline_seed,
+                                                 OfflineSeed))
+
+                    shift.prro_offline_seed = OfflineSeed
+
+                    Testing = registrar_state['Testing']
+                    if shift.testing != Testing:
+                        msg = '{} {}'.format(msg,
+                                             'Исправляем Testing с {} на {}'.format(
+                                                 shift.testing,
+                                                 Testing))
+                    shift.testing = Testing
+
+                    db.session.commit()
+
+        else:
+            msg = "Стан зміни невідомо. "
+        # else:
+        #     shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
+        #         registrar_state["NextLocalNum"])
+    else:
+        msg = "Стан зміни невідомо. "
+
+    if msg == '':
+        msg = 'Все ОК'
+
+    return msg
+
+
 class Users(Base):
     ''' Таблица пользователей программного продукта '''
     __tablename__ = 'users'

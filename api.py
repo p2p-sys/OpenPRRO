@@ -8,7 +8,8 @@ from lxml import etree
 
 from config import TIMEZONE
 from manage import csrf
-from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department, get_sender_by_key
+from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department, get_sender_by_key, \
+    fix_shift
 
 import base64
 
@@ -348,82 +349,83 @@ class ApiView(FlaskView):
             sender = SendData2(db, key, department.rro_id, "")
 
             registrar_state = sender.TransactionsRegistrarState()
+            msg = fix_shift(registrar_state, department, sender)
 
-            msg = ''
-            if not registrar_state:
-                return jsonify(status='error',
-                               message="Фіскального номера немає у доступі, або сервер податкової не працює",
-                               error_code=-1)
-
-            else:
-                if registrar_state:
-                    # if registrar_state['ShiftState'] == 0:
-                    shift, shift_opened = department.prro_open_shift(False)
-                    registrar_state = sender.TransactionsRegistrarState()
-                    # print(registrar_state)
-                    if registrar_state:
-                        if registrar_state['ShiftState'] == 0:
-
-                            # msg = '{} {}'.format(msg, 'Смена есть, статус {}'.format(shift.operation_type))
-                            if shift.operation_type == 1:
-                                operation_time = datetime.datetime.now()
-
-                                msg = '{} {}'.format(msg,
-                                                     'Смена открыта в базе, но не открыта по налоговой, исправляем. ')
-                                shift.p_offline = False
-                                local_number = registrar_state['NextLocalNum']
-                                sender.local_number = local_number
-                                sender.open_shift(operation_time)
-                                # shift.pid = local_number
-                                shift.local_number = sender.local_number
-                                # last_shift.operation_type = 0
-                                db.session.commit()
-
-                            msg = '{} {}'.format(msg, "Стан зміни: закрита, сл. лок. ном. {}".format(
-                                registrar_state["NextLocalNum"]))
-                        else:
-                            shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
-                                registrar_state["NextLocalNum"])
-                            if shift.operation_type == 1:
-                                if shift.p_offline:
-                                    shift.p_offline = False
-                                    msg = '{} {}'.format(msg, 'Исправляем режим оффлайн')
-
-                                # print('Исправляем номер {} на {}'.format(shift.pid, registrar_state['NextLocalNum']))
-                                # if shift.pid != registrar_state['NextLocalNum']:
-                                #     msg = '{} {}'.format(msg, 'Исправляем номер pid с {} на {}'.format(shift.pid,
-                                #                                                                        registrar_state[
-                                #                                                                            'NextLocalNum']))
-                                #     shift.pid = registrar_state['NextLocalNum']
-
-                                if shift.prro_localnumber != registrar_state['NextLocalNum']:
-                                    msg = '{} {}'.format(msg,
-                                                         'Исправляем номер prro_localnumber {} на {}'.format(
-                                                             shift.prro_localnumber,
-                                                             registrar_state['NextLocalNum']))
-                                    shift.prro_localnumber = registrar_state['NextLocalNum']
-
-                                NumLocal = int(registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
-                                shift_prro_zn = int(shift.prro_zn)
-
-                                if shift_prro_zn != NumLocal:
-                                    msg = '{} {}'.format(msg,
-                                                         'Исправляем заводской номер с {} на {}'.format(shift.prro_zn,
-                                                                                                        NumLocal))
-                                    shift.prro_zn = NumLocal
-
-                                db.session.commit()
-
-                    else:
-                        msg = "Стан зміни невідомо. "
-                    # else:
-                    #     shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
-                    #         registrar_state["NextLocalNum"])
-                else:
-                    msg = "Стан зміни невідомо. "
-
-                if msg == '':
-                    msg = 'Все ОК'
+            # msg = ''
+            # if not registrar_state:
+            #     return jsonify(status='error',
+            #                    message="Фіскального номера немає у доступі, або сервер податкової не працює",
+            #                    error_code=-1)
+            #
+            # else:
+            #     if registrar_state:
+            #         # if registrar_state['ShiftState'] == 0:
+            #         shift, shift_opened = department.prro_open_shift(False)
+            #         registrar_state = sender.TransactionsRegistrarState()
+            #         # print(registrar_state)
+            #         if registrar_state:
+            #             if registrar_state['ShiftState'] == 0:
+            #
+            #                 # msg = '{} {}'.format(msg, 'Смена есть, статус {}'.format(shift.operation_type))
+            #                 if shift.operation_type == 1:
+            #                    operation_time = datetime.datetime.now()
+            #
+            #                     msg = '{} {}'.format(msg,
+            #                                          'Смена открыта в базе, но не открыта по налоговой, исправляем. ')
+            #                     shift.p_offline = False
+            #                     local_number = registrar_state['NextLocalNum']
+            #                     sender.local_number = local_number
+            #                     sender.open_shift(operation_time)
+            #                     # shift.pid = local_number
+            #                     shift.local_number = sender.local_number
+            #                     # last_shift.operation_type = 0
+            #                     db.session.commit()
+            #
+            #                 msg = '{} {}'.format(msg, "Стан зміни: закрита, сл. лок. ном. {}".format(
+            #                     registrar_state["NextLocalNum"]))
+            #             else:
+            #                 shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
+            #                     registrar_state["NextLocalNum"])
+            #                 if shift.operation_type == 1:
+            #                     if shift.p_offline:
+            #                         shift.p_offline = False
+            #                         msg = '{} {}'.format(msg, 'Исправляем режим оффлайн')
+            #
+            #                     # print('Исправляем номер {} на {}'.format(shift.pid, registrar_state['NextLocalNum']))
+            #                     # if shift.pid != registrar_state['NextLocalNum']:
+            #                     #     msg = '{} {}'.format(msg, 'Исправляем номер pid с {} на {}'.format(shift.pid,
+            #                     #                                                                        registrar_state[
+            #                     #                                                                            'NextLocalNum']))
+            #                     #     shift.pid = registrar_state['NextLocalNum']
+            #
+            #                     if shift.prro_localnumber != registrar_state['NextLocalNum']:
+            #                         msg = '{} {}'.format(msg,
+            #                                              'Исправляем номер prro_localnumber {} на {}'.format(
+            #                                                  shift.prro_localnumber,
+            #                                                  registrar_state['NextLocalNum']))
+            #                         shift.prro_localnumber = registrar_state['NextLocalNum']
+            #
+            #                     NumLocal = int(registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
+            #                     shift_prro_zn = int(shift.prro_zn)
+            #
+            #                     if shift_prro_zn != NumLocal:
+            #                         msg = '{} {}'.format(msg,
+            #                                              'Исправляем заводской номер с {} на {}'.format(shift.prro_zn,
+            #                                                                                             NumLocal))
+            #                         shift.prro_zn = NumLocal
+            #
+            #                     db.session.commit()
+            #
+            #         else:
+            #             msg = "Стан зміни невідомо. "
+            #         # else:
+            #         #     shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
+            #         #         registrar_state["NextLocalNum"])
+            #     else:
+            #         msg = "Стан зміни невідомо. "
+            #
+            #     if msg == '':
+            #         msg = 'Все ОК'
 
             return jsonify(status='success', message=msg, error_code=0)
 
