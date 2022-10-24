@@ -1536,6 +1536,16 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
                             else:
                                 db.session.commit()
 
+                if 'department_id' in data:
+                    department_id = data['department_id']
+
+                    department = Departments.query.get(department_id)
+                    if department:
+                        department.prro_key_id = department_key.id
+                        db.session.commit()
+
+                    result = department.set_signer_type()
+
             else:
                 status = 'error'
                 error_code = 1
