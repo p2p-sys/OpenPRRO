@@ -3083,32 +3083,41 @@ class DepartmentKeys(Base):
 
         else:
             try:
-                if not b'privatbank' in self.key_data:
-                    # print(self.key_data)
-                    box_id = signer.update_bid(db, self)
 
-                    urls = [
-                        'http://acskidd.gov.ua/services/cmp/',
-                        'http://uakey.com.ua/services/cmp/',
-                        'http://masterkey.ua/services/cmp/',
-                        'http://ca.informjust.ua/services/cmp/',
-                        # 'http://ca.oschadbank.ua/public/cmp/',
-                        # 'http://ca.csd.ua/public/x509/cmp/',
-                        # 'http://ca.gp.gov.ua/cmp/'
-                    ]
+                box_id = signer.add_key(self.key_data, self.key_password)
+                try:
+                    # print(box_id)
+                    infos = signer.info(box_id)
+                    if not infos[0]:
+                        if not b'privatbank' in self.key_data:
+                            # print(self.key_data)
+                            box_id = signer.update_bid(db, self)
 
-                    try:
-                        certs = signer.cert_fetch(box_id, urls)
+                            urls = [
+                                'http://acskidd.gov.ua/services/cmp/',
+                                'http://uakey.com.ua/services/cmp/',
+                                'http://masterkey.ua/services/cmp/',
+                                'http://ca.informjust.ua/services/cmp/',
+                                # 'http://ca.oschadbank.ua/public/cmp/',
+                                # 'http://ca.csd.ua/public/x509/cmp/',
+                                # 'http://ca.gp.gov.ua/cmp/'
+                            ]
 
-                        if certs == 0:
-                            return False, 'Не вдалося отримати сертифікати з ЦБК', None
-                    except Exception as e:
-                        return False, 'Не вдалося отримати сертифікати з ЦБК ({})'.format(e), None
+                            try:
+                                certs = signer.cert_fetch(box_id, urls)
 
-                else:
-                    box_id = signer.add_key(self.key_data, self.key_password)
+                                if certs == 0:
+                                    return False, 'Не вдалося отримати сертифікати з ЦБК', None
+                            except Exception as e:
+                                return False, 'Не вдалося отримати сертифікати з ЦБК ({})'.format(e), None
+
+                except Exception as e:
+                    print('CryproError update_key_data {}'.format(e))
+                    return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(
+                        e), None
 
             except Exception as e:
+
                 print('CryproError update_key_data {}'.format(e))
                 return False, 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(
                     e), None
