@@ -1,24 +1,23 @@
 import base64
 import datetime
-import json
 from hashlib import sha256
 import logging.handlers
 
 from dateutil import tz
-from flask import jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from sqlalchemy import Column, ForeignKey, Integer, String, union_all, literal_column
-from sqlalchemy.sql.sqltypes import NullType, Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Date, Time, \
-    LargeBinary, \
-    BigInteger, JSON, TEXT
+from sqlalchemy import Column, ForeignKey, String, union_all, literal_column
+
+from sqlalchemy.sql.sqltypes import Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Time, \
+    LargeBinary, JSON, TEXT
+
 from sqlalchemy.orm import relationship, backref
 
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_login import current_user
 
-from config import TIMEZONE
+from config import TIMEZONE, LOGFILE
 from utils.SendData2 import SendData2
 
 db = SQLAlchemy()
@@ -35,7 +34,7 @@ def get_logger(name):
     logger.setLevel(logging.INFO)
 
     # настройка обработчика и форматировщика
-    file_handler = logging.handlers.TimedRotatingFileHandler('logs/py-signer.log', when='midnight', delay=True)
+    file_handler = logging.handlers.TimedRotatingFileHandler('{}'.format(LOGFILE), when='midnight', delay=True)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # добавление форматировщика к обработчику
@@ -760,7 +759,7 @@ class Departments(Base):
                 print('Смена есть, статус {}'.format(last_shift.operation_type))
                 if last_shift.operation_type == 1:
                     if registrar_state['ShiftState'] == 0:
-                        print('Смена открыта в офлайн, но не открыта по налоговой, исправляем')
+                        print('Смена открыта в БД, но не открыта по налоговой, исправляем')
                         last_shift.p_offline = False
                         local_number = registrar_state['FirstLocalNum']
                         self.sender.local_number = local_number
@@ -768,6 +767,18 @@ class Departments(Base):
                         last_shift.pid = local_number
                         # last_shift.operation_type = 0
                         db.session.commit()
+            if registrar_state['ShiftState'] == 1 and (not last_shift or last_shift.operation_type == 0):
+                print('Смена открыта в налоговой, но не открыта в БД, исправляем')
+                raise Exception('{}'.format("Смена открыта в налоговой, но не открыта в БД, исправляем"))
+                # document = self.DocumentInfoByLocalNum(local_number)
+                #
+                # data = self.get_fiscal_data_by_local_number(self.local_number, data)
+                # print(data)
+                # if data:
+                #     self.last_fiscal_error_txt = ''
+                #     self.last_fiscal_error_code = 0
+                #
+                # self.sender.local_number
 
         if not p_offline:
             last_shift = Shifts.query \
@@ -2560,7 +2571,19 @@ class Departments(Base):
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
 
-            return tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance
+            ret = {
+                "tax_id": tax_id,
+                "shift": shift,
+                "shift_opened": shift_opened,
+                "qr": qr,
+                "tax_visual": coded_string,
+                "offline": offline,
+                "tax_id_advance": tax_id_advance,
+                "qr_advance": qr_advance,
+                "tax_visual_advance": visual_advance,
+                "fiscal_ticket": base64.b64encode(self.sender.last_fiscal_ticket)
+            }
+            return ret
         else:
             raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
 

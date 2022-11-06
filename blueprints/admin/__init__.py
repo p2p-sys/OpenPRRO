@@ -842,13 +842,13 @@ class DepartmentsAdmin(Filters, ModelView):
 
                     # summa = 298.16
 
-                    tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
+                    check = department.prro_sale(
                         reals, taxes, pays)
-                    decoded_string = base64.b64decode(coded_string).decode('UTF-8')
+                    decoded_string = base64.b64decode(check["tax_visual"]).decode('UTF-8')
                     # print(decoded_string)
                     flash(
                         '{} отправлен чек, получен фискальный номер {}, данные чека: {} ссылка QR кода {}'.format(
-                            department.full_name, tax_id, decoded_string, qr))
+                            department.full_name, check["tax_id"], decoded_string, check["qr"]))
                 except Exception as e:
                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
 

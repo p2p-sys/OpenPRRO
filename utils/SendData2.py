@@ -940,11 +940,6 @@ class SendData2(object):
             REVOKELASTONLINEDOC = etree.SubElement(CHECKHEAD, "REVOKELASTONLINEDOC")
             REVOKELASTONLINEDOC.text = 'true'
 
-        if self.cashier_name:
-            #   <!--ПІБ касира (128 символів)-->
-            CASHIER = etree.SubElement(CHECKHEAD, "CASHIER")
-            CASHIER.text = '{}'.format(self.cashier_name)
-
         if orderretnum:
             # <!--Фіскальний номер чека, для якого здійснюється повернення (зазначається тільки для чеків повернення) (128 символів)-->
             ORDERRETNUM = etree.SubElement(CHECKHEAD, "ORDERRETNUM")
@@ -954,6 +949,11 @@ class SendData2(object):
             # <!--Фіскальний номер чека, для якого здійснюється сторнування (зазначається тільки для чеків сторнування) (128 символів)-->
             ORDERSTORNUM = etree.SubElement(CHECKHEAD, "ORDERSTORNUM")
             ORDERSTORNUM.text = '{}'.format(orderstornum)
+
+        if self.cashier_name:
+            #   <!--ПІБ касира (128 символів)-->
+            CASHIER = etree.SubElement(CHECKHEAD, "CASHIER")
+            CASHIER.text = '{}'.format(self.cashier_name)
 
         #   <!--Версія формату документа (числовий)-->
         VER = etree.SubElement(CHECKHEAD, "VER")

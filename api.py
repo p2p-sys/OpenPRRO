@@ -1193,7 +1193,7 @@ class ApiView(FlaskView):
             else:
                 doc_uid = None
 
-            tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
+            check = department.prro_sale(
                 reals,
                 taxes,
                 pays,
@@ -1207,31 +1207,35 @@ class ApiView(FlaskView):
             print('{} Отдали данные чека продажи через API, все заняло по времени {} секунд'.format(stop, (
                     stop - start).total_seconds()))
 
-            message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(tax_id)
+            message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
 
-            if tax_id_advance:
-                answer = jsonify(status='success', tax_id='{}'.format(tax_id), tax_id_advance='{}'.format(tax_id_advance),
-                                 qr=qr, qr_advance=qr_advance,
+            if check["tax_id_advance"]:
+                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
+                                 qr=check["qr"], qr_advance=check["qr_advance"],
                                  message=message,
-                                 shift_opened_datetime=shift.operation_time,
-                                 shift_opened=shift_opened,
-                                 shift_tax_id='{}'.format(shift.tax_id),
+                                 shift_opened_datetime=check["shift.operation_time"],
+                                 shift_opened=check["shift_opened"],
+                                 shift_tax_id='{}'.format(check["shift"].tax_id),
                                  error_code=0,
-                                 tax_visual=visual,
-                                 tax_visual_advance=visual_advance,
-                                 offline=offline,
+                                 tax_visual=check["tax_visual"],
+                                 tax_visual_advance=check["tax_visual_advance"],
+                                 offline=check["offline"],
+                                 fiscal_ticket=check["fiscal_ticket"],
                                  )
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
+
             else:
-                answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr,
+                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), qr=check["qr"],
                                  message=message,
-                                 shift_opened_datetime=shift.operation_time,
-                                 shift_opened=shift_opened,
-                                 shift_tax_id='{}'.format(shift.tax_id),
+                                 shift_opened_datetime=check["shift"].operation_time,
+                                 shift_opened=check["shift_opened"],
+                                 shift_tax_id='{}'.format(check["shift"].tax_id),
                                  error_code=0,
-                                 tax_visual=visual,
-                                 offline=offline)
+                                 tax_visual=check["tax_visual"],
+                                 offline=check["offline"],
+                                 fiscal_ticket=check["fiscal_ticket"])
+
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
 
@@ -1295,7 +1299,7 @@ class ApiView(FlaskView):
             else:
                 testing = False
 
-            tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_sale(
+            check = department.prro_sale(
                 reals, taxes, pays, totals=totals,
                 sales_ret=True,
                 orderretnum=orderretnum, key=key,
@@ -1303,29 +1307,33 @@ class ApiView(FlaskView):
 
             message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(tax_id)
 
-            if tax_id_advance:
-                answer = jsonify(status='success', tax_id='{}'.format(tax_id), tax_id_advance='{}'.format(tax_id_advance),
-                                 qr=qr, qr_advance=qr_advance,
+            if check["tax_id_advance"]:
+                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
+                                 qr=check["qr"], qr_advance=check["qr_advance"],
                                  message=message,
-                                 shift_opened_datetime=shift.operation_time,
-                                 shift_opened=shift_opened,
-                                 shift_tax_id='{}'.format(shift.tax_id),
+                                 shift_opened_datetime=check["shift.operation_time"],
+                                 shift_opened=check["shift_opened"],
+                                 shift_tax_id='{}'.format(check["shift"].tax_id),
                                  error_code=0,
-                                 tax_visual=visual,
-                                 tax_visual_advance=visual_advance,
-                                 offline=offline,
+                                 tax_visual=check["tax_visual"],
+                                 tax_visual_advance=check["tax_visual_advance"],
+                                 offline=check["offline"],
+                                 fiscal_ticket=check["fiscal_ticket"],
                                  )
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
+
             else:
-                answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr,
+                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), qr=check["qr"],
                                  message=message,
-                                 shift_opened_datetime=shift.operation_time,
-                                 shift_opened=shift_opened,
-                                 shift_tax_id='{}'.format(shift.tax_id),
+                                 shift_opened_datetime=check["shift"].operation_time,
+                                 shift_opened=check["shift_opened"],
+                                 shift_tax_id='{}'.format(check["shift"].tax_id),
                                  error_code=0,
-                                 tax_visual=visual,
-                                 offline=offline)
+                                 tax_visual=check["tax_visual"],
+                                 offline=check["offline"],
+                                 fiscal_ticket=check["fiscal_ticket"])
+
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
 
@@ -1370,7 +1378,7 @@ class ApiView(FlaskView):
 
             x_data = sender.LastShiftTotals()
             '''
-            ТОВ "КАСА.БЛАНКА"
+ТОВ "КАСА.БЛАНКА"
 Варенична 008
 Київська область, Вишгородський район, м. Вишгород, вул. Симоненка, 1-
 А
@@ -1420,15 +1428,17 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
                 #
                 # check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
                 #
-                # check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, shift.prro_zn)
-                # check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, pid, "офлайн")
-                # if shift.cashier:
-                #     check_visual = '{}\r\nКасир {}'.format(check_visual, shift.cashier)
-                # else:
-                #     check_visual = '{}\r\nКасир {}'.format(check_visual, self.prro_key.ceo_fio)
-                #
-                # check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
-                #     check_visual)
+                check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, department.rro_id, shift.prro_zn)
+                check_visual = '{}\r\nX-ЗВІТ онлайн'.format(check_visual)
+                if shift.cashier:
+                    check_visual = '{}\r\nКасир {}'.format(check_visual, shift.cashier)
+                else:
+                    check_visual = '{}\r\nКасир {}'.format(check_visual, department.prro_key.ceo_fio)
+
+
+                check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                    check_visual)
+
                 #
                 # if sales_ret:
                 #     check_visual = '{}Повернення для документу № {}'.format(check_visual, orderretnum)
@@ -1506,7 +1516,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
 
                 check_visual = '{}\r\n{}'.format(check_visual, operation_time.strftime("%d-%m-%Y %H:%M:%S"))
 
-                check_visual = '{}\r\n		НЕФІСКАЛЬНИЙ ЧЕК'.format(check_visual)
+                check_visual = '{}\r\n		НЕФІСКАЛЬНИЙ X-ЗВІТ'.format(check_visual)
 
                 check_visual = '{}\r\n		ФСКО ЄВПЕЗ'.format(check_visual)
 
