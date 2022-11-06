@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 from hashlib import sha256
+import logging.handlers
 
 from dateutil import tz
 from flask import jsonify
@@ -27,6 +28,22 @@ Base = db.Model
 Base.__repr__ = Base.__str__ = lambda self: str({c.name: getattr(self, c.name) for c in self.__table__.columns})
 Base.as_dict = lambda self: {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+
+def get_logger(name):
+    # получение пользовательского логгера и установка уровня логирования
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    # настройка обработчика и форматировщика
+    file_handler = logging.handlers.TimedRotatingFileHandler('logs/py-signer.log', when='midnight', delay=True)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # добавление форматировщика к обработчику
+    file_handler.setFormatter(formatter)
+    # добавление обработчика к логгеру
+    logger.addHandler(file_handler)
+
+    return logger
 
 def get_sender(req):
     data = req.get_json()
