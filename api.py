@@ -1793,7 +1793,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
             return answer
 
         except Exception as e:
-            e = 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(e)
+            e = 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'
             answer = jsonify(status='error', message=str(e), error_code=-1)
             logger.error(f'Відповідь: {answer.json}')
             return answer

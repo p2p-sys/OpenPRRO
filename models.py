@@ -3147,9 +3147,9 @@ class DepartmentKeys(Base):
                                 certs = signer.cert_fetch(box_id, urls)
 
                                 if certs == 0:
-                                    return False, 'Не вдалося отримати сертифікати з ЦБК', None
+                                    return False, 'Не вдалося автоматично отримати сертифікати з АЦСК', None
                             except Exception as e:
-                                return False, 'Не вдалося отримати сертифікати з ЦБК ({})'.format(e), None
+                                return False, 'Не вдалося автоматично отримати сертифікати з АЦСК'.format(e), None
 
                 except Exception as e:
                     print('CryproError update_key_data {}'.format(e))
@@ -3159,8 +3159,7 @@ class DepartmentKeys(Base):
             except Exception as e:
 
                 print('CryproError update_key_data {}'.format(e))
-                return False, 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(
-                    e), None
+                return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль', None
 
         try:
             # print(box_id)

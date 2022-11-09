@@ -256,7 +256,7 @@ class SendData2(object):
         print(answer.status_code)
 
         error = answer.text
-        print(error)
+        # print(error)
 
         if error.find('ShiftAlreadyOpened') != -1:
             # 4 ShiftAlreadyOpened Зміну на ПРРО з фіскальним номером 4000326084 наразі відкрито особою Петренко Віталій Анатолійович, ідентифікатор ключа суб'єкта b5613c1115874d0aab4bf1e4cedf145486873ac6dc01279762bf64d8d47ca49b
