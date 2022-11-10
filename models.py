@@ -1,7 +1,7 @@
 import base64
 import datetime
 from hashlib import sha256
-import logging.handlers
+import logging
 
 from dateutil import tz
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -34,7 +34,8 @@ def get_logger(name):
     logger.setLevel(logging.INFO)
 
     # настройка обработчика и форматировщика
-    file_handler = logging.handlers.TimedRotatingFileHandler('{}'.format(LOGFILE), when='midnight', delay=True)
+    # file_handler = logging.handlers.TimedRotatingFileHandler('{}'.format(LOGFILE), when='midnight', delay=True)
+    file_handler = logging.FileHandler('{}-{}'.format(LOGFILE, datetime.date.today()), delay=True)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # добавление форматировщика к обработчику
@@ -43,6 +44,7 @@ def get_logger(name):
     logger.addHandler(file_handler)
 
     return logger
+
 
 def get_sender(req):
     data = req.get_json()
