@@ -814,6 +814,12 @@ class ApiView(FlaskView):
                     # except Exception as e:
                     #     registrar_state = None
 
+                    if not registrar_state:
+                        answer = jsonify(status='error', message='Виникла помилка запиту даних - відсутній зв\'язок з '
+                                                                 'сервером податкової', error_code=-1)
+                        logger.error(f'Відповідь: {answer.json}')
+                        return answer
+
                     last_shift = Shifts.query \
                         .order_by(Shifts.operation_time.desc()) \
                         .filter(Shifts.department_id == department.id) \
@@ -1204,7 +1210,7 @@ class ApiView(FlaskView):
                 doc_uid=doc_uid)
 
             stop = datetime.datetime.now()
-            print('{} Отдали данные чека продажи через API, все заняло по времени {} секунд'.format(stop, (
+            print('{} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, (
                     stop - start).total_seconds()))
 
             message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
@@ -1547,7 +1553,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
     def close_shift(self):
 
         start = datetime.datetime.now()
-        print('{} {}'.format(start, 'Поступила команда закрытия смены API'))
+        print('{} {}'.format(start, 'Надійшла команда закриття зміни API'))
 
         try:
             data = request.get_json()
@@ -1576,7 +1582,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
                 testing=testing, balance=balance)
 
             stop = datetime.datetime.now()
-            print('{} Отдали данные Z отчета через API, все заняло по времени {} секунд'.format(stop, (
+            print('{} Віддали дані Z звіту через API, все зайняло {} секунд'.format(stop, (
                     stop - start).total_seconds()))
 
             if z_report_tax_id:
