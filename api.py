@@ -1311,7 +1311,7 @@ class ApiView(FlaskView):
                 orderretnum=orderretnum, key=key,
                 testing=testing, balance=balance)
 
-            message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(tax_id)
+            message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(check["tax_id"])
 
             if check["tax_id_advance"]:
                 answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
