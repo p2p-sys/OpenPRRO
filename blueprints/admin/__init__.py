@@ -190,7 +190,7 @@ class DepartmentsAdmin(Filters, ModelView):
     can_view_details = True
 
     column_filters = (
-    'id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
+        'id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
 
     column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
                    'offline']
@@ -1375,13 +1375,13 @@ class DepartmentKeysAdmin(Filters, ModelView):
     def __init__(self, session, **kwargs):
         super(DepartmentKeysAdmin, self).__init__(DepartmentKeys, session, **kwargs)
 
-    column_list = ['id', 'name', 'key_role', 'ceo_fio', 'begin_time', 'end_time']
-    column_sortable_list = ['id', 'name', 'key_role', 'ceo_fio', 'begin_time', 'end_time']
+    column_list = ['id', 'name', 'key_role', 'ceo_fio', 'acsk', 'begin_time', 'end_time']
+    column_sortable_list = ['id', 'name', 'key_role', 'ceo_fio', 'begin_time', 'end_time', 'acsk']
     column_default_sort = ('name', 'begin_time')
 
-    column_filters = ('id', 'name', 'ceo_fio', 'begin_time', 'end_time', 'key_role')
+    column_filters = ('id', 'name', 'ceo_fio', 'begin_time', 'end_time', 'key_role', 'acsk')
 
-    column_searchable_list = ['id', 'name', 'ceo_fio', 'public_key', 'key_data_txt']
+    column_searchable_list = ['id', 'name', 'ceo_fio', 'public_key', 'key_data_txt', 'acsk']
 
     form_excluded_columns = (
         'name', 'key_data', 'key_data_txt', 'begin_time', 'end_time', 'path', 'type', 'create_date', 'public_key',
@@ -1434,13 +1434,17 @@ class DepartmentKeysAdmin(Filters, ModelView):
             query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
 
             for company_key in query.all():
-                sender = TaxForms(company_key=company_key)
-                messages = sender.tax_receive_all(False)
-                if messages:
-                    print(messages)
-                    flash('{}: повідомлення {}'.format(company_key.id, messages))
-                else:
-                    flash('{}: повідомлень немає'.format(company_key.id))
+                try:
+                    sender = TaxForms(company_key=company_key)
+                    messages = sender.tax_receive_all(False)
+                    if messages:
+                        print(messages)
+                        flash('{}: повідомлення {}'.format(company_key.id, messages))
+                    else:
+                        flash('{}: повідомлень немає'.format(company_key.id))
+                except Exception as e:
+                    flash('{} помилка {}'.format(company_key.id, e), 'error')
+
         else:
             flash('У вас немає доступу для даної операції!', 'error')
 

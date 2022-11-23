@@ -124,5 +124,6 @@ TRANSLATIONS = {
     'shift_state': 'Стан зміни',
     'closed': 'Стан ПРРО',
     'chief_cashier': 'Старший касир',
+    'acsk': 'АЦСК'
 }
 

@@ -3099,6 +3099,8 @@ class DepartmentKeys(Base):
 
     key_role_tax_form = Column('key_role_tax_form', String(10), comment='Роль ключа для підписання податкових форм', nullable=True)
 
+    acsk = Column('acsk', String(100), comment='АЦСК', nullable=True)
+
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.name)
 
@@ -3110,6 +3112,9 @@ class DepartmentKeys(Base):
         from utils.Sign import Sign
 
         signer = Sign()
+
+        box_id = None
+        unpacked_keys = None
 
         if self.cert1_data:
             if self.cert1_data and self.cert2_data:
@@ -3123,48 +3128,54 @@ class DepartmentKeys(Base):
             else:
                 box_id = signer.add_key(self.key_data, self.key_password)
 
+            unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
+
         else:
             try:
 
-                box_id = signer.add_key(self.key_data, self.key_password)
-                try:
-                    # print(box_id)
-                    infos = signer.info(box_id)
-                    if not infos[0]:
-                        if not b'privatbank' in self.key_data:
-                            # print(self.key_data)
-                            box_id = signer.update_bid(db, self)
+                if self.key_password:
 
-                            urls = [
-                                'http://acskidd.gov.ua/services/cmp/',
-                                'http://uakey.com.ua/services/cmp/',
-                                'http://masterkey.ua/services/cmp/',
-                                'http://ca.informjust.ua/services/cmp/',
-                                # 'http://ca.oschadbank.ua/public/cmp/',
-                                # 'http://ca.csd.ua/public/x509/cmp/',
-                                # 'http://ca.gp.gov.ua/cmp/'
-                            ]
+                    box_id = signer.add_key(self.key_data, self.key_password)
+                    try:
+                        # print(box_id)
+                        infos = signer.info(box_id)
+                        if not infos[0]:
+                            if not b'privatbank' in self.key_data:
+                                # print(self.key_data)
+                                box_id = signer.update_bid(db, self)
 
-                            try:
-                                certs = signer.cert_fetch(box_id, urls)
+                                urls = [
+                                    'http://acskidd.gov.ua/services/cmp/',
+                                    'http://uakey.com.ua/services/cmp/',
+                                    'http://masterkey.ua/services/cmp/',
+                                    'http://ca.informjust.ua/services/cmp/',
+                                    # 'http://ca.oschadbank.ua/public/cmp/',
+                                    # 'http://ca.csd.ua/public/x509/cmp/',
+                                    # 'http://ca.gp.gov.ua/cmp/'
+                                ]
 
-                                if certs == 0:
-                                    return False, 'Не вдалося автоматично отримати сертифікати з АЦСК', None
-                            except Exception as e:
-                                return False, 'Не вдалося автоматично отримати сертифікати з АЦСК'.format(e), None
+                                try:
+                                    certs = signer.cert_fetch(box_id, urls)
 
-                except Exception as e:
-                    print('CryproError update_key_data {}'.format(e))
-                    return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(
-                        e), None
+                                    if certs == 0:
+                                        return False, 'Не вдалося автоматично отримати сертифікати з АЦСК', None
+                                except Exception as e:
+                                    return False, 'Не вдалося автоматично отримати сертифікати з АЦСК'.format(e), None
+
+                    except Exception as e:
+                        print('CryproError update_key_data1 {}'.format(e))
+                        return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(
+                            e), None
 
             except Exception as e:
-
-                print('CryproError update_key_data {}'.format(e))
+                print('CryproError update_key_data2 {}'.format(e))
                 return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль', None
 
         try:
             # print(box_id)
+            if not box_id:
+                box_id = signer.update_bid(db, self)
+
             infos = signer.info(box_id)
             # print(infos)
             self.box_id = box_id
@@ -3174,8 +3185,6 @@ class DepartmentKeys(Base):
         except Exception as e:
             print('CryproError update_key_data {}'.format(e))
             return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(e), None
-
-        unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
 
         key_content = []
         if infos:
@@ -3197,9 +3206,10 @@ class DepartmentKeys(Base):
                                         if "subjectKeyIdentifier" in info["extension"]:
                                             self.public_key = info["extension"]["subjectKeyIdentifier"]
 
-                                            for unpacked_key in unpacked_keys:
-                                                if unpacked_key['keyid'] == self.public_key:
-                                                    self.key_content = unpacked_key['contents']
+                                            if unpacked_keys:
+                                                for unpacked_key in unpacked_keys:
+                                                    if unpacked_key['keyid'] == self.public_key:
+                                                        self.key_content = unpacked_key['contents']
 
                                         if "ipn" in info["extension"]:
                                             if info["extension"]["ipn"]:
@@ -3228,6 +3238,7 @@ class DepartmentKeys(Base):
 
                         if 'encrypt' in info['usage']:
                             if info['usage']['encrypt']:
+                                self.acsk = info['issuer']['commonName']
                                 self.encrypt = True
                                 if "pem" in info:
                                     self.cert2_content = info["pem"]
@@ -3236,9 +3247,10 @@ class DepartmentKeys(Base):
                                     if "subjectKeyIdentifier" in info["extension"]:
                                         public_key = info["extension"]["subjectKeyIdentifier"]
 
-                                        for unpacked_key in unpacked_keys:
-                                            if unpacked_key['keyid'] == public_key:
-                                                self.encrypt_content = unpacked_key['contents']
+                                        if unpacked_keys:
+                                            for unpacked_key in unpacked_keys:
+                                                if unpacked_key['keyid'] == public_key:
+                                                    self.encrypt_content = unpacked_key['contents']
 
             # self.key_role = None
             self.key_data_txt = key_content
