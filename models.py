@@ -1419,7 +1419,10 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
             else:
-                coded_string = self.sender.GetCheckExt(tax_id, 3)
+                try:
+                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                except Exception as e:
+                    coded_string = None
 
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
@@ -1653,7 +1656,10 @@ class Departments(Base):
 
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
             else:
-                coded_string = self.sender.GetCheckExt(tax_id, 3)
+                try:
+                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                except Exception as e:
+                    coded_string = None
 
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
@@ -1888,7 +1894,10 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
             else:
-                coded_string = self.sender.GetCheckExt(tax_id, 3)
+                try:
+                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                except Exception as e:
+                    coded_string = None
 
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
@@ -2568,7 +2577,10 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
             else:
-                coded_string = self.sender.GetCheckExt(tax_id, 3)
+                try:
+                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                except Exception as e:
+                    coded_string = None
 
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
@@ -3021,7 +3033,10 @@ class Departments(Base):
 
                 close_shift_tax_id = self.prro_close_shift(shift)
 
-                z_visual_data = self.sender.GetZReportEx(self.rro_id, z_report.tax_id, 3)
+                try:
+                    z_visual_data = self.sender.GetZReportEx(self.rro_id, z_report.tax_id, 3)
+                except Exception as e:
+                    z_visual_data = None
 
                 return x_data, z_report.tax_id, close_shift_tax_id, z_visual_data, tax_id_inkass, qr_inkass, visual_inkass
             else:
