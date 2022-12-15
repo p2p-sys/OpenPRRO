@@ -1,0 +1,146 @@
+# Выставим время
+timedatectl set-timezone Europe/Kiev
+
+# Подключаем репозиторий 16-й ноды
+curl -fsSL https://deb.nodesource.com/setup_16.x | sudo bash -
+
+# Ставим необходимые пакеты
+apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev wget unzip mc nginx nodejs mariadb-server
+
+# Ставим питон
+
+wget https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tgz
+tar xvf Python-3.9.13.tgz
+cd Python-3*/
+./configure --enable-optimizations
+make altinstall
+
+# тестируем
+python3.9 --version
+
+# должно выдать
+# Python 3.9.9
+node -v # v16.16.0
+
+# добавим юзера для агента
+
+#useradd -p '*' signer-agent
+#usermod -a -G signer-agent signer-agent
+
+#sudo useradd -r -s /bin/false useradd
+
+# Нужно добавить юзера и группу, чтобы крипта не могла нарушить прав если что-то пойдет не так
+adduser --system signer-agent
+addgroup signer-agent
+usermod -a -G signer-agent signer-agent
+
+# снимем ограничения
+sysctl -w net.core.somaxconn=65535
+sysctl -w fs.file-max=100000
+mcedit /etc/sysctl.conf # добавить net.core.somaxconn=65535
+
+# Мария
+sudo mysql_secure_installation
+
+# копируем архив OpenPrro в папку /home/signer-agent/
+
+# копируем модули служб
+cp /root/openprro/install/agent.zip /home/signer-agent/
+cd /home/signer-agent/
+unzip agent.zip
+rm agent.zip
+cd agent
+npm update
+
+#
+chown -R signer-agent:signer-agent /home/signer-agent
+cp /root/openprro/install/services/* /etc/systemd/system
+systemctl daemon-reload
+
+# Запускаем крипту
+for x in $(seq 3101 3124); do systemctl start signer-agent@$x; done
+for x in $(seq 3101 3124); do systemctl enable signer-agent@$x; done
+
+# проверим что успешно запустилось
+systemctl status signer-agent@3124.service
+
+# запускаем балансировщик крипты
+systemctl start signer-agent-control.service
+systemctl enable signer-agent-control.service
+
+# проверим
+systemctl status signer-agent-control.service
+systemctl status signer-agent@3101
+
+# База данных
+mysql
+SET character_set_server = 'utf8mb4';
+SET collation_connection     = utf8_unicode_ci;
+SET character_set_results    = utf8;
+SET character_set_connection = utf8;
+SET character_set_client     = utf8;
+create database openprro CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE USER 'openprro'@'localhost' IDENTIFIED BY '6!g2KGlPeXF90wcd';
+GRANT ALL PRIVILEGES ON * . * TO 'openprro'@'localhost';
+FLUSH PRIVILEGES;
+exit
+
+#восстановление бэкапа
+mysql -u root -p openprro < /root/openprro/install/db/openprro.sql
+
+# Копируем и распаковываем архив исходников
+cd /home/signer-agent/openprro
+sudo chown -R signer-agent:signer-agent /home/signer-agent
+apt install python3-virtualenv
+virtualenv venv
+source venv/bin/activate
+/usr/local/bin/python3.9 -m pip install --upgrade pip
+
+pip3.9 install uwsgi wheel
+pip3.9 install -r requirements.txt
+
+pip3.9 uninstall -y enum34
+pip3.9 install WTForms==2.3.3
+pip3.9 install markupsafe==2.0.1
+
+mkdir logs
+
+# проверим что не падает
+uwsgi --ini wsgi.ini
+
+
+# копируем службы в /etc/systemd/system
+systemctl daemon-reload
+
+#запускаем службы
+
+systemctl start openprro
+systemctl enable openprro
+systemctl status openprro
+
+systemctl start openprro_close_shifts.service
+systemctl enable openprro_close_shifts.service
+
+systemctl start openprro_to_online.service
+systemctl enable openprro_to_online.service
+
+# Откроем порты
+sudo ufw allow 80
+sudo ufw allow 443
+
+# nginx
+cp install/nginx/conf.d/openprro.conf /etc/nginx/sites-enabled
+curl 127.0.0.1/admin
+nginx -t
+systemctl restart nginx
+
+# создание миграции
+python3.9 manage_db.py db migrate
+
+# апгрейд базы данных
+cd /home/signer-agent/openprro/
+source venv/bin/activate
+python3.9 manage_db.py db upgrade
+
+# обновляем программу
+systemctl start openprro

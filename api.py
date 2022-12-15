@@ -1362,7 +1362,9 @@ class ApiView(FlaskView):
 
             x_data = sender.LastShiftTotals()
 
-            answer = jsonify(status='success', totals=x_data, error_code=0)
+            registrar_state = sender.TransactionsRegistrarState()
+
+            answer = jsonify(status='success', totals=x_data, registrar_state=registrar_state, error_code=0)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 

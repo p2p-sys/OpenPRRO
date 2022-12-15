@@ -170,10 +170,10 @@ def fix_shift(registrar_state, department, sender):
 
                 # msg = '{} {}'.format(msg, 'Смена есть, статус {}'.format(shift.operation_type))
                 if shift.operation_type == 1:
-                    operation_time = datetime.datetime.now()
+                    operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
                     msg = '{} {}'.format(msg, 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем. ')
-                    shift.p_offline = False
+                    shift.offline = False
                     local_number = registrar_state['NextLocalNum']
                     sender.local_number = local_number
                     sender.open_shift(operation_time)
@@ -189,11 +189,6 @@ def fix_shift(registrar_state, department, sender):
                     registrar_state["NextLocalNum"])
                 if shift.operation_type == 1:
 
-                    if shift.p_offline:
-                        shift.p_offline = False
-                        msg = '{} {}'.format(msg, 'Исправляем режим п-оффлайн')
-                    # if shift.offline:
-                    #     shift.offline = False
                     if shift.offline:
                         shift.offline = False
                         msg = '{} {}'.format(msg, 'Исправляем режим оффлайн')
@@ -356,6 +351,7 @@ class Users(Base):
         return str(self.id)
 
     def is_permissions(self, value):
+        q = False
         if not current_user.is_anonymous and current_user.role:
             q = Permission.query \
                 .join(RolePermission, Permission.id == RolePermission.permission_id) \
@@ -731,25 +727,16 @@ class Departments(Base):
 
         registrar_state = self.sender.TransactionsRegistrarState()
 
-        p_offline = False
+        offline = False
 
         if not registrar_state:
-            # Ответ от налоговой не пришёл, переходим в псевдоофлайн режим
-            p_offline = True
-            # if not self.sender.org_name:
-            #     self.sender.org_name = self.full_name
-            #     self.sender.department_name = self.full_name
-            #     self.sender.address = ''
-            #     self.sender.tn = EDRPOU
-            #     self.sender.ipn = None
-            #     self.sender.entity = self.id
-            #     self.sender.zn = self.id
-            #     self.sender.offline_session_id = 0
-            #     self.sender.offline_seed = 0
-            #
-            #     self.sender.local_number = 1
-            #     self.sender.local_check_number = 1
-            #     self.sender.last_ordernum = 1
+            if self.offline:
+                # Ответ от налоговой не пришёл, переходим в офлайн режим
+                offline = True
+            else:
+                raise Exception('{}'.format(
+                    "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+
         else:
             print('Ответ от налоговой есть')
             last_shift = Shifts.query \
@@ -762,7 +749,7 @@ class Departments(Base):
                 if last_shift.operation_type == 1:
                     if registrar_state['ShiftState'] == 0:
                         print('Смена открыта в БД, но не открыта по налоговой, исправляем')
-                        last_shift.p_offline = False
+                        last_shift.offline = False
                         local_number = registrar_state['FirstLocalNum']
                         self.sender.local_number = local_number
                         self.sender.open_shift(operation_time, testing=testing)
@@ -782,7 +769,7 @@ class Departments(Base):
                 #
                 # self.sender.local_number
 
-        if not p_offline:
+        if not offline:
             last_shift = Shifts.query \
                 .order_by(Shifts.operation_time.desc()) \
                 .filter(Shifts.department_id == self.id) \
@@ -820,7 +807,12 @@ class Departments(Base):
 
         if not server_time:
 
-            p_offline = True
+            if self.offline:
+                # Ответ от налоговой не пришёл, переходим в офлайн режим
+                offline = True
+            else:
+                raise Exception('{}'.format(
+                    "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
             fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
@@ -830,13 +822,13 @@ class Departments(Base):
 
             self.sender.last_ordertaxnum = 0
             self.sender.last_fiscal_error_code = 1000
-            self.sender.last_fiscal_error_txt = 'p_offline'
+            self.sender.last_fiscal_error_txt = 'offline'
 
             # self.sender.local_check_number +=1
             xml = None
             fiscal_ticket = None
 
-            print('{}: {} открыли смену в режиме псевдо-офлайн '.format(operation_time, self.full_name))
+            print('{}: {} открыли смену в режиме офлайн '.format(operation_time, self.full_name))
 
         else:
             fiscal_time = self.sender.fiscal_time
@@ -904,291 +896,13 @@ class Departments(Base):
             prro_localnumber=self.sender.local_number,
             prro_localchecknumber=self.sender.local_check_number,
             fiscal_shift_id=self.sender.fiscal_shift_id,
-            offline=False,
-            p_offline=p_offline,
+            offline=offline,
             testing=testing,
             cashier=cashier_name
         )
 
         db.session.add(shift)
         db.session.commit()
-
-        return shift, True
-
-    def prro_open_shift2(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
-
-        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
-        server_time = None
-
-        shift_opened = False
-
-        offline = False
-
-        if not key:
-            key = self.get_prro_key()
-
-        if not self.sender:
-            # from utils.SendData2 import SendData2
-            self.sender = SendData2(db, key, self.rro_id, cashier_name)
-
-        if shift_id:
-            last_shift = Shifts.query.get(shift_id)
-        else:
-            last_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .first()
-
-        if last_shift:
-            self.sender.org_name = last_shift.prro_org_name
-            self.sender.department_name = last_shift.prro_department_name
-            self.sender.address = last_shift.prro_address
-            self.sender.tn = last_shift.prro_tn
-            self.sender.ipn = last_shift.prro_ipn
-            self.sender.entity = last_shift.prro_entity
-            self.sender.zn = last_shift.prro_zn
-            self.sender.cashier_name = last_shift.cashier
-
-            if last_shift.operation_type == 1:
-                self.sender.local_number = last_shift.prro_localnumber
-                self.sender.local_check_number = last_shift.prro_localchecknumber
-                self.sender.offline_session_id = last_shift.prro_offline_session_id
-                self.sender.offline_seed = last_shift.prro_offline_seed
-                return last_shift, False
-            else:
-                self.sender.local_number = last_shift.pid + 1
-                self.sender.local_check_number = 1
-                self.sender.offline_session_id = last_shift.prro_offline_session_id
-                self.sender.offline_seed = last_shift.prro_offline_seed
-                self.sender.last_ordernum = last_shift.pid + 1
-                self.sender.offline_local_number = last_shift.prro_offline_local_number + 1
-
-            if not open_shift:
-                return last_shift, False
-
-            if not last_shift.server_time:
-                offline = True
-
-        if not self.sender.org_name:
-            prev_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .filter(Shifts.operation_type == 1) \
-                .first()
-
-            if prev_shift:
-                self.sender.org_name = prev_shift.prro_org_name
-                self.sender.department_name = prev_shift.prro_department_name
-                self.sender.address = prev_shift.prro_address
-                self.sender.tn = prev_shift.prro_tn
-                self.sender.ipn = prev_shift.prro_ipn
-                self.sender.entity = prev_shift.prro_entity
-                self.sender.zn = prev_shift.prro_zn
-                self.sender.offline_session_id = prev_shift.prro_offline_session_id
-                self.sender.offline_seed = prev_shift.prro_offline_seed
-                self.sender.cashier_name = prev_shift.cashier
-
-        registrar_state = None
-
-        if not offline:
-
-            registrar_state = self.sender.TransactionsRegistrarState()
-
-            if not registrar_state:
-                # Ответ от налоговой не пришёл, переходим в офлайн режим
-                offline = True
-
-            else:
-                print('Ответ от налоговой есть')
-                last_shift = Shifts.query \
-                    .order_by(Shifts.operation_time.desc()) \
-                    .filter(Shifts.department_id == self.id) \
-                    .first()
-
-                if last_shift:
-                    print('Смена есть, статус {}'.format(last_shift.operation_type))
-                    if last_shift.operation_type == 1:
-                        if registrar_state['ShiftState'] == 0:
-                            print('Смена открыта в офлайн, но не открыта по налоговой, исправляем')
-                            last_shift.p_offline = False
-                            local_number = registrar_state['FirstLocalNum']
-                            self.sender.local_number = local_number
-                            self.sender.open_shift(operation_time, testing=testing)
-                            last_shift.pid = local_number
-                            # last_shift.operation_type = 0
-                            db.session.commit()
-
-        if not offline:
-            last_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .filter(Shifts.operation_type == 0) \
-                .first()
-
-            if last_shift:
-                last_pid = last_shift.pid
-
-                if registrar_state:
-                    if 'ShiftState' in registrar_state:
-                        if registrar_state['ShiftState'] != 0:
-
-                            local_number = registrar_state['FirstLocalNum']
-                            self.sender.local_number = local_number
-                            if last_pid + 1 != local_number:
-                                last_shift.pid = local_number - 1
-                                # raise Exception(
-                                #     "Зміну не вдалося відкрити, некоректний номер запиту ({}/{}), зв'яжіться з тех.підтримкою".format(
-                                #         last_pid + 1, local_number))
-                        else:
-                            local_number = self.sender.local_number
-                            if last_pid + 1 != local_number:
-                                last_shift.pid = local_number - 1
-                                # raise Exception(
-                                #     "Зміну не вдалося відкрити, некоректний номер запиту ({}/{}), зв'яжіться з тех.підтримкою".format(last_pid + 1, local_number))
-            else:
-                self.sender.local_number = registrar_state['NextLocalNum']
-
-            ret = self.sender.open_shift(operation_time, testing=testing)
-            if not ret:
-                offline = True
-
-            if ret == 9:
-                registrar_state = self.sender.TransactionsRegistrarState()
-                ret = self.sender.open_shift(operation_time, testing=testing)
-                if not ret:
-                    offline = True
-
-            server_time = self.sender.server_time
-
-        try:
-            user_id = current_user.id
-        except:
-            prev_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .filter(Shifts.operation_type == 1) \
-                .first()
-            if prev_shift:
-                user_id = prev_shift.user_id
-            else:
-                user_id = None
-
-        off = None
-
-        if offline:
-
-            offline_sessions = OfflineChecks.query \
-                .filter(OfflineChecks.server_time == None) \
-                .filter(OfflineChecks.department_id == self.id) \
-                .first()
-
-            fiscal_time = operation_time
-
-            if not offline_sessions:
-
-                # переход в офлайн
-                self.sender.offline_local_number = 1
-                offline = True
-
-                # для офлайн нужно добавить номер, т.к. мы не знаем прошел чек или нет
-                self.sender.local_number += 1
-                self.sender.local_check_number += 1
-
-                xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=testing, revoke=False)
-
-                pid = self.sender.local_number
-                # tax_id = self.sender.last_ordertaxnum
-
-                off = OfflineChecks(
-                    operation_type=1,
-                    department_id=self.id,
-                    user_id=user_id,
-                    operation_time=operation_time,
-                    shift_id=None,
-                    fiscal_time=fiscal_time,
-                    server_time=server_time,
-                    pid=pid,
-                    testing=testing,
-                    offline_fiscal_xml_signed=signed_xml,
-                    offline_tax_id=offline_tax_id,
-                    offline_session_id=self.sender.offline_session_id
-                )
-                db.session.add(off)
-
-                self.sender.local_number += 1
-                self.sender.local_check_number += 1
-                self.sender.offline_local_number += 1
-
-            else:
-                start_offline_sessions = offline_sessions.fiscal_time
-                # start_offline_sessions
-
-            fiscal_ticket = None
-
-        else:
-
-            fiscal_time = self.sender.fiscal_time
-
-            if self.sender.last_xml:
-                xml = base64.b64encode(self.sender.last_xml).decode()
-            else:
-                xml = None
-
-            if self.sender.last_fiscal_ticket:
-                fiscal_ticket = base64.b64encode(
-                    self.sender.last_fiscal_ticket).decode()
-            else:
-                fiscal_ticket = None
-
-        operation_type = 1  # открытие смены
-
-        pid = self.sender.local_number
-
-        tax_id = self.sender.last_ordertaxnum
-
-        fiscal_error_code = self.sender.last_fiscal_error_code
-        fiscal_error_txt = self.sender.last_fiscal_error_txt
-
-        prro_offline_session_id = self.sender.offline_session_id
-        prro_offline_seed = self.sender.offline_seed
-
-        shift = Shifts(
-            department_id=self.id,
-            user_id=user_id,
-            operation_type=operation_type,
-            operation_time=operation_time,
-            fiscal_time=fiscal_time,
-            server_time=server_time,
-            pid=pid,
-            tax_id=tax_id,
-            # xml=xml,
-            fiscal_ticket=fiscal_ticket,
-            fiscal_error_code=fiscal_error_code,
-            fiscal_error_txt=fiscal_error_txt,
-            prro_offline_session_id=prro_offline_session_id,
-            prro_offline_seed=prro_offline_seed,
-            prro_org_name=self.sender.org_name,
-            prro_department_name=self.sender.department_name,
-            prro_address=self.sender.address,
-            prro_tn=self.sender.tn,
-            prro_ipn=self.sender.ipn,
-            prro_entity=self.sender.entity,
-            prro_zn=self.sender.zn,
-            prro_localnumber=self.sender.local_number,
-            prro_localchecknumber=self.sender.local_check_number,
-            fiscal_shift_id=self.sender.fiscal_shift_id,
-            offline=offline,
-            testing=testing,
-            cashier=cashier_name,
-            offline_session_id=prro_offline_session_id
-        )
-
-        db.session.add(shift)
-        db.session.commit()
-
-        if off:
-            off.shift_id = shift.id
-            db.session.commit()
 
         return shift, True
 
@@ -2609,8 +2323,12 @@ class Departments(Base):
 
         # Если чек не отправился
         if not self.sender.server_time:
-            # Переводим смену в псевдо-офлайн
-            shift.p_offline = True
+            if self.offline:
+                # Ответ от налоговой не пришёл, переходим в офлайн режим
+                shift.offline = True
+            else:
+                raise Exception('{}'.format(
+                    "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
             self.sender.local_check_number = shift.prro_localchecknumber
             self.sender.last_ordernum = self.sender.local_number
@@ -2618,7 +2336,7 @@ class Departments(Base):
             # self.sender.local_number = shift.prro_localnumber + 1
 
             self.sender.last_fiscal_error_code = 1000
-            self.sender.last_fiscal_error_txt = 'p_offline'
+            self.sender.last_fiscal_error_txt = 'offline'
 
         else:
             if ret == 9:
@@ -2636,8 +2354,11 @@ class Departments(Base):
                     self.sender.close_shift(testing=shift.testing)
                     # Если чек не отправился
                     if not self.sender.server_time:
-                        # Переводим смену в псевдо-офлайн
-                        shift.p_offline = True
+                        if self.offline:
+                            shift.offline = True
+                        else:
+                            raise Exception('{}'.format(
+                                "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
                         self.sender.local_check_number = shift.prro_localchecknumber
                         self.sender.last_ordernum = self.sender.local_number
@@ -2645,7 +2366,7 @@ class Departments(Base):
                         # self.sender.local_number = shift.prro_localnumber + 1
 
                         self.sender.last_fiscal_error_code = 1000
-                        self.sender.last_fiscal_error_txt = 'p_offline'
+                        self.sender.last_fiscal_error_txt = 'offline'
 
         if self.sender.server_time:
             fiscal_time = datetime.datetime.strptime(
@@ -2654,8 +2375,15 @@ class Departments(Base):
                 '%d%m%Y %H%M%S')
             print('{}: {} закрыли смену в режиме онлайн '.format(operation_time, self.full_name))
         else:
+            if self.offline:
+                # Ответ от налоговой не пришёл, переходим в офлайн режим
+                shift.offline = True
+            else:
+                raise Exception('{}'.format(
+                    "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+
             fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
-            print('{}: {} закрыли смену в режиме псевдо-офлайн '.format(operation_time, self.full_name))
+            print('{}: {} закрыли смену в режиме офлайн '.format(operation_time, self.full_name))
 
         operation_type = 0
 
@@ -2709,6 +2437,7 @@ class Departments(Base):
             prro_offline_session_id=shift.prro_offline_session_id,
             shift_id=shift.id,
             testing=shift.testing,
+            offline=shift.offline,
             offline_session_id=shift.prro_offline_session_id
         )
 
@@ -2752,9 +2481,6 @@ class Departments(Base):
 
             operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
-            # if shift.p_offline:
-            #     x_data = self.prro_get_x_data_base(shift)
-            # else:
             x_data = self.sender.LastShiftTotals()
 
             # shift_state = x_data['ShiftState']
@@ -2782,108 +2508,6 @@ class Departments(Base):
             z_number = 0
 
             if 'Totals' in x_data:
-                # totals = x_data['Totals']
-                #
-                # if totals:
-                #
-                #     currency_list = x_data['Totals']['Currency']
-                #     #
-                #     # """
-                #     # {'TotalInAdvance': 1000.0, 'TotalInAttach': 0.0, 'TotalSurrCollection': 0.0, 'Commission': 0.0, 'CalcDocsCnt': 6, 'AcceptedN': 0.0, 'IssuedN': 0.0, 'CommissionN': 0.0, 'TransfersCnt': 0, 'Details': [{'ValCd': 840, 'ValSymCd': 'USD', 'BuyValI': 3.0, 'SellValI': 0.0, 'BuyValN': 0.0, 'SellValN': 84.0, 'StorBuyValI': 3.0, 'StorSellValI': 0.0, 'StorBuyValN': 0.0, 'StorSellValN': 84.0, 'CInValI': 0.0, 'COutValI': 0.0, 'Commission': 0.0, 'InAdvance': 1000.0, 'InAttach': 0.0, 'SurrCollection': 0.0, 'StorCInValI': 0.0, 'StorCOutValI': 0.0, 'StorCommission': 0.0}]}, 'ServiceInput': 0.0, 'ServiceOutput': 0.0}}
-                #     # """
-                #     if currency_list:
-                #     #
-                #     #     fn = self.sender.rro_fn
-                #     #     zn = self.sender.zn
-                #     #     fsn = 'АСУ «О.С.А.»'
-                #     #     tn = self.sender.tn
-                #     #
-                #     #     pid = 0
-                #     #     qr = ''
-                #     #
-                #     #     #   <!--Кількість розрахункових документів за зміну (числовий)-->
-                #         op_cnt = currency_list['CalcDocsCnt']  # CalcDocsCnt
-                #     #
-                #     #     # print(base_docs_cnt)
-                #     #     # print(op_cnt)
-                #     #     # if send_z:
-                #     #     #     if op_cnt != base_docs_cnt:
-                #     #     #         raise Exception(
-                #     #     #             'Z-звіт неможливо сформувати! Кількість операцій не збігається! Зателефонуйте або напишіть у чат тех. підтримки ФК!')
-                #     #
-                #     #     #   <!--Отримано підкріплень національною валютою (15.2 цифри)-->
-                #     #     sum_reinf = currency_list['TotalInAttach']
-                #     #
-                #     #     #   <!--Здано по інкасації національною валютою (15.2 цифри)-->
-                #     #     sum_collect = currency_list['TotalSurrCollection']
-                #     #
-                #     #     #   <!--Отримано авансів національною валютою (15.2 цифри)-->
-                #     #     sum_adv = currency_list['TotalInAdvance']
-                #     #
-                #     #     z_report = ZReports(
-                #     #         operation_time=operation_time,
-                #     #         department_id=self.id,
-                #     #         operator_id=shift.user_id,
-                #     #         rro_type=self.rro_type,
-                #     #         rro_id=self.rro_id,
-                #     #         z_number=z_number,
-                #     #         fn=fn,
-                #     #         zn=zn,
-                #     #         fsn=fsn,
-                #     #         tn=tn,
-                #     #         pid=pid,
-                #     #         qr=qr,
-                #     #         fiscal_time=operation_time,
-                #     #         op_cnt=op_cnt,
-                #     #         sum_reinf=sum_reinf,
-                #     #         sum_collect=sum_collect,
-                #     #         sum_adv=sum_adv,
-                #     #         printed=printed
-                #     #     )
-                #     #     db.session.add(z_report)
-                #     #
-                #     #     details = currency_list['Details']
-                #     #
-                #     #     '''
-                #     #     [{'ValCd': 840, 'ValSymCd': 'USD', 'BuyValI': 3.0, 'SellValI': 0.0, 'BuyValN': 0.0, 'SellValN': 84.0, 'StorBuyValI': 3.0, 'StorSellValI': 0.0, 'StorBuyValN': 0.0, 'StorSellValN': 84.0, 'CInValI': 0.0, 'COutValI': 0.0, 'Commission': 0.0, 'InAdvance': 1000.0, 'InAttach': 0.0, 'SurrCollection': 0.0, 'StorCInValI': 0.0, 'StorCOutValI': 0.0, 'StorCommission': 0.0}]}
-                #     #     '''
-                #     #     if details:
-                #     #         for detail in details:
-                #     #             currency = Currencies.query.filter(
-                #     #                 Currencies.numcode == detail['ValCd']).first()
-                #     #
-                #     #             nbu_rate = NBURates.query.filter(
-                #     #                 NBURates.rates_time == startOperDate(operation_time)).filter(
-                #     #                 NBURates.currency == currency).first()
-                #     #
-                #     #             z_report_currency = ZReportsCurrency(
-                #     #                 z_report_id=z_report.id,
-                #     #                 currency_id=currency.id,
-                #     #                 nbu_rate=nbu_rate.rate,
-                #     #                 advance=detail['InAdvance'],
-                #     #                 bought=detail['BuyValI'],
-                #     #                 bought_equivalent=detail['SellValN'],
-                #     #                 sold=detail['SellValI'],
-                #     #                 sold_equivalent=detail['BuyValN'],
-                #     #                 bought_storno=detail['StorBuyValI'],
-                #     #                 bought_storno_equivalent=detail['StorSellValN'],
-                #     #                 sold_storno=detail['StorSellValI'],
-                #     #                 sold_storno_equivalent=detail['StorBuyValN'],
-                #     #                 reinforced=detail['InAttach'],
-                #     #                 collected=detail['SurrCollection']
-                #     #             )
-                #     #             db.session.add(z_report_currency)
-                #     # else:
-                #     #     raise Exception('Поточний звіт недоступний!')
-                # # else:
-                # #     raise Exception('Поточний звіт недоступний!')
-                #
-                # else:
-                #
-                #     # if send_z:
-                #     #     if base_docs_cnt > 0:
-                #     #         raise Exception(
-                #     #             'Z-звіт неможливо сформувати! Кількість операцій не збігається! Зателефонуйте або напишіть у чат тех. підтримки ФК!')
 
                 fn = self.sender.rro_fn
                 zn = self.sender.zn
@@ -2950,9 +2574,14 @@ class Departments(Base):
 
                 response = self.sender.post_z(x_data, testing=shift.testing)
                 # Если чек не отправился
+
                 if not self.sender.server_time:
-                    # Переводим смену в псевдо-офлайн
-                    shift.p_offline = True
+                    if self.offline:
+                        # Ответ от налоговой не пришёл, переходим в офлайн режим
+                        shift.offline = True
+                    else:
+                        raise Exception('{}'.format(
+                            "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
                 else:
                     server_time = self.sender.server_time
 
@@ -2964,7 +2593,7 @@ class Departments(Base):
                     # self.sender.local_number = shift.prro_localnumber + 1
 
                     self.sender.last_fiscal_error_code = 1000
-                    self.sender.last_fiscal_error_txt = 'p_offline'
+                    self.sender.last_fiscal_error_txt = 'offline'
                 else:
 
                     if response == 9:
@@ -2983,16 +2612,22 @@ class Departments(Base):
 
                             # Если чек не отправился
                             if not self.sender.server_time:
-                                # Переводим смену в псевдо-офлайн
-                                shift.p_offline = True
 
-                                self.sender.local_check_number = shift.prro_localchecknumber
-                                self.sender.last_ordernum = self.sender.local_number
-                                self.sender.last_ordertaxnum = 0
-                                # self.sender.local_number = shift.prro_localnumber + 1
+                                if self.offline:
+                                    # Ответ от налоговой не пришёл, переходим в офлайн режим
+                                    shift.offline = True
 
-                                self.sender.last_fiscal_error_code = 1000
-                                self.sender.last_fiscal_error_txt = 'p_offline'
+                                    self.sender.local_check_number = shift.prro_localchecknumber
+                                    self.sender.last_ordernum = self.sender.local_number
+                                    self.sender.last_ordertaxnum = 0
+                                    # self.sender.local_number = shift.prro_localnumber + 1
+
+                                    self.sender.last_fiscal_error_code = 1000
+                                    self.sender.last_fiscal_error_txt = 'offline'
+
+                                else:
+                                    raise Exception('{}'.format(
+                                        "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
                 if self.sender.server_time:
                     fiscal_time = datetime.datetime.strptime(
@@ -3002,13 +2637,14 @@ class Departments(Base):
                     print('{}: {} отправили Z отчет в режиме онлайн'.format(operation_time, self.full_name))
                 else:
                     fiscal_time = datetime.datetime.now(tz.gettz(TIMEZONE))
-                    print('{}: {} отправили Z отчет в режиме псевдо-офлайн'.format(operation_time, self.full_name))
+                    print('{}: {} отправили Z отчет в режиме офлайн'.format(operation_time, self.full_name))
 
                 z_report.fiscal_time = fiscal_time
                 z_report.z_number = z_number
                 z_report.pid = self.sender.local_number
                 z_report.tax_id = self.sender.last_ordertaxnum
                 z_report.shift_id = shift.id
+                z_report.offline = shift.offline
 
                 z_report.server_time = self.sender.server_time
 
@@ -3369,8 +3005,6 @@ class Shifts(Base):
                                nullable=True)
 
     offline = Column('offline', Boolean, nullable=True, comment='Отделение находится в режиме офлайн')
-
-    p_offline = Column('p_offline', Boolean, nullable=True, comment='Отделение находится в режиме эмуляции офлайн')
 
     shift_id = Column("shift_id", Integer, comment='Идентификатор смены', nullable=True)
 
