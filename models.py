@@ -2812,6 +2812,10 @@ class DepartmentKeys(Base):
                                         return False, 'Не вдалося автоматично отримати сертифікати з АЦСК', None
                                 except Exception as e:
                                     return False, 'Не вдалося автоматично отримати сертифікати з АЦСК'.format(e), None
+                            elif not self.key_role:
+                                role = signer.get_role(self.box_id)
+                                if role:
+                                    self.key_role = role
 
                     except Exception as e:
                         print('CryproError update_key_data1 {}'.format(e))
