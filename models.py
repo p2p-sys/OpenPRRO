@@ -758,7 +758,19 @@ class Departments(Base):
                         db.session.commit()
             if registrar_state['ShiftState'] == 1 and (not last_shift or last_shift.operation_type == 0):
                 print('Смена открыта в налоговой, но не открыта в БД, исправляем')
-                raise Exception('{}'.format("Смена открыта в налоговой, но не открыта в БД, исправляем"))
+
+                # shift.offline = False
+                # local_number = registrar_state['NextLocalNum']
+                # sender.local_number = local_number
+                # sender.open_shift(operation_time)
+                # shift.pid = local_number
+                # shift.local_number = sender.local_number
+                # # last_shift.operation_type = 0
+                # db.session.commit()
+
+
+
+                # raise Exception('{}'.format("Смена открыта в налоговой, но не открыта в БД, исправляем"))
                 # document = self.DocumentInfoByLocalNum(local_number)
                 #
                 # data = self.get_fiscal_data_by_local_number(self.local_number, data)
@@ -2779,8 +2791,6 @@ class DepartmentKeys(Base):
             else:
                 box_id = signer.add_key(self.key_data, self.key_password)
 
-            unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
-
         else:
             try:
 
@@ -2841,6 +2851,8 @@ class DepartmentKeys(Base):
             print('CryproError update_key_data {}'.format(e))
             return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(e), None
 
+        unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
+
         key_content = []
         if infos:
             for info in infos:
@@ -2864,7 +2876,8 @@ class DepartmentKeys(Base):
                                             if unpacked_keys:
                                                 for unpacked_key in unpacked_keys:
                                                     if unpacked_key['keyid'] == self.public_key:
-                                                        self.key_content = unpacked_key['contents']
+                                                        if unpacked_key['contents']:
+                                                            self.key_content = unpacked_key['contents']
 
                                         if "ipn" in info["extension"]:
                                             if info["extension"]["ipn"]:
@@ -2905,7 +2918,8 @@ class DepartmentKeys(Base):
                                         if unpacked_keys:
                                             for unpacked_key in unpacked_keys:
                                                 if unpacked_key['keyid'] == public_key:
-                                                    self.encrypt_content = unpacked_key['contents']
+                                                    if unpacked_key['contents']:
+                                                        self.encrypt_content = unpacked_key['contents']
 
             # self.key_role = None
             self.key_data_txt = key_content
