@@ -2791,19 +2791,24 @@ class DepartmentKeys(Base):
             else:
                 box_id = signer.add_key(self.key_data, self.key_password)
 
+            unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
+
         else:
             try:
 
                 if self.key_password:
 
                     box_id = signer.add_key(self.key_data, self.key_password)
+
+                    unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
+
                     try:
                         # print(box_id)
                         infos = signer.info(box_id)
                         if not infos[0]:
                             if not b'privatbank' in self.key_data:
                                 # print(self.key_data)
-                                box_id = signer.update_bid(db, self)
+                                # box_id = signer.update_bid(db, self)
 
                                 urls = [
                                     'http://acskidd.gov.ua/services/cmp/',
@@ -2850,8 +2855,6 @@ class DepartmentKeys(Base):
         except Exception as e:
             print('CryproError update_key_data {}'.format(e))
             return False, 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'.format(e), None
-
-        unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
 
         key_content = []
         if infos:
