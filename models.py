@@ -1150,8 +1150,8 @@ class Departments(Base):
                 except Exception as e:
                     coded_string = None
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
-                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
+            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm=()'.format(
+                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
 
             return tax_id, shift, shift_opened, qr, coded_string, offline
         else:
