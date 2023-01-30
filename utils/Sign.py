@@ -236,39 +236,37 @@ class Sign(object):
         try:
 
             if key.key_content and key.cert1_content:
-                # print(key.key_content.encode('latin1'))
-                # if key.encrypt_content:
-                #     print(key.encrypt_content.encode('latin1'))
-                #
-                # print(key.cert1_content.encode('latin1'))
-                # if key.cert2_content:
-                #     print(key.cert2_content.encode('latin1'))
 
                 if key.encrypt_content:
-                    self.box_id = self.add_keys([key.key_content.encode('latin1'), key.encrypt_content.encode('latin1')])
+                    self.box_id = self.add_keys(
+                        [key.key_content.encode('latin1'), key.encrypt_content.encode('latin1')])
                 else:
                     self.box_id = self.add_key(key.key_content.encode('latin1'))
 
-                self.add_cert(self.box_id, key.cert1_content.encode('latin1'))
-                self.add_cert(self.box_id, key.cert2_content.encode('latin1'))
+                if key.cert1_content:
+                    self.add_cert(self.box_id, key.cert1_content.encode('latin1'))
+
+                if key.cert2_content:
+                    self.add_cert(self.box_id, key.cert2_content.encode('latin1'))
+
                 return self.box_id
 
-            if key.cert1_data and key.cert2_data:
-                # keys = self.get_key_contents(key.key_data, key.key_password)
-                self.box_id = self.add_key(key.key_data, key.key_password)
-                self.add_certs(self.box_id, key.cert1_data, key.cert2_data)
-            elif key.cert1_data and not key.cert2_data:
-                # keys = self.get_key_contents(key.key_data, key.key_password)
-                self.box_id = self.add_key(key.key_data, key.key_password)
-                self.add_cert(self.box_id, key.cert1_data)
             else:
-                self.box_id = self.add_key(key.key_data, key.key_password)
-                key.box_id = self.box_id
 
-            # db.session.commit()
-            # print(self.box_id)
+                if key.key_data and key.key_password:
+                    self.box_id = self.add_key(key.key_data, key.key_password)
+                    if key.cert1_data:
+                        self.add_cert(self.box_id, key.cert1_data)
 
-            return self.box_id
+                    if key.cert2_data:
+                        self.add_cert(self.box_id, key.cert2_data)
+
+                    return self.box_id
+
+                else:
+                    print('CryproError update_bid no key/password data')
+                    raise Exception('{}'.format(
+                        'Помилка ключа криптографії'))
 
         except Exception as e:
             print('CryproError update_bid {}'.format(e))
@@ -361,7 +359,8 @@ class Sign(object):
 
         for role in roles:
             try:
-                self.cn.pipe(box_id, b'test', [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
+                self.cn.pipe(box_id, b'test',
+                             [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
                 return role
 
             except Exception as e:
@@ -376,7 +375,8 @@ class Sign(object):
         # print(role)
         try:
             # print(unsigned_data)
-            signed_data = self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
+            signed_data = self.cn.pipe(box_id, unsigned_data, [
+                {"op": "sign", "role": role, "tax": False}])  # , "role": "stamp"  , "tsp": "signature"
             rdata, meta = self.cn.unwrap(box_id, signed_data, ocsp=None)
             # print(role, rdata, unsigned_data)
             return rdata == unsigned_data
@@ -386,18 +386,26 @@ class Sign(object):
 
     def sign(self, box_id, unsigned_data, role=None, tax=False, tsp=False, ocsp=False):
         try:
-            return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
+            return self.cn.pipe(box_id, unsigned_data,
+                                [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
 
         except ProtocolError as e:
             # print(str(e))
-            return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
+            return self.cn.pipe(box_id, unsigned_data,
+                                [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
 
     def encrypt(self, box_id, unsigned_data, role=None, tax=False, tsp=False, ocsp=False):
-        return self.cn.pipe(box_id, unsigned_data, [{"op": "encrypt", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
+        return self.cn.pipe(box_id, unsigned_data,
+                            [{"op": "encrypt", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
 
-    def tax_encrypt(self, box_id, unsigned_data, role="director", tax=True, cert=None, headers=None, tsp=False, ocsp=False):
+    def tax_encrypt(self, box_id, unsigned_data, role="director", tax=True, cert=None, headers=None, tsp=False,
+                    ocsp=False):
         # print('role={}'.format(role))
-        return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}, {"op": "encrypt", "role": role, "forCert": cert, "addCert": True, "tax": tax}, {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}], headers)  # , "role": "stamp"  , "tsp": "signature"
+        return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp},
+                                                    {"op": "encrypt", "role": role, "forCert": cert, "addCert": True,
+                                                     "tax": tax},
+                                                    {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}],
+                            headers)  # , "role": "stamp"  , "tsp": "signature"
 
     def unwrap(self, box_id, signed_data, tsp=None, ocsp=None):
         try:
