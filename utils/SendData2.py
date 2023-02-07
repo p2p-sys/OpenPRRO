@@ -296,6 +296,10 @@ class SendData2(object):
             return False
 
         if answer.status_code >= 400:
+            if error.find('DocumentValidationError') != -1:
+                if error.find('реєстраційних') != -1:
+                    return 9
+
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
             # if error.find('CheckLocalNumberInvalid') != -1:
