@@ -465,9 +465,9 @@ class DepartmentsAdmin(Filters, ModelView):
         else:
             flash('У вас немає доступу для даної операції!', 'error')
 
-    @action('prro_fix_numbers', lazy_gettext('Виправити номери пакетів'),
-            lazy_gettext('Ви впевнені, що хочете виправити номери пакетів?'))
-    def prro_fix_numbers(self, ids):
+    @action('prro_fix_errors', lazy_gettext('Тестування та виправлення помилок'),
+            lazy_gettext('Ви впевнені, що хочете зробити тестування та виправлення помилок?'))
+    def prro_fix_errors(self, ids):
         if not current_user.is_anonymous and current_user.is_permissions(10):
 
             query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
