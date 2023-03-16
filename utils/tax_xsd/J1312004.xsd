@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:annotation>
+		<xs:documentation>ПОВІДОМЛЕННЯ* про об'єкти оподаткування або об'єкти, пов'язані з оподаткуванням або через які провадиться діяльність</xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="common_types.xsd"/>
+	<xs:element name="DECLAR" type="DeclarContent"/>
+	 <xs:complexType name="DGStrColumnAdr">
+		<xs:simpleContent>
+				<xs:restriction base="StrColumn">
+					<xs:pattern value="([IVXLCDM]|[Є-ЯҐ]|[а-їґ]|[0-9]|[.,:;+-=@&apos;&quot;()/!?*\s&amp;&#171;&#187;&#8220;&#8221;&#8209;&#8470;])+"/>
+				</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>	
+	 <xs:complexType name="DGStrColumnName">
+		<xs:simpleContent>
+				<xs:restriction base="StrColumn">
+					<xs:pattern value="([IVXLCDM]|[Є-ЯҐ]|[а-їґ]|[A-Z]|[a-z]|[0-9]|[.,:;+-=@&apos;&quot;()/!?*\s&amp;&#171;&#187;&#8220;&#8221;&#8209;&#8470;])+"/>
+				</xs:restriction>
+		</xs:simpleContent>
+	</xs:complexType>	
+	<xs:complexType name="DeclarContent">
+		<xs:sequence>
+			<xs:element name="DECLARHEAD" type="DHead"/>
+			<xs:element name="DECLARBODY" type="DBody">
+				<xs:unique name="UT1RXXXXG2">
+					<xs:selector xpath="T1RXXXXG2"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG3">
+					<xs:selector xpath="T1RXXXXG3"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG4S">
+					<xs:selector xpath="T1RXXXXG4S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG5">
+					<xs:selector xpath="T1RXXXXG5"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG6">
+					<xs:selector xpath="T1RXXXXG6"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG6S">
+					<xs:selector xpath="T1RXXXXG6S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG7S">
+					<xs:selector xpath="T1RXXXXG7S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG8S">
+					<xs:selector xpath="T1RXXXXG8S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG9">
+					<xs:selector xpath="T1RXXXXG9"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG10">
+					<xs:selector xpath="T1RXXXXG10"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG11">
+					<xs:selector xpath="T1RXXXXG11"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+				<xs:unique name="UT1RXXXXG12S">
+					<xs:selector xpath="T1RXXXXG12S"/>
+					<xs:field xpath="@ROWNUM"/>
+				</xs:unique>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DHead">
+		<xs:sequence>
+			<xs:element name="TIN" type="DGLong"/>
+			<xs:element name="C_DOC" type="xs:string" fixed="J13"/>
+			<xs:element name="C_DOC_SUB" type="xs:string" fixed="120"/>
+			<xs:element name="C_DOC_VER" type="xs:string" fixed="4"/>
+			<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+			<xs:element name="C_REG" type="DGsti"/>
+			<xs:element name="C_RAJ" type="DGsti"/>
+			<xs:element name="PERIOD_MONTH" type="DGMonth"/>
+			<xs:element name="PERIOD_TYPE" type="DGPType"/>
+			<xs:element name="PERIOD_YEAR" type="DGYear"/>
+			<xs:element name="C_STI_ORIG" type="DGc_dpi"/>
+			<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+			<xs:element name="LINKED_DOCS" nillable="true" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="DOC" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="C_DOC" type="DGC_DOC"/>
+									<xs:element name="C_DOC_SUB" type="DGC_DOC_SUB"/>
+									<xs:element name="C_DOC_VER" type="DGC_DOC_VER"/>
+									<xs:element name="C_DOC_TYPE" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_CNT" type="xs:nonNegativeInteger"/>
+									<xs:element name="C_DOC_STAN" type="DGSTAN"/>
+									<xs:element name="FILENAME" type="DGFilename"/>
+								</xs:sequence>
+								<xs:attribute name="NUM" type="xs:nonNegativeInteger"/>
+								<xs:attribute name="TYPE" type="DGTypeLinkDoc"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="UH_DOC_NUM">
+					<xs:selector xpath="DOC"/>
+					<xs:field xpath="@NUM"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="D_FILL" type="DGDate"/>
+			<xs:element name="SOFTWARE" type="xs:string" nillable="true" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="DBody">
+		<xs:sequence>
+			<!--BODY-->
+			<!--HEAD-->
+			<xs:element name="HSTI" type="DGHSTI"/>
+			<xs:element name="HTIN" type="DGHTINJ"/>
+			<xs:element name="HNAME" type="DGHNAME"/>
+			<!--TABLE №1-->
+			<xs:element name="T1RXXXXG2" type="DGI1nomColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG3" type="DGI3nomColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG4S" type="DGStrColumnName" nillable="true" minOccurs="0" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG5" type="IntNegativeColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG6" type="KOATUUColumn" nillable="true" minOccurs="0" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG6S" type="KATOTTGColumn" nillable="true" minOccurs="0" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG7S" type="StrColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG8S" type="DGStrColumnAdr" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG9" type="I2inomColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG10" type="I2inomColumn" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG11" type="ChkColumn" nillable="true" minOccurs="0" maxOccurs="9999"/>
+			<xs:element name="T1RXXXXG12S" type="StrColumn" nillable="true" minOccurs="0" maxOccurs="9999"/>
+			<!--/TABLE №1-->
+			<!--FOOTER-->
+			<xs:element name="HBOS" type="DGHBOS"/>
+			<xs:element name="HFILL" type="DGDate"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
+<!--Розробник: відділ проектування та розробки АІС ГУ ДПС у Черкаській області-->

@@ -22,31 +22,19 @@ class TaxForms(object):
         if not company_key:
             raise Exception('Не вказано ключ для підпису податкових форм')
         else:
-            self.key_role_tax_form = None
-
             self.box_id = self.signer.update_bid(db, company_key)
-            if company_key.key_data_txt:
-                if not company_key.acsk:
-                    for key_data in company_key.key_data_txt:
-                        if key_data['usage']['encrypt']:
-                            company_key.acsk = key_data['issuer']['commonName']
-                            break
-
-                if 'ПРИВАТБАНК' in company_key.acsk:
-                    if not company_key.key_role_tax_form:
-                        roles = ['fop', 'director', 'corporate', 'other']
-                        role = self.signer.get_role(self.box_id, roles)
-                        if role:
-                            company_key.key_role_tax_form = role
-                        else:
-                            company_key.key_role_tax_form = company_key.key_role
-                        company_key.box_id = self.box_id
-
-                    self.key_role_tax_form = company_key.key_role_tax_form
-            else:
-                raise Exception('{}'.format('Помилка ключа криптографії'))
+            if not company_key.key_role_tax_form:
+                roles = ['fop', 'director', 'corporate', 'other']
+                role = self.signer.get_role(self.box_id, roles)
+                if role:
+                    company_key.key_role_tax_form = role
+                else:
+                    company_key.key_role_tax_form = company_key.key_role
+                company_key.box_id = self.box_id
 
         self.company_key = company_key
+
+        self.key_role_tax_form = self.company_key.key_role_tax_form
 
         self.TAX_EMAIL = '{}@tax.gov.ua'.format(company_key.edrpou)
 

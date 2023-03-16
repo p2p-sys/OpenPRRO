@@ -814,12 +814,6 @@ class ApiView(FlaskView):
                     # except Exception as e:
                     #     registrar_state = None
 
-                    if not registrar_state:
-                        answer = jsonify(status='error', message='Виникла помилка запиту даних - відсутній зв\'язок з '
-                                                                 'сервером податкової', error_code=-1)
-                        logger.error(f'Відповідь: {answer.json}')
-                        return answer
-
                     last_shift = Shifts.query \
                         .order_by(Shifts.operation_time.desc()) \
                         .filter(Shifts.department_id == department.id) \
@@ -1210,7 +1204,7 @@ class ApiView(FlaskView):
                 doc_uid=doc_uid)
 
             stop = datetime.datetime.now()
-            print('{} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, (
+            print('{} Отдали данные чека продажи через API, все заняло по времени {} секунд'.format(stop, (
                     stop - start).total_seconds()))
 
             message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
@@ -1311,7 +1305,7 @@ class ApiView(FlaskView):
                 orderretnum=orderretnum, key=key,
                 testing=testing, balance=balance)
 
-            message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(check["tax_id"])
+            message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(tax_id)
 
             if check["tax_id_advance"]:
                 answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
@@ -1362,9 +1356,7 @@ class ApiView(FlaskView):
 
             x_data = sender.LastShiftTotals()
 
-            registrar_state = sender.TransactionsRegistrarState()
-
-            answer = jsonify(status='success', totals=x_data, registrar_state=registrar_state, error_code=0)
+            answer = jsonify(status='success', totals=x_data, error_code=0)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -1555,7 +1547,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
     def close_shift(self):
 
         start = datetime.datetime.now()
-        print('{} {}'.format(start, 'Надійшла команда закриття зміни API'))
+        print('{} {}'.format(start, 'Поступила команда закрытия смены API'))
 
         try:
             data = request.get_json()
@@ -1584,7 +1576,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
                 testing=testing, balance=balance)
 
             stop = datetime.datetime.now()
-            print('{} Віддали дані Z звіту через API, все зайняло {} секунд'.format(stop, (
+            print('{} Отдали данные Z отчета через API, все заняло по времени {} секунд'.format(stop, (
                     stop - start).total_seconds()))
 
             if z_report_tax_id:
@@ -1801,7 +1793,7 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
             return answer
 
         except Exception as e:
-            e = 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'
+            e = 'Помилка ключа криптографії ({}), можливо надані невірні сертифікати або пароль'.format(e)
             answer = jsonify(status='error', message=str(e), error_code=-1)
             logger.error(f'Відповідь: {answer.json}')
             return answer

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="windows-1251" standalone="no"?>
+<DECLAR xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="J1312002.xsd">
+    <DECLARHEAD>
+        <TIN>39307260</TIN>
+        <C_DOC>J13</C_DOC>
+        <C_DOC_SUB>120</C_DOC_SUB>
+        <C_DOC_VER>2</C_DOC_VER>
+        <C_DOC_TYPE>0</C_DOC_TYPE>
+        <C_DOC_CNT>159</C_DOC_CNT>
+        <C_REG>26</C_REG>
+        <C_RAJ>55</C_RAJ>
+        <PERIOD_MONTH>4</PERIOD_MONTH>
+        <PERIOD_TYPE>1</PERIOD_TYPE>
+        <PERIOD_YEAR>2021</PERIOD_YEAR>
+        <C_STI_ORIG>2655</C_STI_ORIG>
+        <C_DOC_STAN>1</C_DOC_STAN>
+        <LINKED_DOCS xsi:nil="true"/>
+        <D_FILL>28042021</D_FILL>
+        <SOFTWARE>CABINET 0.5.0</SOFTWARE>
+    </DECLARHEAD>
+  <DECLARBODY>
+<HSTI>ГОЛОВНЕ УПРАВЛІННЯ ДПС У М.КИЄВІ, ДПІ У ПЕЧЕРСЬКОМУ РАЙОНІ (ПЕЧЕРСЬКИЙ РАЙОН М.КИЄВА)</HSTI> оставляем так(может в конфиг?)
+<HTIN>39307260</HTIN> оставляем так(есть в конфиге)
+<HNAME>ТОВАРИСТВО З ОБМЕЖЕНОЮ ВIДПОВIДАЛЬНIСТЮ "ФІНАНСОВА КОМПАНІЯ МАГНАТ"</HNAME> оставляем так(есть в конфиге)
+<T1RXXXXG2 ROWNUM="1">3</T1RXXXXG2>  відкриття = 1,(при зміні/ліквід проверяем статус если 3-то ставим 6, во всех остальных случаях = 3)
+<T1RXXXXG3 ROWNUM="1">1</T1RXXXXG3>  завжди = 1
+<T1RXXXXG4S ROWNUM="1">Харківське відділення № 290</T1RXXXXG4S> назва відділення з full_name
+<T1RXXXXG5 ROWNUM="1">100036</T1RXXXXG5> ідентифікатор відділення з dpi_id
+<T1RXXXXG6 ROWNUM="1">6310137500</T1RXXXXG6> коатуу відділення з koatuu
+<T1RXXXXG7S ROWNUM="1">.</T1RXXXXG7S> завжди .
+<T1RXXXXG8S ROWNUM="1">пр-т Московський, 55</T1RXXXXG8S> після змін у базі даних буде поле address
+<T1RXXXXG9 ROWNUM="1">3</T1RXXXXG9> відкриття = 2, при зміні/ліквід. перевіряємо статус відділення 
+                                    (статус 1 - ставимо 2, статус 2 - ставимо 3, статус 3 - ставимо 6)
+<T1RXXXXG10 ROWNUM="1">7</T1RXXXXG10> завжди = 7
+<T1RXXXXG11 ROWNUM="1">1</T1RXXXXG11> при статус=3 набуває значення (<T1RXXXXG11 ROWNUM="1" xsi:nil="true"/>) в інших випадках = 1
+<T1RXXXXG12S ROWNUM="1" xsi:nil="true"/> завжди = (<T1RXXXXG12S ROWNUM="1" xsi:nil="true"/>)
+<HBOS>ПОЛЬОВА АЛІНА ВАСИЛІВНА</HBOS> - оставляем так, не спрашивай, почему в налоговой не поменяли
+<HFILL>28042021</HFILL> - дата
+</DECLARBODY>
+</DECLAR>

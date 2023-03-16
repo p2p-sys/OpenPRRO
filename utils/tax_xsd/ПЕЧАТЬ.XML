@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="windows-1251" standalone="no"?>
+<DECLAR xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="J1391801.xsd">
+    <DECLARHEAD>
+        <TIN>39628794</TIN>
+        <C_DOC>J13</C_DOC>
+        <C_DOC_SUB>918</C_DOC_SUB>
+        <C_DOC_VER>1</C_DOC_VER>
+        <C_DOC_TYPE>0</C_DOC_TYPE>
+        <C_DOC_CNT>23</C_DOC_CNT>
+        <C_REG>26</C_REG>
+        <C_RAJ>55</C_RAJ>
+        <PERIOD_MONTH>12</PERIOD_MONTH>
+        <PERIOD_TYPE>1</PERIOD_TYPE>
+        <PERIOD_YEAR>2020</PERIOD_YEAR>
+        <C_STI_ORIG>2655</C_STI_ORIG>
+        <C_DOC_STAN>1</C_DOC_STAN>
+        <LINKED_DOCS xsi:nil="true"/>
+        <D_FILL>18122020</D_FILL>
+        <SOFTWARE>CABINET 0.4.1</SOFTWARE>
+    </DECLARHEAD>
+  <DECLARBODY>
+<HFILL>18122020</HFILL>
+<HNUM>1</HNUM>
+<HSTI>ГОЛОВНЕ УПРАВЛІННЯ ДПС У М.КИЄВІ, ДПІ У ПЕЧЕРСЬКОМУ РАЙОНІ (ПЕЧЕРСЬКИЙ РАЙОН М.КИЄВА)</HSTI>
+<HNAME>ТОВАРИСТВО З ОБМЕЖЕНОЮ ВIДПОВIДАЛЬНIСТЮ "ФІНАНСОВА КОМПАНІЯ "ОКТАВА ФІНАНС"</HNAME>
+<HTIN>39628794</HTIN>
+<T1RXXXXG1S ROWNUM="1">Дніпропетровське відділення № 143 ТОВ "ФК "ОКТАВА ФІНАНС"</T1RXXXXG1S>
+<T1RXXXXG2S ROWNUM="1">0039628794</T1RXXXXG2S>
+<T1RXXXXG3S ROWNUM="1">89164681e274fdb3487ee58fe1d5632f2bb2a605cc338ba566e7bc1303fa3dc1</T1RXXXXG3S>
+<T1RXXXXG4S ROWNUM="1">Касир</T1RXXXXG4S>
+<HBOS>СТОРОЖУК ВІРА ЛЕОНІДІВНА</HBOS>
+<HPOST>Директор</HPOST>
+<HEXECUTOR>СТОРОЖУК ВІРА ЛЕОНІДІВНА</HEXECUTOR>
+<HTEL>380671080445</HTEL>
+</DECLARBODY>
+</DECLAR>

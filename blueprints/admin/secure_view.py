@@ -1,0 +1,96 @@
+from flask_login import login_required, current_user
+from flask import redirect, url_for, request, current_app
+class translationViewMixin():
+    page_size = 50
+    can_view_details = True
+
+    column_labels = {
+        'id' : 'ID',
+        'name' : 'Назва',
+        'number' : 'Номер',
+        'name_1' : 'Назва1',
+        'name_2' : 'Назва2',
+        'name_3' : 'Назва3',
+        'name_4' : 'Назва4',
+        'name_5' : 'Назва5',
+        'name_6' : 'Назва6',
+        'name_7' : 'Назва7',
+        'name_8' : 'Назва8',
+        'name_9' : 'Назва9',
+        'name_10' : 'Назва10',
+        'comments' : 'Комментар',
+        'country' : 'Країна',
+        'countries' : 'Країни',
+        'document' : 'Документ',
+        'birthplace' : 'Місце народження',
+        'birthday' : 'День народження',
+        'title' : 'Назва країни',
+        'code' : 'Код',
+        'nbu_code' : 'Код НБУ',
+        'buy_rate' : 'Курс купівлі',
+        'numcode' :  'Цифровий код',
+        'zero_numcode' :  'Цифровий код',
+        'masculine' : 'Чоловічий рід?',
+        'printable' : 'Друкувати в наказі?',
+        'departments' : 'Відділення',
+        'login' : 'Логін',
+        'operating_departments' : 'Касир',
+        'managing_departments' : 'Начальник відділення', 
+        'collecting_regions' : 'Інкасатор',
+        'role' : 'Роль',
+        'person' : 'ПІБ',
+        'order_num' : 'Номер наказу',
+        'rates_time' : 'Час наказу',
+        'buy_rate ' :  'Курс купівлі',
+        'sell_rate' : 'Курс продажу',
+        'currency' : 'Валюта',
+        'is_active' : 'Активовано?',
+        'rate' :  'Курс',
+        'degree' : 'Коефіціент',
+        'legal_number' : 'Номер',
+        'dep_code' : 'Код НБУ',
+        'region' : 'Регіон',
+        'address' : 'Адреса',
+        'boss' : 'Начальник відділення',
+        'deactivated' : 'Деактивовано',
+        'department' : 'Відділення',
+        'operator' : 'Касир',
+        'money_amount' : 'Сума',
+        'operation_time' : 'Час',
+        'fiscal_time' : 'Час РРО',
+        'confirmation_time' : 'Підтвердження',
+        'department.legal_number' :  'Відділення',
+        'department.af_id' :  '1C',
+        'currency_amount' : 'Сума',
+        'equivalent' : 'Еквівалент',
+        'storno_time' : 'Сторно',
+        'client' : 'Клієнт',
+        'operator.login' : 'Логін',
+        'currency.code' : 'Валюта',
+        'persons.name' : 'Імя',
+        'commercial_buy' : 'Купівля',
+        'commercial_sell' : 'Продаж',
+        'currency.degree' : 'Кількість одиниць',
+        'refusal_time' : 'Відмова',
+        'refusal_reason' : 'Причина відмови',
+        'confirmation_purpose' : 'Призначення ордера',
+        'department.region' : 'Регіон',
+        'regions': 'Регіон',
+        'operator.person_initials': 'Касир',
+        'exchange_rate': 'Курс',
+        'rates_update_id' : 'Наказ',
+        'rates_update.department.legal_number' : 'Відділення', 
+        'rates_update.department.af_id' : '1C',
+        'rates_update.rates_time' : 'Час',
+        'curating_groups' : 'Куратор',
+    }
+
+class adminOnly(translationViewMixin):
+    def is_accessible(self):
+        if current_app.config['ADMIN_PANEL_FREE_ACCESS']:
+            return True
+        else:
+            return not current_user.is_anonymous and current_user.role and (current_user.role.name == 'admin')
+    
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login.auth', next=request.url))
