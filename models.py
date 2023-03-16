@@ -290,6 +290,10 @@ def fix_shift(registrar_state, department, sender):
                                                  Testing))
                     shift.testing = Testing
 
+                    if registrar_state['ShiftState'] == 1 and registrar_state['ZRepPresent']:
+                        close_shift_tax_id = department.prro_close_shift(shift)
+                        msg = '{} {}'.format(msg, 'Z отчет отправлен, но смена не закрыта, исправляем. Отправлено закрытие смены, получен фискальный номер {}'.format(close_shift_tax_id))
+
                     db.session.commit()
 
         else:
