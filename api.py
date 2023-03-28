@@ -237,6 +237,11 @@ class ApiView(FlaskView):
             else:
                 prro_key_id = None
 
+            if 'offline' in data:
+                offline = data['offline']
+            else:
+                offline = False
+
             if department_id:
                 department = Departments.query.get(department_id)
                 if not department:
@@ -246,7 +251,8 @@ class ApiView(FlaskView):
                         address=address,
                         rro_id=rro_id,
                         taxform_key_id=taxform_key_id,
-                        prro_key_id=prro_key_id
+                        prro_key_id=prro_key_id,
+                        offline=offline
                     )
                     db.session.add(department)
                     db.session.commit()

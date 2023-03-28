@@ -456,7 +456,7 @@ class Departments(Base):
     auto_close_time = Column('auto_close_time', Time, comment='Час автоматичного закриття зміни', default=None,
                              nullable=True)
 
-    offline = Column('offline', SmallInteger, default=1, nullable=False, comment='Режим офлайн')
+    offline = Column('offline', SmallInteger, default=0, nullable=False, comment='Режим офлайн')
 
     offline_supported = Column('offline_supported', SmallInteger, default=1, nullable=True, comment='Дозвіл переходу в режим офлайн по податковій')
 
