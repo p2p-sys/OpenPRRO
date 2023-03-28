@@ -369,6 +369,29 @@ class Sign(object):
 
         return False
 
+    def get_roles(self, box_id):
+
+        roles = [{'role': 'fop', 'description': 'ФОП'},
+                 {'role': 'director', 'description': 'Директор'},
+                 {'role': 'stamp', 'description': 'Печатка'},
+                 {'role': 'corporate', 'description': 'Корпоративний'},
+                 {'role': 'personal', 'description': 'Особистий'},
+                 {'role': 'other', 'description': 'Інше'}]
+
+        roles_arr = []
+
+        for role in roles:
+            try:
+                self.cn.pipe(box_id, b'test',
+                             [{"op": "sign", "role": role['role'], "tax": False}])
+                roles_arr.append(role)
+
+            except Exception as e:
+                print(e)
+                pass
+
+        return roles_arr
+
     def check_role(self, box_id, role):
 
         unsigned_data = b'test'

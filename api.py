@@ -2808,3 +2808,52 @@ Z-ЗВІТ ФН 531852974          ВН 29 онлайн
             answer = jsonify(status='error', message=str(e), error_code=-1)
             logger.error(f'Відповідь: {answer.json}')
             return answer
+
+
+    @route('/key_roles', methods=['POST', 'GET'],
+           endpoint='key_roles')
+    @csrf.exempt
+    def key_roles(self):
+        try:
+            data = request.get_json()
+            logger.info(f'Надійшов запит /key_roles: {data}')
+            if not data:
+                msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
+                      'application/json '
+                answer = jsonify(status='error', message=msg, error_code=1)
+                logger.error(f'Відповідь: {answer.json}')
+                return answer
+
+            if 'key' in data:
+                key = data['key']
+                key_file_content = base64.b64decode(key)
+                key_data = key_file_content
+            else:
+                msg = 'Не вказано ключ'
+                answer = jsonify(status='error', message=msg, error_code=2)
+                logger.error(f'Відповідь: {answer.json}')
+                return answer
+
+            if 'password' in data:
+                key_password = data['password']
+            else:
+                msg = 'Не вказано пароль ключа'
+                answer = jsonify(status='error', message=msg, error_code=3)
+                logger.error(f'Відповідь: {answer.json}')
+                return answer
+
+            from utils.Sign import Sign
+
+            signer = Sign()
+            box_id = signer.add_key(key_data, key_password)
+            roles = signer.get_roles(box_id)
+
+            answer = jsonify(status='success', key_roles=roles, error_code=0)
+            logger.info(f'Відповідь: {answer.json}')
+            return answer
+
+        except Exception as e:
+            e = 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'
+            answer = jsonify(status='error', message=str(e), error_code=-1)
+            logger.error(f'Відповідь: {answer.json}')
+            return answer

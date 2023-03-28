@@ -1981,7 +1981,7 @@ class Departments(Base):
                     self.sender.local_number = shift.prro_localnumber
                     self.sender.local_check_number = shift.prro_localchecknumber
 
-                    xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=testing,
+                    xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False,
                                                                              revoke=False)
 
                     pid = self.sender.local_number
@@ -2315,6 +2315,11 @@ class Departments(Base):
             qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
                 tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
 
+            if self.sender.last_fiscal_ticket:
+                fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket)
+            else:
+                fiscal_ticket = None
+
             ret = {
                 "tax_id": tax_id,
                 "shift": shift,
@@ -2325,7 +2330,7 @@ class Departments(Base):
                 "tax_id_advance": tax_id_advance,
                 "qr_advance": qr_advance,
                 "tax_visual_advance": visual_advance,
-                "fiscal_ticket": base64.b64encode(self.sender.last_fiscal_ticket)
+                "fiscal_ticket": fiscal_ticket
             }
             return ret
         else:

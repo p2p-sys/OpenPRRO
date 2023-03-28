@@ -3,6 +3,7 @@ from manage import create_app
 from flask_sqlalchemy import SQLAlchemy
 
 import click
+import json
 
 from utils.Sign import Sign
 
@@ -82,17 +83,17 @@ def to_online():
         print('Начали обработку {}'.format(department.rro_id))
         # continue
 
-        last_shift = Shifts.query \
-            .order_by(Shifts.operation_time.desc()) \
-            .filter(Shifts.department_id == department.id) \
-            .first()
+        # last_shift = Shifts.query \
+        #     .order_by(Shifts.operation_time.desc()) \
+        #     .filter(Shifts.department_id == department.id) \
+        #     .first()
 
-        if last_shift:
-            if not last_shift.offline:
-                session.server_time = datetime.datetime.now()
-                db.session.commit()
-                print('{} успешно удалили оффлайн сессию'.format(department.rro_id))
-                continue
+        # if last_shift:
+        #     if not last_shift.offline:
+        #         session.server_time = datetime.datetime.now()
+        #         db.session.commit()
+        #         print('{} успешно удалили оффлайн сессию'.format(department.rro_id))
+        #         continue
 
         try:
 

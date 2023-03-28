@@ -1033,7 +1033,7 @@ class SendData2(object):
         offline_tax_number = self.calculate_offline_tax_number(dt)
 
         CHECK = self.get_check_xml(102, offline=True, dt=dt, prev_hash=None, offline_tax_number=offline_tax_number,
-                                   revoke=revoke, testing=testing)
+                                   revoke=revoke, testing=False)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
