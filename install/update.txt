@@ -1,0 +1,10 @@
+# создание миграции
+python3 manage_db.py db migrate
+
+# апгрейд базы данных
+cd /home/signer-agent/openprro/
+source venv/bin/activate
+python3 manage_db.py db upgrade
+
+# обновляем программу
+systemctl start openprro

@@ -10,7 +10,7 @@ from lxml import etree
 import uuid
 import zlib
 
-from config import TIMEZONE
+from config import TIMEZONE, FS_URL, TESTING_OFFLINE
 from utils.Sign import Sign
 
 import dateutil.parser
@@ -184,7 +184,11 @@ class SendData2(object):
 
     def post_data(self, command, data, return_cmd_data=False):
 
-        url = 'http://fs.tax.gov.ua:8609/fs/{}'.format(command)
+        if TESTING_OFFLINE:
+            url = 'http://127.0.0.1/'.format(FS_URL)
+        else:
+            url = '{}{}'.format(FS_URL, command)
+
         headers = {'Content-Type': 'application/octet-stream',
                    'Content-Encoding': 'gzip'}
 
@@ -286,6 +290,7 @@ class SendData2(object):
                 self.last_fiscal_error_code = 0
                 return True
 
+            print("Помилка надсилання даних на фіскальний сервер: {}".format(error))
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
         if answer.status_code == 204:
@@ -300,7 +305,9 @@ class SendData2(object):
                 if error.find('реєстраційних') != -1:
                     return 9
 
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            print("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            return False
+            # raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
             # if error.find('CheckLocalNumberInvalid') != -1:
             #     need_num = int(error[error.find('дорівнювати')+12:])

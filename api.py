@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid
 
 from dateutil import tz
 from flask import request, session, jsonify
@@ -1158,103 +1159,106 @@ class ApiView(FlaskView):
         start = datetime.datetime.now()
         print('{} {}'.format(start, 'Поступил чек продажи через API'))
 
-        try:
-            data = request.get_json()
-            logger.info(f'Надійшов запит /real: {data}')
-            if not data:
-                msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
-                      'application/json '
-                answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
-
-            department, key = get_department(data)
-
-            if 'totals' in data:
-                totals = data['totals']
-            else:
-                totals = None
-
-            if 'reals' in data:
-                reals = data['reals']
-            else:
-                reals = None
-
-            if 'pays' in data:
-                pays = data['pays']
-            else:
-                pays = None
-
-            if 'taxes' in data:
-                taxes = data['taxes']
-            else:
-                taxes = None
-
-            if 'testing' in data:
-                testing = data['testing']
-            else:
-                testing = False
-
-            if 'balance' in data:
-                balance = data['balance']
-            else:
-                balance = 0
-
-            if 'UID' in data:
-                doc_uid = data['UID']
-            else:
-                doc_uid = None
-
-            check = department.prro_sale(
-                reals,
-                taxes,
-                pays,
-                totals=totals,
-                key=key,
-                testing=testing,
-                balance=balance,
-                doc_uid=doc_uid)
-
-            stop = datetime.datetime.now()
-            print('{} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, (
-                    stop - start).total_seconds()))
-
-            message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
-
-            if check["tax_id_advance"]:
-                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
-                                 qr=check["qr"], qr_advance=check["qr_advance"],
-                                 message=message,
-                                 shift_opened_datetime=check["shift.operation_time"],
-                                 shift_opened=check["shift_opened"],
-                                 shift_tax_id='{}'.format(check["shift"].tax_id),
-                                 error_code=0,
-                                 tax_visual=check["tax_visual"],
-                                 tax_visual_advance=check["tax_visual_advance"],
-                                 offline=check["offline"],
-                                 fiscal_ticket=check["fiscal_ticket"],
-                                 )
-                logger.info(f'Відповідь: {answer.json}')
-                return answer
-
-            else:
-                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), qr=check["qr"],
-                                 message=message,
-                                 shift_opened_datetime=check["shift"].operation_time,
-                                 shift_opened=check["shift_opened"],
-                                 shift_tax_id='{}'.format(check["shift"].tax_id),
-                                 error_code=0,
-                                 tax_visual=check["tax_visual"],
-                                 offline=check["offline"],
-                                 fiscal_ticket=check["fiscal_ticket"])
-
-                logger.info(f'Відповідь: {answer.json}')
-                return answer
-
-        except Exception as e:
-            answer = jsonify(status='error', message=str(e), error_code=-1)
+        # try:
+        data = request.get_json()
+        logger.info(f'Надійшов запит /real: {data}')
+        if not data:
+            msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
+                  'application/json '
+            answer = jsonify(status='error', message=msg, error_code=1)
             logger.error(f'Відповідь: {answer.json}')
             return answer
+
+        department, key = get_department(data)
+
+        if 'totals' in data:
+            totals = data['totals']
+        else:
+            totals = None
+
+        if 'reals' in data:
+            reals = data['reals']
+        else:
+            reals = None
+
+        if 'pays' in data:
+            pays = data['pays']
+        else:
+            pays = None
+
+        if 'taxes' in data:
+            taxes = data['taxes']
+        else:
+            taxes = None
+
+        if 'testing' in data:
+            testing = data['testing']
+        else:
+            testing = False
+
+        if 'balance' in data:
+            balance = data['balance']
+        else:
+            balance = 0
+
+        if 'UID' in data:
+            doc_uid = data['UID']
+        else:
+            doc_uid = uuid.uuid1()
+
+        check = department.prro_sale(
+            reals,
+            taxes,
+            pays,
+            totals=totals,
+            key=key,
+            testing=testing,
+            balance=balance,
+            doc_uid=doc_uid)
+
+        stop = datetime.datetime.now()
+        print('{} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, (
+                stop - start).total_seconds()))
+
+        message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
+
+        if check["tax_id_advance"]:
+            answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), tax_id_advance='{}'.format(check["tax_id_advance"]),
+                             qr=check["qr"], qr_advance=check["qr_advance"],
+                             message=message,
+                             shift_opened_datetime=check["shift.operation_time"],
+                             shift_opened=check["shift_opened"],
+                             shift_tax_id='{}'.format(check["shift"].tax_id),
+                             error_code=0,
+                             tax_visual=check["tax_visual"],
+                             tax_visual_advance=check["tax_visual_advance"],
+                             offline=check["offline"],
+                             fiscal_ticket=check["fiscal_ticket"],
+                             uid=check['uid']
+                             )
+            logger.info(f'Відповідь: {answer.json}')
+            return answer
+
+        else:
+            answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), qr=check["qr"],
+                             message=message,
+                             shift_opened_datetime=check["shift"].operation_time,
+                             shift_opened=check["shift_opened"],
+                             shift_tax_id='{}'.format(check["shift"].tax_id),
+                             error_code=0,
+                             tax_visual=check["tax_visual"],
+                             offline=check["offline"],
+                             fiscal_ticket=check["fiscal_ticket"],
+                             uid=check['uid']
+                             )
+
+            logger.info(f'Відповідь: {answer.json}')
+            return answer
+
+        # except Exception as e:
+        #     answer = jsonify(status='error', message=str(e), error_code=-1)
+        #     logger.error(f'Відповідь: {answer.json}')
+        #     return answer
 
     @route('/return', methods=['POST', 'GET'],
            endpoint='ret')

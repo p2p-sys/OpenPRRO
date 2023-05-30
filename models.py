@@ -1900,441 +1900,487 @@ class Departments(Base):
     def prro_sale(self, reals, taxes, pays, sales_ret=False, orderretnum=None, key=None, testing=False, totals=None,
                   balance=0, doc_uid=None):
 
-        shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
-        if shift:
+        offline = False
+        qr_advance = None
+        visual_advance = None
+        tax_id_advance = None
 
-            if shift_opened and balance > 0:
-                tax_id_advance, shift_advance, shift_opened_advance, qr_advance, visual_advance, offline_advance = self.prro_advances(
-                    balance, key=key,
-                    testing=testing)
-            else:
-                qr_advance = None
-                visual_advance = None
-                tax_id_advance = None
+        if doc_uid:
+            sale = Sales.query.filter(Sales.doc_uid == doc_uid).first()
+        else:
+            sale = None
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
-            server_time = None
+        if not sale:
 
-            offline = shift.offline
-            prev_hash = shift.prev_hash
+            shift, shift_opened = self.prro_open_shift(True, key=key, testing=testing)
+            if not shift:
+                raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
 
-            summa = 0
-            discount = 0
-            if reals:
-                for real in reals:
-                    summa += real['COST']
-                    if 'DISCOUNTSUM' in real:
-                        discount += real['DISCOUNTSUM']
+            if shift:
+                if shift_opened and balance > 0:
+                    tax_id_advance, shift_advance, shift_opened_advance, qr_advance, visual_advance, offline_advance = self.prro_advances(
+                        balance, key=key,
+                        testing=testing)
+                else:
+                    qr_advance = None
+                    visual_advance = None
+                    tax_id_advance = None
 
-            if not shift.offline:
+                operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                server_time = None
 
-                ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
-                                            sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
-                                            doc_uid=doc_uid)
-                if not ret:
-                    if self.offline:
-                        offline = True
-                    else:
-                        raise Exception('{}'.format(
-                            "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+                offline = shift.offline
+                prev_hash = shift.prev_hash
 
-                if ret == 9:
-                    registrar_state = self.sender.TransactionsRegistrarState()
-                    if registrar_state:
-                        shift.prro_org_name = self.sender.org_name
-                        shift.prro_department_name = self.sender.department_name
-                        shift.prro_address = self.sender.address
-                        shift.prro_tn = self.sender.tn
-                        shift.prro_ipn = self.sender.ipn
-                        shift.prro_entity = self.sender.entity
-                        shift.prro_zn = self.sender.zn
-                        db.session.commit()
-
-                        ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
-                                                    sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
-                                                    doc_uid=doc_uid)
-                        if not ret:
-                            if self.offline:
-                                offline = True
-                            else:
-                                raise Exception('{}'.format(
-                                    "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
-
-                server_time = self.sender.server_time
-
-            fiscal_error_code = self.sender.last_fiscal_error_code
-            fiscal_error_txt = self.sender.last_fiscal_error_txt
-
-            if offline:
-
-                fiscal_time = operation_time
+                summa = 0
+                discount = 0
+                if reals:
+                    for real in reals:
+                        summa += real['COST']
+                        if 'DISCOUNTSUM' in real:
+                            discount += real['DISCOUNTSUM']
 
                 if not shift.offline:
-                    # переход в офлайн
-                    self.sender.offline_local_number = 1
-                    shift.prro_offline_local_number = 1
-                    shift.offline = True
 
-                    # Для офлайн нужно добавить номер, т.к. мы не знаем прошел чек или нет
-                    shift.prro_localnumber += 1  # = self.sender.local_number
-                    shift.prro_localchecknumber += 1  # = self.sender.local_check_number
-                    self.sender.local_number = shift.prro_localnumber
+                    ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
+                                                sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
+                                                doc_uid=doc_uid)
+                    if not ret:
+                        if self.offline:
+                            offline = True
+                        else:
+                            raise Exception('{}'.format(
+                                "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+
+                    if ret == 9:
+                        registrar_state = self.sender.TransactionsRegistrarState()
+                        if registrar_state:
+                            shift.prro_org_name = self.sender.org_name
+                            shift.prro_department_name = self.sender.department_name
+                            shift.prro_address = self.sender.address
+                            shift.prro_tn = self.sender.tn
+                            shift.prro_ipn = self.sender.ipn
+                            shift.prro_entity = self.sender.entity
+                            shift.prro_zn = self.sender.zn
+                            db.session.commit()
+
+                            ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time, totals=totals,
+                                                        sales_ret=sales_ret, orderretnum=orderretnum, testing=shift.testing,
+                                                        doc_uid=doc_uid)
+                            if not ret:
+                                if self.offline:
+                                    offline = True
+                                else:
+                                    raise Exception('{}'.format(
+                                        "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+
+                    server_time = self.sender.server_time
+
+                fiscal_error_code = self.sender.last_fiscal_error_code
+                fiscal_error_txt = self.sender.last_fiscal_error_txt
+
+                if offline:
+
+                    fiscal_time = operation_time
+
+                    if not shift.offline:
+                        # переход в офлайн
+                        self.sender.offline_local_number = 1
+                        shift.prro_offline_local_number = 1
+                        shift.offline = True
+
+                        # Для офлайн нужно добавить номер, т.к. мы не знаем прошел чек или нет
+                        shift.prro_localnumber += 1  # = self.sender.local_number
+                        shift.prro_localchecknumber += 1  # = self.sender.local_check_number
+                        self.sender.local_number = shift.prro_localnumber
+                        self.sender.local_check_number = shift.prro_localchecknumber
+
+                        xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False,
+                                                                                 revoke=False)
+
+                        pid = self.sender.local_number
+                        # tax_id = self.sender.last_ordertaxnum
+
+                        off = OfflineChecks(
+                            operation_type=1,
+                            department_id=self.id,
+                            user_id=shift.user_id,
+                            operation_time=operation_time,
+                            shift_id=shift.id,
+                            fiscal_time=fiscal_time,
+                            server_time=server_time,
+                            pid=pid,
+                            testing=shift.testing,
+                            offline_fiscal_xml_signed=signed_xml,
+                            offline_tax_id=offline_tax_id,
+                            offline_session_id=shift.prro_offline_session_id
+                        )
+                        db.session.add(off)
+
+                        shift.prro_localnumber += 1  # = self.sender.local_number
+                        shift.prro_localchecknumber += 1  # = self.sender.local_check_number
+
+                        shift.prro_offline_local_number += 1
+
+                        self.sender.local_number += 1
+                        self.sender.offline_local_number += 1
+                        self.sender.local_check_number = shift.prro_localchecknumber
+
+                    else:
+                        self.sender.offline_local_number = shift.prro_offline_local_number
+
+                    xml, signed_xml, offline_tax_id = self.sender.post_sale(summa,
+                                                                            discount,
+                                                                            reals,
+                                                                            taxes,
+                                                                            pays,
+                                                                            operation_time,
+                                                                            totals=totals,
+                                                                            sales_ret=sales_ret,
+                                                                            orderretnum=orderretnum,
+                                                                            testing=shift.testing,
+                                                                            offline=True,
+                                                                            prev_hash=shift.prev_hash)
+
                     self.sender.local_check_number = shift.prro_localchecknumber
-
-                    xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False,
-                                                                             revoke=False)
-
-                    pid = self.sender.local_number
-                    # tax_id = self.sender.last_ordertaxnum
-
-                    off = OfflineChecks(
-                        operation_type=1,
-                        department_id=self.id,
-                        user_id=shift.user_id,
-                        operation_time=operation_time,
-                        shift_id=shift.id,
-                        fiscal_time=fiscal_time,
-                        server_time=server_time,
-                        pid=pid,
-                        testing=shift.testing,
-                        offline_fiscal_xml_signed=signed_xml,
-                        offline_tax_id=offline_tax_id,
-                        offline_session_id=shift.prro_offline_session_id
-                    )
-                    db.session.add(off)
-
-                    shift.prro_localnumber += 1  # = self.sender.local_number
-                    shift.prro_localchecknumber += 1  # = self.sender.local_check_number
+                    self.sender.last_ordernum = self.sender.local_number
+                    self.sender.last_ordertaxnum = 0
 
                     shift.prro_offline_local_number += 1
 
-                    self.sender.local_number += 1
-                    self.sender.offline_local_number += 1
-                    self.sender.local_check_number = shift.prro_localchecknumber
+                    shift.prev_hash = sha256(xml).hexdigest()
 
-                else:
-                    self.sender.offline_local_number = shift.prro_offline_local_number
-
-                xml, signed_xml, offline_tax_id = self.sender.post_sale(summa,
-                                                                        discount,
-                                                                        reals,
-                                                                        taxes,
-                                                                        pays,
-                                                                        operation_time,
-                                                                        totals=totals,
-                                                                        sales_ret=sales_ret,
-                                                                        orderretnum=orderretnum,
-                                                                        testing=shift.testing,
-                                                                        offline=True,
-                                                                        prev_hash=shift.prev_hash)
-
-                self.sender.local_check_number = shift.prro_localchecknumber
-                self.sender.last_ordernum = self.sender.local_number
-                self.sender.last_ordertaxnum = 0
-
-                shift.prro_offline_local_number += 1
-
-                shift.prev_hash = sha256(xml).hexdigest()
-
-                fiscal_ticket = None
-
-                print('{}: {} сохранили чек продажи в режиме офлайн '.format(fiscal_time, self.full_name))
-            else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
-
-                if self.sender.last_xml:
-                    xml = base64.b64encode(self.sender.last_xml).decode()
-                else:
-                    xml = None
-
-                if self.sender.last_fiscal_ticket:
-                    fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
-                else:
                     fiscal_ticket = None
 
-                signed_xml = None
-
-                offline_tax_id = None
-
-                print('{}: {} сохранили чек продажи в режиме онлайн '.format(fiscal_time, self.full_name))
-
-            pid = self.sender.local_number
-            tax_id = self.sender.last_ordertaxnum
-
-            sale = Sales(
-                department_id=self.id,
-                user_id=shift.user_id,
-                operation_time=operation_time,
-                shift_id=shift.id,
-                fiscal_time=fiscal_time,
-                server_time=server_time,
-                sum=summa,
-                pid=pid,
-                tax_id=tax_id,
-                fiscal_ticket=fiscal_ticket,
-                fiscal_error_code=fiscal_error_code,
-                fiscal_error_txt=fiscal_error_txt,
-                testing=shift.testing,
-                offline_fiscal_xml_signed=signed_xml,
-                offline=offline,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=shift.prro_offline_session_id,
-                doc_uid=doc_uid
-            )
-            db.session.add(sale)
-            db.session.commit()
-
-            if taxes:
-                for tax in taxes:
-                    sale_tax = SalesTaxes(
-                        sales_id=sale.id,
-                    )
-                    if 'TYPE' in tax:
-                        sale_tax.type = tax['TYPE']
-
-                    # <!--Найменування виду податку/збору (64 символи)-->
-                    if 'NAME' in tax:
-                        sale_tax.name = tax['NAME']
-
-                    # <!--Літерне позначення виду і ставки податку/збору (А,Б,В,Г,...) (1 символ)-->
-                    if 'LETTER' in tax:
-                        sale_tax.letter = tax['LETTER']
-
-                    #  <!--Відсоток податку/збору (15.2 цифри)-->
-                    if 'PRC' in tax:
-                        sale_tax.prc = tax['PRC']
-
-                    # <!--Ознака податку/збору, не включеного у вартість-->
-                    if 'SIGN' in tax:
-                        if tax['SIGN']:
-                            sale_tax.sign = True
-
-                    # <!--Сума для розрахування податку/збору (15.2 цифри)-->
-                    if 'TURNOVER' in tax:
-                        sale_tax.turnover = tax['TURNOVER']
-
-                    # <!--Сума податку/збору (15.2 цифри)-->
-                    if 'SUM' in tax:
-                        sale_tax.sum = tax['SUM']
-
-                    db.session.add(sale_tax)
-
-            if pays:
-                for pay in pays:
-                    sale_pay = SalesPays(
-                        sales_id=sale.id,
-                    )
-
-                    if 'PAYFORMCD' in pay:
-                        sale_pay.payformcd = pay['PAYFORMCD']
-                    if 'PAYFORMNM' in pay:
-                        sale_pay.payformname = pay['PAYFORMNM']
-                    if 'SUM' in pay:
-                        sale_pay.sum = pay['SUM']
-                    if 'PROVIDED' in pay:
-                        sale_pay.provided = pay['PROVIDED']
-                    if 'REMAINS' in pay:
-                        sale_pay.remains = pay['REMAINS']
-
-                    db.session.add(sale_pay)
-
-            if reals:
-                for real in reals:
-                    sale_check = SalesCheck(
-                        sales_id=sale.id,
-                    )
-
-                    # <!--Внутрішній код товару (64 символи)-->
-                    if 'CODE' in real:
-                        sale_check.code = real['CODE']
-
-                    # <!--Код товару згідно з УКТЗЕД (15 цифр)-->
-                    if 'UKTZED' in real:
-                        sale_check.uktzed = real['UKTZED']
-
-                    # <!--Найменування товару, послуги або операції (текст)-->
-                    if 'NAME' in real:
-                        sale_check.name = real['NAME']
-
-                    # <!--Код одиниці виміру згідно класифікатора (5 цифр)-->
-                    if 'UNITCD' in real:
-                        sale_check.unitcd = real['UNITCD']
-
-                    # <!--Найменування одиниці виміру (64 символи)-->
-                    if 'UNITNM' in real:
-                        sale_check.unitnm = real['UNITNM']
-
-                    # <!--Кількість/об’єм товару (15.3 цифри)-->
-                    if 'AMOUNT' in real:
-                        sale_check.amount = real['AMOUNT']
-
-                    # <!--Ціна за одиницю товару (15.2 цифри)-->
-                    if 'PRICE' in real:
-                        sale_check.price = real['PRICE']
-
-                    # <!--Літерні позначення видів і ставок податків/зборів (15 символів)-->
-                    if 'LETTERS' in real:
-                        sale_check.letters = real['LETTERS']
-
-                    # <!--Сума операції (15.2 цифри)-->
-                    if 'COST' in real:
-                        sale_check.cost = real['COST']
-
-                    db.session.add(sale_check)
-
-            shift.prro_localnumber += 1  # = self.sender.local_number
-            shift.prro_localchecknumber += 1  # = self.sender.local_check_number
-            self.sender.local_number = shift.prro_localnumber
-
-            db.session.commit()
-
-            if offline:
-                tax_id = offline_tax_id
-
-                check_visual = '{}'.format(shift.prro_org_name)
-                if shift.prro_department_name:
-                    check_visual = '{}\r\n{}'.format(check_visual, shift.prro_department_name)
-                if shift.prro_address:
-                    check_visual = '{}\r\n{}'.format(check_visual, shift.prro_address)
-                if shift.prro_tn:
-                    check_visual = '{}\r\n		ІД {}'.format(check_visual, shift.prro_tn)
-                if shift.prro_ipn:
-                    check_visual = '{}\r\n		ПН {}'.format(check_visual, shift.prro_ipn)
-
-                if sales_ret:
-                    check_visual = '{}\r\n		{}'.format(check_visual, "Видатковий чек (повернення)")
-
-                check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
-
-                check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, shift.prro_zn)
-                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, pid, "офлайн")
-                if shift.cashier:
-                    check_visual = '{}\r\nКасир {}'.format(check_visual, shift.cashier)
+                    print('{}: {} сохранили чек продажи в режиме офлайн '.format(fiscal_time, self.full_name))
                 else:
-                    check_visual = '{}\r\nКасир {}'.format(check_visual, self.prro_key.ceo_fio)
+                    fiscal_time = datetime.datetime.strptime(
+                        '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
 
-                check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
-                    check_visual)
+                    if self.sender.last_xml:
+                        xml = base64.b64encode(self.sender.last_xml).decode()
+                    else:
+                        xml = None
 
-                if sales_ret:
-                    check_visual = '{}Повернення для документу № {}'.format(check_visual, orderretnum)
-                    check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
-                        check_visual)
+                    if self.sender.last_fiscal_ticket:
+                        fiscal_ticket = base64.b64encode(
+                            self.sender.last_fiscal_ticket).decode()
+                    else:
+                        fiscal_ticket = None
 
-                if reals:
-                    for real in reals:
-                        if 'CODE' in real:
-                            check_visual = '{}АРТ.№ {} '.format(check_visual, real['CODE'])
-                        if 'NAME' in real:
-                            check_visual = '{}{}'.format(check_visual, real['NAME'])
-                        if 'AMOUNT' in real:
-                            check_visual = '{}\r\n{:.3f}         x         {:.2f} =                  {:.2f}'.format(
-                                check_visual, real['AMOUNT'], real['PRICE'], real['COST'])
-                        if 'LETTERS' in real:
-                            check_visual = '{} {}\r\n'.format(check_visual, real['LETTERS'])
-                        if 'DISCOUNTSUM' in real:
-                            check_visual = '{}	Дисконт: {:.2f}\r\n'.format(check_visual, real['DISCOUNTSUM'])
-                        if 'DKPP' in real:
-                            check_visual = '{}	Код ДКПП: {}\r\n'.format(check_visual, real['DKPP'])
-                        if 'EXCISELABELS' in real:
-                            for labels_item in real['EXCISELABELS']:
-                                check_visual = '{}	Акцизна марка: {}\r\n'.format(check_visual,
-                                                                                    labels_item['EXCISELABEL'])
-                        if 'COMMENT' in real:
-                            check_visual = '{}{}\r\n'.format(check_visual, real['COMMENT'])
+                    signed_xml = None
 
-                check_visual = '{}----------------------------------------------------------------------\r\n'.format(
-                    check_visual)
-                if discount > 0:
-                    check_visual = '{}ДИСКОНТ:                                           {:.2f}\r\n'.format(
-                        check_visual, discount)
-                if pays:
-                    paysum = 0
-                    for pay in pays:
-                        paysum = pay['SUM']
-                    if paysum > 0:
-                        check_visual = '{}СУМА ДО СПЛАТИ:                                           {:.2f}\r\n'.format(
-                            check_visual, paysum)
+                    offline_tax_id = None
 
-                if pays:
-                    for pay in pays:
-                        check_visual = '{}----------------------------------------------------------------------\r\n'.format(
-                            check_visual)
-                        if 'PAYFORMNM' in pay:
-                            check_visual = '{}{}: {: <40s}{:.2f}\r\n'.format(check_visual, pay['PAYFORMNM'], "",
-                                                                             pay['SUM'])
-                        if 'PROVIDED' in pay:
-                            check_visual = '{}Сплачено: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['PROVIDED'])
-                        if 'REMAINS' in pay:
-                            check_visual = '{}Решта: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['REMAINS'])
+                    print('{}: {} сохранили чек продажи в режиме онлайн '.format(fiscal_time, self.full_name))
+
+                pid = self.sender.local_number
+                tax_id = self.sender.last_ordertaxnum
+
+                sale = Sales(
+                    department_id=self.id,
+                    user_id=shift.user_id,
+                    operation_time=operation_time,
+                    shift_id=shift.id,
+                    fiscal_time=fiscal_time,
+                    server_time=server_time,
+                    sum=summa,
+                    discount=discount,
+                    pid=pid,
+                    tax_id=tax_id,
+                    fiscal_ticket=fiscal_ticket,
+                    fiscal_error_code=fiscal_error_code,
+                    fiscal_error_txt=fiscal_error_txt,
+                    testing=shift.testing,
+                    offline_fiscal_xml_signed=signed_xml,
+                    offline=offline,
+                    offline_tax_id=offline_tax_id,
+                    offline_session_id=shift.prro_offline_session_id,
+                    doc_uid=doc_uid
+                )
+                db.session.add(sale)
+                db.session.commit()
 
                 if taxes:
                     for tax in taxes:
-                        check_visual = '{}----------------------------------------------------------------------\r\n'.format(
-                            check_visual)
-                        if 'SOURCESUM' in tax:
-                            check_visual = '{}{} {}                {:.2f}% від    {:.2f}: {:.2f}\r\n'.format(
-                                check_visual, tax['NAME'], tax['LETTER'], tax['PRC'], tax['SOURCESUM'], tax['SUM'])
-                        else:
-                            check_visual = '{}{} {}                {:.2f}% від    {:.2f}\r\n'.format(check_visual,
-                                                                                                     tax['NAME'],
-                                                                                                     tax['LETTER'],
-                                                                                                     tax['PRC'],
-                                                                                                     tax['SUM'])
+                        sale_tax = SalesTaxes(
+                            sales_id=sale.id,
+                        )
+                        if 'TYPE' in tax:
+                            sale_tax.type = tax['TYPE']
 
-                # check_visual = '{}\r\nСУМА:                                            {:.2f}'.format(check_visual, summa)
+                        # <!--Найменування виду податку/збору (64 символи)-->
+                        if 'NAME' in tax:
+                            sale_tax.name = tax['NAME']
 
+                        # <!--Літерне позначення виду і ставки податку/збору (А,Б,В,Г,...) (1 символ)-->
+                        if 'LETTER' in tax:
+                            sale_tax.letter = tax['LETTER']
+
+                        #  <!--Відсоток податку/збору (15.2 цифри)-->
+                        if 'PRC' in tax:
+                            sale_tax.prc = tax['PRC']
+
+                        # <!--Ознака податку/збору, не включеного у вартість-->
+                        if 'SIGN' in tax:
+                            if tax['SIGN']:
+                                sale_tax.sign = True
+
+                        # <!--Сума для розрахування податку/збору (15.2 цифри)-->
+                        if 'TURNOVER' in tax:
+                            sale_tax.turnover = tax['TURNOVER']
+
+                        # <!--Сума податку/збору (15.2 цифри)-->
+                        if 'SUM' in tax:
+                            sale_tax.sum = tax['SUM']
+
+                        db.session.add(sale_tax)
+
+                if pays:
+                    for pay in pays:
+                        sale_pay = SalesPays(
+                            sales_id=sale.id,
+                        )
+
+                        if 'PAYFORMCD' in pay:
+                            sale_pay.payformcd = pay['PAYFORMCD']
+                        if 'PAYFORMNM' in pay:
+                            sale_pay.payformname = pay['PAYFORMNM']
+                        if 'SUM' in pay:
+                            sale_pay.sum = pay['SUM']
+                        if 'PROVIDED' in pay:
+                            sale_pay.provided = pay['PROVIDED']
+                        if 'REMAINS' in pay:
+                            sale_pay.remains = pay['REMAINS']
+
+                        db.session.add(sale_pay)
+
+                if reals:
+                    for real in reals:
+                        sale_check = SalesCheck(
+                            sales_id=sale.id,
+                        )
+
+                        # <!--Внутрішній код товару (64 символи)-->
+                        if 'CODE' in real:
+                            sale_check.code = real['CODE']
+
+                        # <!--Код товару згідно з УКТЗЕД (15 цифр)-->
+                        if 'UKTZED' in real:
+                            sale_check.uktzed = real['UKTZED']
+
+                        # <!--Найменування товару, послуги або операції (текст)-->
+                        if 'NAME' in real:
+                            sale_check.name = real['NAME']
+
+                        # <!--Код одиниці виміру згідно класифікатора (5 цифр)-->
+                        if 'UNITCD' in real:
+                            sale_check.unitcd = real['UNITCD']
+
+                        # <!--Найменування одиниці виміру (64 символи)-->
+                        if 'UNITNM' in real:
+                            sale_check.unitnm = real['UNITNM']
+
+                        # <!--Кількість/об’єм товару (15.3 цифри)-->
+                        if 'AMOUNT' in real:
+                            sale_check.amount = real['AMOUNT']
+
+                        # <!--Ціна за одиницю товару (15.2 цифри)-->
+                        if 'PRICE' in real:
+                            sale_check.price = real['PRICE']
+
+                        # <!--Літерні позначення видів і ставок податків/зборів (15 символів)-->
+                        if 'LETTERS' in real:
+                            sale_check.letters = real['LETTERS']
+
+                        # <!--Сума операції (15.2 цифри)-->
+                        if 'COST' in real:
+                            sale_check.cost = real['COST']
+
+                        db.session.add(sale_check)
+
+                shift.prro_localnumber += 1  # = self.sender.local_number
+                shift.prro_localchecknumber += 1  # = self.sender.local_check_number
+                self.sender.local_number = shift.prro_localnumber
+
+                if offline:
+                    sale.tax_id = sale.offline_tax_id
+
+                db.session.commit()
+
+        else:
+            shift_id = sale.shift_id
+            shift = Shifts.query\
+                .order_by(Shifts.operation_time.desc()) \
+                .filter(Shifts.id == shift_id).first()
+
+            if not shift:
+                raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
+
+            shift_opened = False
+
+            offline = sale.offline
+            # offline_tax_id = sale.offline_tax_id
+
+        try:
+            sender = SendData2(db, key, self.rro_id, "")
+            coded_string = sender.GetCheckExt(sale.tax_id, 3)
+        except Exception as e:
+
+            coded_string = False
+
+        if not coded_string:
+
+            check_visual = '{}'.format(shift.prro_org_name)
+            if shift.prro_department_name:
+                check_visual = '{}\r\n{}'.format(check_visual, shift.prro_department_name)
+            if shift.prro_address:
+                check_visual = '{}\r\n{}'.format(check_visual, shift.prro_address)
+            if shift.prro_tn:
+                check_visual = '{}\r\n		ІД {}'.format(check_visual, shift.prro_tn)
+            if shift.prro_ipn:
+                check_visual = '{}\r\n		ПН {}'.format(check_visual, shift.prro_ipn)
+
+            if sales_ret:
+                check_visual = '{}\r\n		{}'.format(check_visual, "Видатковий чек (повернення)")
+
+            check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
+
+            check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, shift.prro_zn)
+
+            if sale.offline:
+                off_on = "офлайн"
+            else:
+                off_on = "онлайн"
+
+            check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, sale.tax_id, sale.pid, off_on)
+            if sale.testing:
+                check_visual = '{}\r\nТЕСТОВИЙ НЕФІСКАЛЬНИЙ ДОКУМЕНТ'.format(check_visual)
+
+            if shift.cashier:
+                check_visual = '{}\r\nКасир {}'.format(check_visual, shift.cashier)
+            else:
+                check_visual = '{}\r\nКасир {}'.format(check_visual, self.prro_key.ceo_fio)
+
+            check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                check_visual)
+
+            if sales_ret:
+                check_visual = '{}Повернення для документу № {}'.format(check_visual, orderretnum)
+                check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                    check_visual)
+
+            if reals:
+                for real in reals:
+                    if 'CODE' in real:
+                        check_visual = '{}АРТ.№ {} '.format(check_visual, real['CODE'])
+                    if 'NAME' in real:
+                        check_visual = '{}{}'.format(check_visual, real['NAME'])
+                    if 'AMOUNT' in real:
+                        check_visual = '{}\r\n{:.3f}         x         {:.2f} =                  {:.2f}'.format(
+                            check_visual, real['AMOUNT'], real['PRICE'], real['COST'])
+                    if 'LETTERS' in real:
+                        check_visual = '{} {}\r\n'.format(check_visual, real['LETTERS'])
+                    if 'DISCOUNTSUM' in real:
+                        check_visual = '{}	Дисконт: {:.2f}\r\n'.format(check_visual, real['DISCOUNTSUM'])
+                    if 'DKPP' in real:
+                        check_visual = '{}	Код ДКПП: {}\r\n'.format(check_visual, real['DKPP'])
+                    if 'EXCISELABELS' in real:
+                        for labels_item in real['EXCISELABELS']:
+                            check_visual = '{}	Акцизна марка: {}\r\n'.format(check_visual,
+                                                                                labels_item['EXCISELABEL'])
+                    if 'COMMENT' in real:
+                        check_visual = '{}{}\r\n'.format(check_visual, real['COMMENT'])
+
+            check_visual = '{}\r\n----------------------------------------------------------------------\r\n'.format(
+                check_visual)
+            if sale.discount:
+                if sale.discount > 0:
+                    check_visual = '{}ДИСКОНТ:                                           {:.2f}\r\n'.format(
+                        check_visual, sale.discount)
+            if pays:
+                paysum = 0
+                for pay in pays:
+                    paysum = pay['SUM']
+                if paysum > 0:
+                    check_visual = '{}СУМА ДО СПЛАТИ:                                           {:.2f}\r\n'.format(
+                        check_visual, paysum)
+
+            if pays:
+                for pay in pays:
+                    check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                        check_visual)
+                    if 'PAYFORMNM' in pay:
+                        check_visual = '{}{}: {: <40s}{:.2f}\r\n'.format(check_visual, pay['PAYFORMNM'].upper(), "",
+                                                                         pay['SUM'])
+                    if 'PROVIDED' in pay:
+                        check_visual = '{}Сплачено: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['PROVIDED'])
+                    if 'REMAINS' in pay:
+                        check_visual = '{}Решта: {: <40s}{:.2f}\r\n'.format(check_visual, "", pay['REMAINS'])
+
+            if taxes:
+                for tax in taxes:
+                    check_visual = '{}----------------------------------------------------------------------\r\n'.format(
+                        check_visual)
+                    if 'SOURCESUM' in tax:
+                        check_visual = '{}{} {}                {:.2f}% від    {:.2f}: {:.2f}\r\n'.format(
+                            check_visual, tax['NAME'], tax['LETTER'], tax['PRC'], tax['SOURCESUM'], tax['SUM'])
+                    else:
+                        check_visual = '{}{} {}                {:.2f}% від    {:.2f}\r\n'.format(check_visual,
+                                                                                                 tax['NAME'],
+                                                                                                 tax['LETTER'],
+                                                                                                 tax['PRC'],
+                                                                                                 tax['SUM'])
+            else:
                 check_visual = '{}----------------------------------------------------------------------\r\n'.format(
                     check_visual)
-
-                if shift.prev_hash:
-                    check_visual = '{}Контрольне число:\r\n{}'.format(
-                        check_visual, prev_hash)
-
-                check_visual = '{}\r\n----------------------------------------------------------------------'.format(
+                check_visual = '{}Без ПДВ\r\n'.format(
                     check_visual)
 
-                check_visual = '{}\r\n{}'.format(check_visual, operation_time.strftime("%d-%m-%Y %H:%M:%S"))
+            # check_visual = '{}\r\nСУМА:                                            {:.2f}'.format(check_visual, summa)
 
+            if shift.prev_hash:
+                check_visual = '{}Контрольне число:\r\n{}'.format(
+                    check_visual, shift.prev_hash)
+
+            check_visual = '{}----------------------------------------------------------------------'.format(
+                check_visual)
+
+            check_visual = '{}\r\n{}'.format(check_visual, sale.operation_time.strftime("%d-%m-%Y %H:%M:%S"))
+
+            if sale.testing:
+                check_visual = '{}\r\n		ТЕСТОВИЙ НЕФІСКАЛЬНИЙ ЧЕК'.format(check_visual)
+            else:
                 check_visual = '{}\r\n		ФІСКАЛЬНИЙ ЧЕК'.format(check_visual)
 
-                check_visual = '{}\r\n		ФСКО ЄВПЕЗ'.format(check_visual)
+            check_visual = '{}\r\n		ФСКО ЄВПЕЗ'.format(check_visual)
 
-                check_visual = '{}\r\nДержавна податкова служба України'.format(check_visual)
+            check_visual = '{}\r\nДержавна податкова служба України'.format(check_visual)
 
-                coded_string = base64.b64encode(check_visual.encode('UTF-8'))
+            coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
-            else:
-                try:
-                    coded_string = self.sender.GetCheckExt(tax_id, 3)
-                except Exception as e:
-                    coded_string = None
+        qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
+            sale.tax_id, self.rro_id, sale.operation_time.strftime("%Y%m%d"), sale.sum)
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
-                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
+        # if sale.fiscal_ticket:
+        #     fiscal_ticket = base64.b64encode(sale.fiscal_ticket)
+        # else:
+        #     fiscal_ticket = None
 
-            if self.sender.last_fiscal_ticket:
-                fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket)
-            else:
-                fiscal_ticket = None
-
-            ret = {
-                "tax_id": tax_id,
-                "shift": shift,
-                "shift_opened": shift_opened,
-                "qr": qr,
-                "tax_visual": coded_string,
-                "offline": offline,
-                "tax_id_advance": tax_id_advance,
-                "qr_advance": qr_advance,
-                "tax_visual_advance": visual_advance,
-                "fiscal_ticket": fiscal_ticket
-            }
-            return ret
-        else:
-            raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
+        ret = {
+            "tax_id": sale.tax_id,
+            "shift": shift,
+            "shift_opened": shift_opened,
+            "qr": qr,
+            "tax_visual": coded_string,
+            "offline": offline,
+            "tax_id_advance": tax_id_advance,
+            "qr_advance": qr_advance,
+            "tax_visual_advance": visual_advance,
+            "fiscal_ticket": sale.fiscal_ticket,
+            "uid": sale.doc_uid,
+        }
+        return ret
 
     def prro_close_shift(self, shift):
 
@@ -3390,6 +3436,8 @@ class Sales(Base):
     sum = Column('sum', Numeric(precision=20, scale=2),
                  comment='Сумма')
 
+    discount = Column('discount', Numeric(precision=20, scale=2), default=0, comment='Дисконт')
+
     ret = Column('ret', Boolean, comment='Признак возврата', nullable=True, default=False)
 
     orderretnum = Column('orderretnum', Integer, comment='Фискальный номер чека возврата', nullable=True, default=None)
@@ -3503,6 +3551,7 @@ class SalesCheck(Base):
 
     cost = Column('cost', Numeric(precision=15, scale=2), comment='Сума операції')
 
+    discount = Column('discount', Numeric(precision=15, scale=2), default=0, comment='Дисконт операції')
 
 class ZReports(Base):
     ''' Таблица фискальных данных Z отчетов '''
