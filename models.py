@@ -534,25 +534,6 @@ class Departments(Base):
         shift, shift_opened, messages, offline  = self.prro_open_shift(False)
         print(registrar_state)
 
-        if int(registrar_state['OfflineNextLocalNum']) > 1:
-
-            data = close_offline_session(self.rro_id)
-            if data:
-                OfflineSessionId = data['OfflineSessionId']
-                OfflineSeed = data['OfflineSeed']
-
-                shift.prro_offline_seed = OfflineSeed
-                shift.prro_offline_session_id = OfflineSessionId
-
-                self.prro_offline_seed = OfflineSeed
-                self.prro_offline_session_id = OfflineSessionId
-
-                self.offline_status = False
-
-                messages.append('Успішно закрили оффлайн сесію')
-            else:
-                messages.append('Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
-
         if registrar_state['ShiftState'] == 0:
 
             # msg = '{} {}'.format(msg, 'Смена есть, статус {}'.format(shift.operation_type))
@@ -617,16 +598,6 @@ class Departments(Base):
             shift.prro_localnumber = registrar_state['NextLocalNum']
             self.next_local_number = int(registrar_state['NextLocalNum'])
 
-        if self.next_offline_local_number != int(registrar_state['OfflineNextLocalNum']):
-            messages.append('Виправлено значення next_offline_local_number з {} на {}'.format(
-                                     self.next_offline_local_number,
-                                     registrar_state['OfflineNextLocalNum']))
-            self.next_offline_local_number = int(registrar_state['OfflineNextLocalNum'])
-
-        if self.next_offline_local_number == 1 and self.offline_status:
-            messages.append('Значення next_offline_local_number=1, виправлено значення offline_status=False')
-            self.offline_status = False
-
         # self.offline_status = False
 
         zn = int(
@@ -684,18 +655,39 @@ class Departments(Base):
         offline_supported = registrar_state['OfflineSupported']
         self.offline_supported = offline_supported
 
-        OfflineSessionId = registrar_state['OfflineSessionId']
-        if self.prro_offline_session_id != OfflineSessionId:
-            messages.append('Исправляем OfflineSessionId ПРРО с {} на {}'.format(self.prro_offline_session_id,
-                                     OfflineSessionId))
-            shift.prro_offline_session_id = OfflineSessionId
-            self.prro_offline_session_id = OfflineSessionId
+        if offline_supported:
 
-        OfflineSeed = registrar_state['OfflineSeed']
-        if self.prro_offline_seed != OfflineSeed:
-            messages.append('Исправляем OfflineSeed ПРРО с {} на {}'.format(self.prro_offline_seed, OfflineSeed))
-            shift.prro_offline_seed = OfflineSeed
-            self.prro_offline_seed = OfflineSeed
+            if int(registrar_state['OfflineNextLocalNum']) > 1:
+
+                data = close_offline_session(self.rro_id)
+                if data:
+                    self.offline_status = False
+
+                    messages.append('Успішно закрили оффлайн сесію')
+                else:
+                    messages.append(
+                        'Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
+
+            if self.next_offline_local_number != int(registrar_state['OfflineNextLocalNum']):
+                messages.append('Виправлено значення next_offline_local_number з {} на {}'.format(
+                    self.next_offline_local_number,
+                    registrar_state['OfflineNextLocalNum']))
+                self.next_offline_local_number = int(registrar_state['OfflineNextLocalNum'])
+
+            OfflineSessionId = registrar_state['OfflineSessionId']
+            if self.prro_offline_session_id != OfflineSessionId:
+                messages.append('Исправляем OfflineSessionId ПРРО с {} на {}'.format(self.prro_offline_session_id,
+                                         OfflineSessionId))
+                shift.prro_offline_session_id = OfflineSessionId
+                self.prro_offline_session_id = OfflineSessionId
+
+            OfflineSeed = registrar_state['OfflineSeed']
+            if self.prro_offline_seed != OfflineSeed:
+                messages.append('Исправляем OfflineSeed ПРРО с {} на {}'.format(self.prro_offline_seed, OfflineSeed))
+                shift.prro_offline_seed = OfflineSeed
+                self.prro_offline_seed = OfflineSeed
+        else:
+            self.offline_status = False
 
         testing = registrar_state['Testing']
         if shift.testing != testing:
