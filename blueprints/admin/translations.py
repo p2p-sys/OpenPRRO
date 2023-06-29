@@ -111,6 +111,7 @@ TRANSLATIONS = {
     'offline': 'Режим офлайн',
     'offline_supported': 'Дозвіл переходу в режим офлайн по податковій',
     'next_local_number': 'Наступний локальний номер документа',
+    'next_offline_local_number': 'Наступний локальний оффлайн номер документа',
     'org_name': 'Найменування продавця',
     'name': 'Найменування точки продаж',
     'prro_name': 'Найменування ПРРО',
@@ -122,8 +123,11 @@ TRANSLATIONS = {
     'tax_obj_guid': 'Ідентифікатор запису ОО',
     'tax_obj_id': 'Код запису ОО',
     'shift_state': 'Стан зміни',
-    'closed': 'Стан ПРРО',
+    'closed': 'ПРРО відключений у податковій',
     'chief_cashier': 'Старший касир',
-    'acsk': 'АЦСК'
+    'acsk': 'АЦСК',
+    'offline_status': 'Перейшли в режим офлайн',
+    'offline_session_duration': 'Тривалість оффлайн сесії',
+    'offline_session_monthly_duration': 'Тривалість оффлайн сесії з початку місяця',
+    'last_offline_session_start': 'Час початку оффлайн сесії',
 }
-

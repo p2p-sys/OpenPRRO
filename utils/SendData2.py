@@ -1,4 +1,6 @@
+import base64
 import struct
+from hashlib import sha256
 
 import requests
 import json
@@ -18,52 +20,44 @@ import dateutil.parser
 
 class SendData2(object):
 
-    def __init__(self, db, key, rro_fn, cashier_name):
+    def __init__(self, db, key, department, rro_fn, cashier_name):
 
-        self.key = key
-
-        self.signer = Sign()
+        if not key and department:
+            self.key = department.get_prro_key()
+        else:
+            self.key = key
 
         if not self.key:
             raise Exception('Не задано ключ криптографії')
 
-        self.box_id = self.key.box_id
+        self.department = department
+
+        self.signer = Sign()
 
         self.db = db
 
-        self.rro_fn = rro_fn
-
-        self.tn = ''
-        self.zn = None  # Локальний номер реєстратора
-        self.ipn = ''
-
-        self.org_name = ''
-        self.department_name = ''
-        self.rro_department_name = ''
-        self.address = ''
-        self.entity = ''
+        if rro_fn:
+            self.rro_fn = rro_fn
+        else:
+            self.rro_fn = department.rro_id
 
         self.shift_state = 0
-        self.local_number = 0
-        self.local_check_number = 0
+
+        self.cashier_name = cashier_name
+
+        # self.fiscal_shift_id = None
 
         self.last_ordernum = 0
         self.last_ordertaxnum = 0
         self.last_taxorderdate = None
         self.last_taxordertime = None
 
-        self.offline_supported = False
-        self.chief_cashier = False
+        # self.offline_supported = False
+        # self.chief_cashier = False
 
-        # <!--Ідентифікатор офлайн сесії (128 символів, необов’язковий)-->
-        self.offline_session_id = None
+        # self.offline_local_number = 0
 
-        # <!--"Секретне число" для обчислення фіскального номера офлайн документа (128 символів, необов’язковий)-->
-        self.offline_seed = None
-
-        self.offline_local_number = 0
-
-        self.offline = False
+        # self.offline = False
 
         self.last_xml = None
 
@@ -72,10 +66,6 @@ class SendData2(object):
         self.last_fiscal_error_code = 0
 
         self.last_fiscal_error_txt = ''
-
-        self.cashier_name = cashier_name
-
-        self.fiscal_shift_id = None
 
         self.server_time = None
 
@@ -116,18 +106,22 @@ class SendData2(object):
 
         if prev_hash:
             if doc_sum:
-                str = '{},{},{},{},{},{},{:.2f},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
-                                                           self.rro_fn, self.zn, doc_sum, prev_hash)
+                str = '{},{},{},{},{},{},{:.2f},{}'.format(self.department.prro_offline_seed, check_date, check_time,
+                                                           self.department.next_local_number,
+                                                           self.rro_fn, self.department.zn, doc_sum, prev_hash)
             else:
-                str = '{},{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
-                                                    self.rro_fn, self.zn, prev_hash)
+                str = '{},{},{},{},{},{},{}'.format(self.department.prro_offline_seed, check_date, check_time,
+                                                    self.department.next_local_number,
+                                                    self.rro_fn, self.department.zn, prev_hash)
         else:
             if doc_sum:
-                str = '{},{},{},{},{},{},{:.2f}'.format(self.offline_seed, check_date, check_time, self.local_number,
-                                                        self.rro_fn, self.zn, doc_sum)
+                str = '{},{},{},{},{},{},{:.2f}'.format(self.department.prro_offline_seed, check_date, check_time,
+                                                        self.department.next_local_number,
+                                                        self.rro_fn, self.department.zn, doc_sum)
             else:
-                str = '{},{},{},{},{},{}'.format(self.offline_seed, check_date, check_time, self.local_number,
-                                                 self.rro_fn, self.zn)
+                str = '{},{},{},{},{},{}'.format(self.department.prro_offline_seed, check_date, check_time,
+                                                 self.department.next_local_number,
+                                                 self.rro_fn, self.department.zn)
 
         print(str)
         # Від текстового рядку розраховується геш за алгоритмом CRC32
@@ -148,17 +142,17 @@ class SendData2(object):
             # Контрольне число не може дорівнювати 0. Якщо у результаті розрахунку контрольного числа одержано 0, призначається значення 1.
             control_int = 1
 
-        if not self.offline_session_id:
+        if not self.department.prro_offline_session_id:
             raise Exception('Для цього номера РРО режим оффлайн заборонено')
 
-        offline_tax_number = '{}.{}.{}'.format(self.offline_session_id, self.offline_local_number, control_int)
+        offline_tax_number = '{}.{}.{}'.format(self.department.prro_offline_session_id, self.department.next_offline_local_number, control_int)
 
         return offline_tax_number
 
         # print(str_crc32_hash)
 
     def get_fiscal_data_by_local_number(self, local_number, data):
-        # print(self.local_number)
+        # print(self.department.next_local_number)
         document = self.DocumentInfoByLocalNum(local_number)
         if document:
             # print(document)
@@ -168,11 +162,11 @@ class SendData2(object):
             taxorderdate = etree.fromstring(data).xpath('//ORDERDATE/text()')
             taxordertime = etree.fromstring(data).xpath('//ORDERTIME/text()')
 
-            self.last_ordernum = self.local_number
+            self.last_ordernum = self.department.next_local_number
             self.last_ordertaxnum = ordertaxnum
             self.last_taxorderdate = taxorderdate[0]
             self.last_taxordertime = taxordertime[0]
-            # self.local_number += 1
+            # self.department.next_local_number += 1
 
             self.last_fiscal_error_code = 999
 
@@ -198,7 +192,7 @@ class SendData2(object):
             self.server_time = None
 
         # проверим актуальность ключа криптографии
-        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Начинаю подписывать'))
+        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Починаю підписувати'))
         try:
             try:
                 signed_data = self.signer.sign(self.key.box_id, data, role=self.key.key_role)
@@ -214,7 +208,7 @@ class SendData2(object):
             raise Exception('{}'.format(
                 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закончил подписывать'))
+        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Перестав підписувати'))
         request_body = zlib.compress(signed_data)
 
         try:
@@ -223,18 +217,21 @@ class SendData2(object):
             # else:
             # return False
             start = datetime.now(tz.gettz(TIMEZONE))
-            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Начинаю отправлять в налоговую'))
+            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Починаю відправляти до податкової'))
             answer = requests.post(url, data=request_body, headers=headers, timeout=15)
-            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закончил отправлять в налоговую'))
+            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закінчив відправляти до податкової'))
             stop = datetime.now(tz.gettz(TIMEZONE))
-            print('{} Все заняло по времени {} секунд'.format(stop, (stop - start).total_seconds()))
-            # return False
+            print('{} Операція зайняла за часом {} секунд'.format(stop, (stop - start).total_seconds()))
+
+            ''' For tests offline uncomment '''
+            # if command == "doc":
+            #     return False
 
         except Exception as e:
-            print('Error {}: {}'.format(self.department_name, e))
+            print('Error {}: {}'.format(self.department.name, e))
             # time.sleep(3)
             # if command != "cmd":
-            #     data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             #     if data:
             #         return True
             #     else:
@@ -259,61 +256,72 @@ class SendData2(object):
         '''
         print(answer.status_code)
 
-        error = answer.text
-        # print(error)
+        message = answer.text
+        if command == "cmd":
+            print(message)
 
-        if error.find('ShiftAlreadyOpened') != -1:
-            # 4 ShiftAlreadyOpened Зміну на ПРРО з фіскальним номером 4000326084 наразі відкрито особою Петренко Віталій Анатолійович, ідентифікатор ключа суб'єкта b5613c1115874d0aab4bf1e4cedf145486873ac6dc01279762bf64d8d47ca49b
-            error_rro_pos = error.find('наразі відкрито особою')
+        if message.find('ShiftAlreadyOpened') != -1:
+            error_rro_pos = message.find('наразі відкрито особою')
             if error_rro_pos > 0:
-                error_rro = error[error_rro_pos - 11:error_rro_pos - 1]
+                error_rro = message[error_rro_pos - 11:error_rro_pos - 1]
 
-                errr_key_pos = error.find("ідентифікатор ключа суб'єкта")
+                errr_key_pos = message.find("ідентифікатор ключа суб'єкта")
                 if error_rro_pos > 0:
-                    error_key = error[errr_key_pos + 29:errr_key_pos + 93]
+                    error_key = message[errr_key_pos + 29:errr_key_pos + 93]
 
                     if error_rro == self.rro_fn and error_key == self.key.public_key:
-                        data = self.get_fiscal_data_by_local_number(self.local_number, data)
+                        data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
                         print(data)
                         if data:
                             self.last_fiscal_error_txt = ''
                             self.last_fiscal_error_code = 0
                             return True
 
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 
-        if error.find('ZRepAlreadyRegistered') != -1:
-            data = self.get_fiscal_data_by_local_number(self.local_number, data)
+        if message.find('ZRepAlreadyRegistered') != -1:
+            data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             print(data)
             if data:
                 self.last_fiscal_error_txt = ''
                 self.last_fiscal_error_code = 0
                 return True
 
-            print("Помилка надсилання даних на фіскальний сервер: {}".format(error))
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+
+        if message.find('Сторнуватись може лише останній документ') != -1:
+            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+            messages = message.split('\r\n')
+            if len(messages) > 1:
+                message = messages[1]
+
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 
         if answer.status_code == 204:
             raise Exception('{}'.format(
-                "Помилка 204. На фіскальному сервері немає об'єктів для роботи. Будь ласка, перевірте в Електронному кабінеті ДПС (Програмне РРО - Касири) наявність ідетифікатора вашого сертифіката. Якщо Ви нещодавно подали форму №5-ПРРО для реєстрації ідентифікатора, зачекайте, потрібен час для синхронізації даних між серверами ДПС."))
+                "Помилка 204. На фіскальному сервері немає об'єктів для роботи. Будь ласка, перевірте в"
+                " Електронному кабінеті ДПС (Програмне РРО - Касири) наявність ідетифікатора вашого сертифіката."
+                " Якщо Ви нещодавно подали форму №5-ПРРО для реєстрації ідентифікатора, зачекайте,"
+                " потрібен час для синхронізації даних між серверами ДПС."))
 
         if answer.status_code == 500:
             return False
 
         if answer.status_code >= 400:
-            if error.find('DocumentValidationError') != -1:
-                if error.find('реєстраційних') != -1:
+            if message.find('DocumentValidationError') != -1:
+                if message.find('реєстраційних') != -1:
                     return 9
 
-            print("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
             return False
             # raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
 
             # if error.find('CheckLocalNumberInvalid') != -1:
             #     need_num = int(error[error.find('дорівнювати')+12:])
             #     print(need_num)
-            #     if need_num > self.local_number:
-            #         data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            #     if need_num > self.department.next_local_number:
+            #         data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             #         if data:
             #             self.last_fiscal_error_txt = ''
             #             self.last_fiscal_error_code = 0
@@ -322,7 +330,7 @@ class SendData2(object):
             #     #     return need_num
             #
             # elif error.find('ShiftNotOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             #     print(data)
             #     if data:
             #         self.last_fiscal_error_txt = ''
@@ -330,7 +338,7 @@ class SendData2(object):
             #         return True
             #
             # elif error.find('ShiftAlreadyOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             #     print(data)
             #     if data:
             #         self.last_fiscal_error_txt = ''
@@ -342,7 +350,7 @@ class SendData2(object):
             #     #
             #     # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
             #     #
-            #     # msg = '{} Ошибка пРРО на {}: {}'.format(self.org_name, self.department_name, error)
+            #     # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
             #     #
             #     # bot.sendMessage(chat_id='-333840622',
             #     #                 text='{}'.format(''.join(msg)))
@@ -355,7 +363,7 @@ class SendData2(object):
             #         #
             #         # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
             #         #
-            #         # msg = '{} Ошибка пРРО на {}: {}'.format(self.org_name, self.department_name, error)
+            #         # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
             #         #
             #         # bot.sendMessage(chat_id='-333840622',
             #         #                 text='{}'.format(''.join(msg)))
@@ -366,7 +374,7 @@ class SendData2(object):
             #         return error
             #
             # elif error.find('ShiftAlreadyOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.local_number, data)
+            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
             #     print(data)
             #     if data:
             #         self.last_fiscal_error_txt = ''
@@ -379,7 +387,7 @@ class SendData2(object):
             #
             # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
             #
-            # msg = '{} Ошибка пРРО на {}: {}'.format(self.org_name, self.department_name, error)
+            # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
             #
             # bot.sendMessage(chat_id='-333840622',
             #                 text='{}'.format(''.join(msg)))
@@ -474,19 +482,19 @@ class SendData2(object):
                         taxordertime = etree.fromstring(last_data).xpath('//ORDERTIME/text()')
 
                         if len(offline_session_id) > 0:
-                            self.offline_session_id = offline_session_id[0]
+                            self.department.prro_offline_session_id = offline_session_id[0]
 
                         if len(offline_seed) > 0:
-                            self.offline_seed = offline_seed[0]
+                            self.department.prro_offline_seed = offline_seed[0]
 
                         print("Документ с локальным номером {} и фискальным номером {} успешно отражен".format(ordernum,
                                                                                                                ordertaxnum))
-                        if ordernum == self.local_number:
+                        if ordernum == self.department.next_local_number:
                             self.last_ordernum = ordernum
                             self.last_ordertaxnum = ordertaxnum
                             self.last_taxorderdate = taxorderdate[0]
                             self.last_taxordertime = taxordertime[0]
-                            # self.local_number += 1
+                            # self.department.next_local_number += 1
 
                             self.fiscal_time = datetime.strptime(
                                 '{} {}'.format(self.last_taxorderdate, self.last_taxordertime),
@@ -535,16 +543,16 @@ class SendData2(object):
                         if isinstance(registrars, list):
                             for registrar in registrars:
                                 if self.rro_fn == str(registrar['NumFiscal']):
-                                    self.address = tax_object['Address']
-                                    self.org_name = tax_object['OrgName']
-                                    self.department_name = tax_object['Name']
-                                    self.rro_department_name = registrar['Name']
-                                    self.tn = tax_object['Tin']
-                                    self.ipn = tax_object['Ipn']
-
-                                    self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
-
-                                    self.zn = registrar['NumLocal']
+                                    # self.department.address = tax_object['Address']
+                                    # self.department.org_name = tax_object['OrgName']
+                                    # self.department.name = tax_object['Name']
+                                    # self.rro_department_name = registrar['Name']
+                                    # self.department.tin = tax_object['Tin']
+                                    # self.department.ipn = tax_object['Ipn']
+                                    #
+                                    # self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
+                                    #
+                                    # self.department.zn = registrar['NumLocal']
                                     # print("Требуемый РРО есть в базе налоговой")
                                     return data
         # else:
@@ -584,35 +592,37 @@ class SendData2(object):
         }
         data = self.post_data("cmd", cmd)
 
-        if data:
-            if 'ShiftState' in data:
-                self.shift_state = data['ShiftState']
-                self.local_number = data['NextLocalNum']
-                self.offline_supported = data['OfflineSupported']
-                self.chief_cashier = data['ChiefCashier']
-                if 'ShiftId' in data:
-                    self.fiscal_shift_id = data["ShiftId"]
-            if 'TaxObject' in data:
-                tax_object = data['TaxObject']
+        return data
 
-                registrars = tax_object['TransactionsRegistrars']
-                if isinstance(registrars, list):
-                    for registrar in registrars:
-                        if self.rro_fn == str(registrar['NumFiscal']):
-                            self.address = tax_object['Address']
-                            self.org_name = tax_object['OrgName']
-                            self.department_name = tax_object['Name']
-                            self.rro_department_name = registrar['Name']
-                            self.tn = tax_object['Tin']
-                            self.ipn = tax_object['Ipn']
+        # if data:
+            # if 'ShiftState' in data:
+                # self.shift_state = data['ShiftState']
+                # self.department.next_local_number = data['NextLocalNum']
+                # self.offline_supported = data['OfflineSupported']
+                # self.chief_cashier = data['ChiefCashier']
+                # if 'ShiftId' in data:
+                #     self.fiscal_shift_id = data["ShiftId"]
+            # if 'TaxObject' in data:
+            #     tax_object = data['TaxObject']
 
-                            self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
-
-                            self.zn = registrar['NumLocal']
-                            print("Требуемый РРО есть в базе налоговой")
-            return data
-
-        return False
+                # registrars = tax_object['TransactionsRegistrars']
+                # if isinstance(registrars, list):
+                #     for registrar in registrars:
+                #         if self.rro_fn == str(registrar['NumFiscal']):
+                #             self.department.address = tax_object['Address']
+                #             self.department.org_name = tax_object['OrgName']
+                #             self.department.name = tax_object['Name']
+                #             self.rro_department_name = registrar['Name']
+                #             self.department.tin = tax_object['Tin']
+                #             self.department.ipn = tax_object['Ipn']
+                #
+                #             self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
+                #
+                #             self.department.zn = registrar['NumLocal']
+                # print("Требуемый РРО есть в базе налоговой")
+        #     return data
+        # else:
+        #     return False
 
     def GetCheck(self, check_id, original=False):
         """ Запит чека """
@@ -907,24 +917,24 @@ class SendData2(object):
 
         #   <!--ЄДРПОУ/ДРФО/№ паспорта продавця (10 символів)-->
         TIN = etree.SubElement(CHECKHEAD, "TIN")
-        TIN.text = '{}'.format(self.tn)
+        TIN.text = '{}'.format(self.department.tin)
 
         #   <!--Податковий номер або Індивідуальний номер платника ПДВ (12 символів)-->
-        if self.ipn:
+        if self.department.ipn:
             IPN = etree.SubElement(CHECKHEAD, "IPN")
-            IPN.text = '{}'.format(self.ipn)
+            IPN.text = '{}'.format(self.department.ipn)
 
         #   <!--Найменування продавця (256 символів)-->
         ORGNM = etree.SubElement(CHECKHEAD, "ORGNM")
-        ORGNM.text = self.org_name
+        ORGNM.text = self.department.org_name
 
         #   <!--Найменування точки продаж (256 символів)-->
         POINTNM = etree.SubElement(CHECKHEAD, "POINTNM")
-        POINTNM.text = self.department_name
+        POINTNM.text = self.department.name
 
         #   <!--Адреса точки продаж (256 символів)-->
         POINTADDR = etree.SubElement(CHECKHEAD, "POINTADDR")
-        POINTADDR.text = self.address
+        POINTADDR.text = self.department.address
 
         #   <!--Дата операції (ddmmyyyy)-->
         ORDERDATE = etree.SubElement(CHECKHEAD, "ORDERDATE")
@@ -936,11 +946,11 @@ class SendData2(object):
 
         #   <!--Локальний номер документа (128 символів)-->
         ORDERNUM = etree.SubElement(CHECKHEAD, "ORDERNUM")
-        ORDERNUM.text = str(self.local_number)
+        ORDERNUM.text = str(self.department.next_local_number)
 
         #   <!--Локальний номер реєстратора розрахункових операцій (64 символи)-->
         CASHDESKNUM = etree.SubElement(CHECKHEAD, "CASHDESKNUM")
-        CASHDESKNUM.text = str(self.zn)
+        CASHDESKNUM.text = str(self.department.zn)
 
         #   <!--Фіскальний номер реєстратора розрахункових операцій (128 символів)-->
         CASHREGISTERNUM = etree.SubElement(CHECKHEAD, "CASHREGISTERNUM")
@@ -992,10 +1002,16 @@ class SendData2(object):
 
         return CHECK
 
-    def open_shift(self, dt, testing=False):
+    def open_shift(self, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек відкриття зміни (форма №3-ПРРО) """
 
-        CHECK = self.get_check_xml(100, dt=dt, testing=testing)
+        if offline:
+            offline_tax_number = self.calculate_offline_tax_number(dt, prev_hash=prev_hash)
+        else:
+            offline_tax_number = None
+
+        CHECK = self.get_check_xml(100, dt=dt, testing=testing, offline=offline,
+                                   prev_hash=prev_hash, offline_tax_number=offline_tax_number)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
@@ -1007,6 +1023,19 @@ class SendData2(object):
         except etree.DocumentInvalid as e:
             raise Exception('Помилка XML (pretest): {}'.format(e))
 
+        if offline:
+            try:
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                                               tsp=False, ocsp=False)
+            except Exception as e:
+                box_id = self.signer.update_bid(self.db, self.key)
+                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                                               tsp=False, ocsp=False)
+                self.key.box_id = box_id
+                self.db.session.commit()
+
+            return base64.b64encode(xml).decode(), signed_data, offline_tax_number, sha256(xml).hexdigest()
+
         ret = self.post_data("doc", xml)
 
         if ret:
@@ -1016,15 +1045,13 @@ class SendData2(object):
             registrar_state = self.TransactionsRegistrarState()
 
             if registrar_state:
-                if not self.fiscal_shift_id:
-                    return False
-                elif self.shift_state:
-                    print("Смена успешно открыта")
-                    self.last_xml = xml
-                    return True
+                if 'ShiftState' in registrar_state:
+                    if registrar_state['ShiftState'] == 1:
+                        print("Смена успешно открыта")
+                        self.last_xml = xml
+                        return True
                 else:
                     self.server_time = None
-                self.shift_state = 1
 
             else:
                 print("Ошибка проверки открытия смены")
@@ -1064,7 +1091,7 @@ class SendData2(object):
 
         return xml, signed_data, offline_tax_number
 
-    def post_storno(self, tax_id, dt, testing=False, offline=False, prev_hash=None):
+    def post_storno(self, tax_id, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек сторно """
 
         if offline:
@@ -1096,7 +1123,7 @@ class SendData2(object):
                 self.key.box_id = box_id
                 self.db.session.commit()
 
-            return xml, signed_data, offline_tax_number
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
         if ret:
@@ -1111,7 +1138,7 @@ class SendData2(object):
 
         return False
 
-    def post_advances(self, summa, dt, testing=False, offline=False, prev_hash=None):
+    def post_advances(self, summa, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек (форма №3-ПРРО) """
 
         if offline:
@@ -1151,7 +1178,7 @@ class SendData2(object):
                 self.key.box_id = box_id
                 self.db.session.commit()
 
-            return xml, signed_data, offline_tax_number
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
         if ret:
@@ -1206,7 +1233,7 @@ class SendData2(object):
                 self.key.box_id = box_id
                 self.db.session.commit()
 
-            return xml, signed_data, offline_tax_number
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
         if ret:
@@ -1261,7 +1288,7 @@ class SendData2(object):
                 self.key.box_id = box_id
                 self.db.session.commit()
 
-            return xml, signed_data, offline_tax_number
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
         if ret:
@@ -1648,7 +1675,7 @@ class SendData2(object):
                 self.key.box_id = box_id
                 self.db.session.commit()
 
-            return xml, signed_data, offline_tax_number
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
         if ret:
@@ -1663,352 +1690,7 @@ class SendData2(object):
 
         return False
 
-    def post_currency_check(self, check_data, dt):
-        """ Чек операції обміну валюти """
-
-        CHECK = self.get_check_xml(2, 0, dt=dt)
-
-        # <!-- Дата та час встановлення курсу (присутній тільки для чеку-довідки) (ддммррррггххсс)
-        kurs_datetime = check_data['kurs_datetime']
-
-        CHECKBODY = etree.SubElement(CHECK, "CHECKBODY")
-        CHECKBODY.text = ''
-
-        ROW = etree.SubElement(CHECKBODY, "ROW", ROWNUM="1")
-        ROW.text = ''
-
-        # <!--Код валюти (64 символи)-->
-        VALCD = etree.SubElement(ROW, "VALCD")
-        VALCD.text = '{:d}'.format(check_data['currency_numcode_in'])
-
-        # <!--Символьний код валюти  (64 символи)-->
-        VALSYMCD = etree.SubElement(ROW, "VALSYMCD")
-        VALSYMCD.text = '{}'.format(check_data['currency_code_in'])
-
-        # <!--Тип операції (1 символ)-->
-        # <!--0-Купівля; 1-Сторно купівлі; 2-Продаж; 3-Сторно продажи; 4-Зворотній обмін; 5-Конвертація; 6–Сторно зворотного обміну; 7–Сторно конвертації-->
-        VALOPERTYPE = etree.SubElement(ROW, "VALOPERTYPE")
-        VALOPERTYPE.text = '{:d}'.format(check_data['type_op'])
-
-        # <!--Код валюти виданої  (64 символи)-->
-        VALOUTCD = etree.SubElement(ROW, "VALOUTCD")
-        VALOUTCD.text = '{:d}'.format(check_data['currency_numcode_out'])
-
-        ''' <!--Символьний код валюти виданої (64 символи)--> '''
-        VALOUTSYMCD = etree.SubElement(ROW, "VALOUTSYMCD")
-        VALOUTSYMCD.text = '{}'.format(check_data['currency_code_out'])
-
-        ''' <!--Найменування валюти виданої (текст)--> '''
-        VALOUTNM = etree.SubElement(ROW, "VALOUTNM")
-        VALOUTNM.text = '{}'.format(check_data['currency_name_out'])
-
-        ''' <!--Курс операції (ХХХХ.ХХХХХХХХ) (64 символи)--> '''
-        VALCOURSE = etree.SubElement(ROW, "VALCOURSE")
-        VALCOURSE.text = "{:04.8f}".format(check_data['kurs'])
-
-        ''' <!--Дата та час встановлення курсу (присутній тільки для чеку-довідки) (64 символи)--> '''
-        VALCOURSEDATE = etree.SubElement(ROW, "VALCOURSEDATE")
-        VALCOURSEDATE.text = '{}'.format(kurs_datetime)  # check_data['kurs_datetime']
-
-        ''' <!--Сума валюти по типу операцій вказаної у атрибуті ‘TYPEOPERATION’ (іноземна валюта) (15.2 цифри)--> '''
-        VALFOREIGNSUM = etree.SubElement(ROW, "VALFOREIGNSUM")
-        VALFOREIGNSUM.text = "{:.2f}".format(check_data['sum_currency'])
-
-        ''' <!--Сума валюти по типу операцій вказаної у атрибуті ‘TYPEOPERATION’ (національна валюта) (15.2 цифри)--> '''
-        VALNATIONALSUM = etree.SubElement(ROW, "VALNATIONALSUM")
-        VALNATIONALSUM.text = "{:.2f}".format(check_data['sum_uah'])
-
-        ''' <!--Сума комісії конвертації (15.2 цифри)--> '''
-        VALCOMMISSION = etree.SubElement(ROW, "VALCOMMISSION")
-        VALCOMMISSION.text = "{:.2f}".format(0.00)
-
-        ''' <!--Кількість розрахункових документів по операції (присутній тільки для чеку-довідки) (64 символи)--> '''
-        VALOPERCNT = etree.SubElement(ROW, "VALOPERCNT")
-        VALOPERCNT.text = "1"
-
-        xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
-
-        try:
-            xmlschema_doc = etree.parse(self.xsd_path)
-            xmlschema = etree.XMLSchema(xmlschema_doc)
-            xmlschema.assertValid(CHECK)
-        except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
-
-        ret = self.post_data("doc", xml)
-        if ret:
-            if ret == 9:
-                return ret
-
-            self.last_xml = xml
-            print("Чек успешно отправлен")
-            self.local_check_number += 1
-            return True
-        else:
-            print("Ошибка отправки чека")
-            return False
-
-    def post_payment_check(self):
-        """ Чек переказу коштів """
-
-        # <!--Загальна сума (15.2 цифри)-->
-        sum = 476.53
-
-        # <!--Сума чеку без урахування податків/зборів (15.2 цифри)-->
-        no_tax_sum = 99.88
-
-        # <!--Сума комісії (15.2 цифри)-->
-        comission = 9.98
-
-        cost = 0
-
-        pay_system_name = "FLASH PAY"
-        pay_system_id = "12121212121212121212"
-
-        CHECK = self.get_check_xml(1, 0)
-
-        #   <!--Підсумок по чеку-->
-        CHECKTOTAL = etree.SubElement(CHECK, "CHECKTOTAL")
-        CHECKTOTAL.text = ''
-
-        # <!--Загальна сума (15.2 цифри)-->
-        SUM = etree.SubElement(CHECKTOTAL, "SUM")
-        SUM.text = "{:.2f}".format(sum)
-
-        # <!--Сума чеку без урахування податків/зборів (15.2 цифри)-->
-        NOTAXSUM = etree.SubElement(CHECKTOTAL, "NOTAXSUM")
-        NOTAXSUM.text = "{:.2f}".format(no_tax_sum)
-
-        # <!--Сума комісії (15.2 цифри)-->
-        COMMISSION = etree.SubElement(CHECKTOTAL, "COMMISSION")
-        COMMISSION.text = "{:.2f}".format(comission)
-
-        #   <!--Реалізація-->
-        CHECKPAY = etree.SubElement(CHECK, "CHECKPAY")
-        CHECKPAY.text = ''
-
-        ROW = etree.SubElement(CHECKPAY, "ROW", ROWNUM="1")
-        ROW.text = ''
-
-        #    <!--Код форми оплати (числовий):-->
-        #	<!--0–Готівка, 1–Банківська картка...-->
-        PAYFORMCD = etree.SubElement(ROW, "PAYFORMCD")
-        PAYFORMCD.text = '0'
-
-        # <!--Найменування форми оплати (64 символи)-->
-        PAYFORMNM = etree.SubElement(ROW, "PAYFORMNM")
-        PAYFORMNM.text = 'ГОТІВКА'
-
-        # <!--Загальна сума (15.2 цифри)-->
-        SUM = etree.SubElement(ROW, "SUM")
-        SUM.text = "{:.2f}".format(sum)
-
-        # <!--Сума внесених коштів (15.2 цифри)-->
-        PROVIDED = etree.SubElement(ROW, "PROVIDED")
-        PROVIDED.text = "{:.2f}".format(sum)
-
-        if cost > 0:
-            # <!--Решта (не зазначається, якщо решта відсутня) (15.2 цифри)-->
-            REMAINS = etree.SubElement(ROW, "REMAINS")
-            REMAINS.text = "{:.2f}".format(sum)
-
-        PAYSYS = etree.SubElement(ROW, "PAYSYS")
-        PAYSYS.text = ''
-
-        ROW = etree.SubElement(PAYSYS, "ROW", ROWNUM="1")
-        ROW.text = ''
-
-        # <!--Найменування платіжної системи (текст)-->
-        NAME = etree.SubElement(ROW, "NAME")
-        NAME.text = pay_system_name
-
-        # <!--Ідентифікатор транзакції, що надається еквайром та ідентифікує операцію в платіжній системі (128 символів)-->
-        ACQUIRETRANSID = etree.SubElement(ROW, "ACQUIRETRANSID")
-        ACQUIRETRANSID.text = pay_system_id
-
-        # <!--Податки/Збори-->
-        CHECKTAX = etree.SubElement(CHECK, "CHECKTAX")
-        CHECKTAX.text = ''
-
-        ROW = etree.SubElement(CHECKTAX, "ROW", ROWNUM="1")
-        ROW.text = ''
-
-        ''' <!--Код виду податку/збору (числовий):-->
-            <!--0-ПДВ,1-Акциз,2-ПФ...--> '''
-        TYPE = etree.SubElement(ROW, "TYPE")
-        TYPE.text = '0'
-
-        # <!--Найменування виду податку/збору (64 символи)-->
-        NAME = etree.SubElement(ROW, "NAME")
-        NAME.text = 'ПДВ'
-
-        # <!--Літерне позначення виду і ставки податку/збору (А,Б,В,Г,...) (1 символ)-->
-        LETTER = etree.SubElement(ROW, "LETTER")
-        LETTER.text = 'A'
-
-        # <!--Відсоток податку/збору (15.2 цифри)-->
-        PRC = etree.SubElement(ROW, "PRC")
-        PRC.text = '20.00'
-
-        # <!--Ознака податку/збору, не включеного у вартість-->
-        SIGN = etree.SubElement(ROW, "SIGN")
-        SIGN.text = 'false'
-
-        # <!--Сума для розрахування податку/збору (15.2 цифри)-->
-        TURNOVER = etree.SubElement(ROW, "TURNOVER")
-        TURNOVER.text = "{:.2f}".format(450.00)
-
-        # <!--Сума податку/збору (15.2 цифри)-->
-        SUM = etree.SubElement(ROW, "SUM")
-        SUM.text = "{:.2f}".format(20.00)
-
-        # <!--ПТКС-->
-        CHECKPTKS = etree.SubElement(CHECK, "CHECKPTKS")
-        CHECKPTKS.text = ''
-
-        # <!--Найменування оператора ПТКС (текст)-->
-        PTKSNM = etree.SubElement(CHECKPTKS, "PTKSNM")
-        PTKSNM.text = "AVMRPRVZ"
-
-        # <!--Номер терміналу ПТКС (64 символи)-->
-        TERMINALNUM = etree.SubElement(CHECKPTKS, "TERMINALNUM")
-        TERMINALNUM.text = "533882698"
-
-        # <!--Адреса розміщення терміналу ПТКС (текст)-->
-        TERMINALADDR = etree.SubElement(CHECKPTKS, "TERMINALADDR")
-        TERMINALADDR.text = self.address
-
-        # <!--Номер операції ПТКС (64 символи)-->
-        OPERNUM = etree.SubElement(CHECKPTKS, "OPERNUM")
-        OPERNUM.text = '{}'.format(self.local_number)
-
-        # <!--Номер операції у системі оператора ПТКС (64 символи)-->
-        OPERSYSNUM = etree.SubElement(CHECKPTKS, "OPERSYSNUM")
-        OPERSYSNUM.text = '{}'.format(self.local_number)
-
-        # <!--Продажі-->
-        CHECKBODY = etree.SubElement(CHECK, "CHECKBODY")
-        CHECKBODY.text = ''
-
-        ROW = etree.SubElement(CHECKBODY, "ROW", ROWNUM="1")
-        ROW.text = ''
-
-        # <!--Код товару (64 символи)-->
-        CODE = etree.SubElement(ROW, "CODE")
-        CODE.text = '{}'.format(1)
-
-        # <!--Найменування товару, послуги, або операції (текст)-->
-        NAME = etree.SubElement(ROW, "NAME")
-        NAME.text = '{}'.format("ПЕРЕКАЗ")
-
-        # <!--Кількість/об’єм товару (15.3 цифри)-->
-        AMOUNT = etree.SubElement(ROW, "AMOUNT")
-        AMOUNT.text = "{:.3f}".format(5.00)
-
-        # <!--Ціна за одиницю товару (15.2 цифри)-->
-        PRICE = etree.SubElement(ROW, "PRICE")
-        PRICE.text = "{:.2f}".format(52.30)
-
-        # <!--Літерні позначення видів і ставок податків/зборів (15 символів)-->
-        LETTERS = etree.SubElement(ROW, "LETTERS")
-        LETTERS.text = "A"
-
-        # <!--Сума операції (15.2 цифри)-->
-        COST = etree.SubElement(ROW, "COST")
-        COST.text = "{:.2f}".format(sum)
-
-        # <!--Найменування отримувача, якщо присутній (текст)-->
-        RECIPIENTNM = etree.SubElement(ROW, "RECIPIENTNM")
-        RECIPIENTNM.text = "Іванов Петро Іванович"
-
-        # <!--Код отримувача, якщо присутній (12 символів)-->
-        RECIPIENTIPN = etree.SubElement(ROW, "RECIPIENTIPN")
-        RECIPIENTIPN.text = "111111111111"
-
-        # <!--Код банку отримувача, якщо присутній (15 символів)-->
-        BANKCD = etree.SubElement(ROW, "BANKCD")
-        BANKCD.text = "22222222222"
-
-        # <!--Найменування банку одержувача, якщо присутній (текст)-->
-        BANKNM = etree.SubElement(ROW, "BANKNM")
-        BANKNM.text = "Національний банк України"
-
-        # <!--Номер рахунку в банку одержувача, якщо присутній (64 символи)-->
-        BANKRS = etree.SubElement(ROW, "BANKRS")
-        BANKRS.text = "UA33333333333333333333333333333333"
-
-        # <!--Реквізити платіжного засобу одержувача, якщо присутній (текст)-->
-        PAYDETAILS = etree.SubElement(ROW, "PAYDETAILS")
-        PAYDETAILS.text = "Бакай I.А."
-
-        # <!--Призначення платежу (одержувача) (128 символів)-->
-        PAYPURPOSE = etree.SubElement(ROW, "PAYPURPOSE")
-        PAYPURPOSE.text = "Сплата грошового зобов`язання"
-
-        # <!--Найменування платника, якщо присутній (текст)-->
-        PAYERNM = etree.SubElement(ROW, "PAYERNM")
-        PAYERNM.text = "Бакай I.Ї."
-
-        # <!--Ідентифікаційний код платника, якщо присутній (12 символів)-->
-        PAYERIPN = etree.SubElement(ROW, "PAYERIPN")
-        PAYERIPN.text = "702189118289"
-
-        # <!--Реквізити платіжного засобу платника, якщо присутній (текст)-->
-        PAYDETAILSP = etree.SubElement(ROW, "PAYDETAILSP")
-        PAYDETAILSP.text = "0759410915108087"
-
-        # <!--Підстава платежу платником, якщо присутній (текст)-->
-        BASISPAY = etree.SubElement(ROW, "BASISPAY")
-        BASISPAY.text = "Наказ №6775542"
-
-        # <!--Тип виплати (зазначається тільки для чеку повернення) (1 символ)-->
-        PAYOUTTYPE = etree.SubElement(ROW, "PAYOUTTYPE")
-        PAYOUTTYPE.text = "2"
-
-        ROW = etree.SubElement(CHECKBODY, "ROW", ROWNUM="2")
-        ROW.text = ''
-
-        # <!--Код товару (64 символи)-->
-        CODE = etree.SubElement(ROW, "CODE")
-        CODE.text = '{}'.format(1)
-
-        # <!--Найменування товару, послуги, або операції (текст)-->
-        NAME = etree.SubElement(ROW, "NAME")
-        NAME.text = '{}'.format("КОМIСIЯ")
-
-        # <!--Літерні позначення видів і ставок податків/зборів (15 символів)-->
-        LETTERS = etree.SubElement(ROW, "LETTERS")
-        LETTERS.text = "1"
-
-        # <!--Сума операції (15.2 цифри)-->
-        COST = etree.SubElement(ROW, "COST")
-        COST.text = "{:15.2f}".format(5.00)
-
-        xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
-
-        try:
-            xmlschema_doc = etree.parse(self.xsd_path)
-            xmlschema = etree.XMLSchema(xmlschema_doc)
-            xmlschema.assertValid(CHECK)
-        except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
-
-        ret = self.post_data("doc", xml)
-        if ret:
-            if ret == 9:
-                return ret
-
-            self.last_xml = xml
-            print("Чек успешно отправлен")
-            self.local_check_number += 1
-        else:
-            print("Ошибка отправки чека")
-
-        return
-
-    def post_z(self, x_data, testing=False):
+    def post_z(self, dt, x_data, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек відкриття зміни (форма №3-ПРРО) """
 
         # x_data = self.LastShiftTotals()
@@ -2031,24 +1713,24 @@ class SendData2(object):
 
             #   <!--ЄДРПОУ/ДРФО/№ паспорта продавця (10 символів)-->
             TIN = etree.SubElement(ZREPHEAD, "TIN")
-            TIN.text = '{}'.format(self.tn)
+            TIN.text = '{}'.format(self.department.tin)
 
             # <!--Податковий номер або Індивідуальний номер платника ПДВ (12 символів)-->
-            if self.ipn:
+            if self.department.ipn:
                 IPN = etree.SubElement(ZREPHEAD, "IPN")
-                IPN.text = '{}'.format(self.ipn)
+                IPN.text = '{}'.format(self.department.ipn)
 
             #   <!--Найменування продавця (256 символів)-->
             ORGNM = etree.SubElement(ZREPHEAD, "ORGNM")
-            ORGNM.text = self.org_name
+            ORGNM.text = self.department.org_name
 
             #   <!--Найменування точки продаж (256 символів)-->
             POINTNM = etree.SubElement(ZREPHEAD, "POINTNM")
-            POINTNM.text = self.department_name
+            POINTNM.text = self.department.name
 
             #   <!--Адреса точки продаж (256 символів)-->
             POINTADDR = etree.SubElement(ZREPHEAD, "POINTADDR")
-            POINTADDR.text = self.address
+            POINTADDR.text = self.department.address
 
             #   <!--Дата операції (ddmmyyyy)-->
             ORDERDATE = etree.SubElement(ZREPHEAD, "ORDERDATE")
@@ -2060,11 +1742,11 @@ class SendData2(object):
 
             #   <!--Локальний номер документа (128 символів)-->
             ORDERNUM = etree.SubElement(ZREPHEAD, "ORDERNUM")
-            ORDERNUM.text = str(self.local_number)
+            ORDERNUM.text = str(self.department.next_local_number)
 
             #   <!--Локальний номер реєстратора розрахункових операцій (64 символи)-->
             CASHDESKNUM = etree.SubElement(ZREPHEAD, "CASHDESKNUM")
-            CASHDESKNUM.text = str(self.zn)
+            CASHDESKNUM.text = str(self.department.zn)
 
             #   <!--Фіскальний номер реєстратора розрахункових операцій (128 символів)-->
             CASHREGISTERNUM = etree.SubElement(ZREPHEAD, "CASHREGISTERNUM")
@@ -2590,10 +2272,16 @@ class SendData2(object):
 
         return False
 
-    def close_shift(self, testing=False):
+    def close_shift(self, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек відкриття зміни (форма №3-ПРРО) """
 
-        CHECK = self.get_check_xml(101, testing=testing)
+        if offline:
+            offline_tax_number = self.calculate_offline_tax_number(dt, prev_hash=prev_hash)
+        else:
+            offline_tax_number = None
+
+        CHECK = self.get_check_xml(101, testing=testing, offline=offline,
+                                   prev_hash=prev_hash, offline_tax_number=offline_tax_number)
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
 
@@ -2603,6 +2291,19 @@ class SendData2(object):
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
             raise Exception('Помилка XML (pretest): {}'.format(e))
+
+        if offline:
+            try:
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                                               tsp=False, ocsp=False)
+            except Exception as e:
+                box_id = self.signer.update_bid(self.db, self.key)
+                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                                               tsp=False, ocsp=False)
+                self.key.box_id = box_id
+                self.db.session.commit()
+
+            return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
 

@@ -19,7 +19,7 @@ cd Python-3*/
 make altinstall
 
 # тестируем
-python3.10 --version
+python3 --version
 
 # Установим venv
 apt install python3-virtualenv

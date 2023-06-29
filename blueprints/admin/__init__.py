@@ -325,27 +325,25 @@ class DepartmentsAdmin(Filters, ModelView):
                 try:
                     rro_id = department.rro_id
 
-                    key = department.get_prro_key()
-
                     from utils.SendData2 import SendData2
-                    sender = SendData2(db, key, rro_id, "")
+                    sender = SendData2(db, None, department, rro_id, "")
 
                     # try:
                     registrar_state = sender.TransactionsRegistrarState()
 
                     if not registrar_state:
                         flash(
-                            "{} номер {}. Фискального номера нет в доступе, либо сервер налоговой не работает".format(
+                            "{} номер {}. Фіскального номера немає у доступі, або сервер податкової не працює".format(
                                 department.full_name, rro_id), 'error')
                     else:
-                        if sender.department_name != sender.rro_department_name:
-                            flash(
-                                '{} налоговый объект имеет название {}, но в самом РРО название {}'.format(
-                                    department.full_name, sender.department_name,
-                                    sender.rro_department_name),
-                                'warning')
+                        # if sender.department_name != sender.rro_department_name:
+                        #     flash(
+                        #         '{} налоговый объект имеет название {}, но в самом РРО название {}'.format(
+                        #             department.full_name, sender.department_name,
+                        #             sender.rro_department_name),
+                        #         'warning')
 
-                        access = "РРО в податкової: {} ".format(sender.department_name)
+                        access = "РРО в податкової: {} ".format(registrar_state['TaxObject']['Name'])
 
                         if registrar_state:
                             if registrar_state['ShiftState'] == 0:
@@ -355,14 +353,14 @@ class DepartmentsAdmin(Filters, ModelView):
                                 shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
                                     registrar_state["NextLocalNum"])
 
-                            last_shift = Shifts.query \
-                                .order_by(Shifts.operation_time.desc()) \
-                                .filter(Shifts.department_id == department.id) \
-                                .first()
+                            # last_shift = Shifts.query \
+                            #     .order_by(Shifts.operation_time.desc()) \
+                            #     .filter(Shifts.department_id == department.id) \
+                            #     .first()
 
-                            if last_shift:
-                                if last_shift.offline == True:
-                                    print('{} находится в режиме оффлайн!'.format(department.full_name))
+                            # if last_shift:
+                            if department.offline_status == True:
+                                print('{} знаходиться в режимі офлайн!'.format(department.full_name))
 
                         else:
                             shift_state = "Стан зміни невідомо. "
@@ -390,10 +388,8 @@ class DepartmentsAdmin(Filters, ModelView):
                 try:
                     rro_id = department.rro_id
 
-                    key = department.get_prro_key()
-
                     from utils.SendData2 import SendData2
-                    sender = SendData2(db, key, rro_id, "")
+                    sender = SendData2(db, None, department, rro_id, "")
 
                     try:
                         registrar_state = sender.TransactionsRegistrarState()
@@ -414,7 +410,7 @@ class DepartmentsAdmin(Filters, ModelView):
 
                             if registrar_state:
                                 # if registrar_state['ShiftState'] == 0:
-                                shift, shift_opened = department.prro_open_shift(True)
+                                shift, shift_opened, messages, offline = department.prro_open_shift(True)
                                 registrar_state = sender.TransactionsRegistrarState()
                                 if registrar_state:
                                     if registrar_state['ShiftState'] == 0:
@@ -475,39 +471,15 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    rro_id = department.rro_id
+                    msg, status = department.prro_fix()
 
-                    key = department.get_prro_key()
+                    if not status:
+                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
+                    else:
+                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, msg))
 
-                    from utils.SendData2 import SendData2
-                    sender = SendData2(db, key, rro_id, "")
-
-                    try:
-                        registrar_state = sender.TransactionsRegistrarState()
-
-                        if not registrar_state:
-                            flash(
-                                "{} номер {}. Фискального номера нет в доступе, либо сервер налоговой не работает".format(
-                                    department.full_name, rro_id), 'error')
-                        else:
-                            if sender.department_name != sender.rro_department_name:
-                                flash(
-                                    '{} налоговый объект имеет название {}, но в самом РРО название {}'.format(
-                                        department.full_name, sender.department_name,
-                                        sender.rro_department_name),
-                                    'warning')
-
-                            access = "РРО в податкової: {} ".format(sender.department_name)
-                            msg = fix_shift(registrar_state, department, sender)
-
-                            flash('{} номер {}. {}. {}'.format(department.full_name, rro_id, access, msg))
-
-                    except Exception as e:
-                        flash('{} помилка, не удалось запросить состояние смены, возможно печать не имеет доступа к '
-                              'фискальным данным'.format(
-                            e), 'error')
-                except Exception as e:
-                    flash('{} помилка {}'.format(department.full_name, e), 'error')
+                except Exception as msg:
+                    flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
@@ -566,10 +538,8 @@ class DepartmentsAdmin(Filters, ModelView):
 
                 rro_id = department.rro_id
 
-                key = department.get_prro_key()
-
                 from utils.SendData2 import SendData2
-                sender = SendData2(db, key, rro_id, "")
+                sender = SendData2(db, None, department, rro_id, "")
                 registrar_state = sender.TransactionsRegistrarState()
 
                 if registrar_state:
@@ -857,18 +827,8 @@ class DepartmentsAdmin(Filters, ModelView):
                 try:
                     rro_id = department.rro_id
 
-                    key = department.get_prro_key()
-
                     from utils.SendData2 import SendData2
-                    # from utils.Sign import Sign
-
-                    # signer = Sign()
-
-                    # box_id = signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-                    # print(box_id)
-                    # print(m.box_id)
-                    # sender = SendData2(signer, m.box_id, rro_id, "")
-                    sender = SendData2(db, key, rro_id, "")
+                    sender = SendData2(db, None, department, rro_id, "")
 
                     # try:
                     server_state = sender.ServerState()
@@ -969,10 +929,8 @@ class DepartmentsAdmin(Filters, ModelView):
                 try:
                     rro_id = department.rro_id
 
-                    key = department.get_prro_key()
-
                     from utils.SendData2 import SendData2
-                    sender = SendData2(db, key, rro_id, "")
+                    sender = SendData2(db, None, department, rro_id, "")
                     server_state = sender.ServerState()
 
                     if server_state:
@@ -1031,7 +989,7 @@ class DepartmentsAdmin(Filters, ModelView):
 
                 if department.taxform_key and department.prro_key:
                     from utils.SendData2 import SendData2
-                    sender = SendData2(db, department.taxform_key, 0, "")
+                    sender = SendData2(db, department.taxform_key, department, 0, "")
 
                     objects = sender.post_data("cmd", {"Command": "Objects"})
 
@@ -1058,161 +1016,6 @@ class DepartmentsAdmin(Filters, ModelView):
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
-
-
-# @action('prro_open_shift', lazy_gettext('Открыть смену пРРО'),
-#         lazy_gettext('Ви впевнені, що хочете открыть смену пРРО?'))
-# def prro_open_shift(self, ids):
-#     if not current_user.is_anonymous and current_user.is_permissions(10):
-#
-#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-#         # count = 0
-#         for m in query.all():
-#
-#             if m.department_id:
-#                 department = Departments.query.get(m.department_id)
-#                 if department.rro_type == "prro":
-#                     shift = department.prro_open_shift(True, False)
-#                     try:
-#                         shift = department.prro_open_shift(True, False)
-#                         if shift:
-#                             flash(
-#                                 'Отделение {} смена успешно открыта, идентификатор {}'.format(department.full_name,
-#                                                                                               shift.id))
-#                         else:
-#                             flash('Отделение {} смену не удалось открыть'.format(department.full_name), 'error')
-#
-#                     except Exception as e:
-#                         return flash('Отделение {} помилка: {}'.format(department.full_name, e), 'error')
-#                 else:
-#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-#
-#     else:
-#         flash('У вас немає доступу для даної операції!', 'error')
-
-# @action('prro_send_fiscal_data', lazy_gettext('Зафискализировать нефискальные операции на пРРО'),
-#         lazy_gettext('Ви впевнені, що хочете зафискализировать нефискальные операции на пРРО?'))
-# def prro_send_fiscal_data(self, ids):
-#     if not current_user.is_anonymous and current_user.is_permissions(10):
-#
-#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-#         # count = 0
-#         for m in query.all():
-#
-#             if m.department_id:
-#                 department = Departments.query.get(m.department_id)
-#                 if department.rro_type == "prro":
-#                     try:
-#
-#                         exchange_operations = db.session.query(literal_column('1').label('type'),
-#                                                                ExchangeOperations.real_id.label('id'),
-#                                                                ExchangeOperations.operation_time.label(
-#                                                                    'operation_time')) \
-#                             .filter(ExchangeOperations.department_id == department.id) \
-#                             .filter(ExchangeOperations.operation_time != None) \
-#                             .filter(ExchangeOperations.fiscal_time == None) \
-#                             .filter(ExchangeOperations.storno_time == None) \
-#                             .filter(ExchangeOperations.rate_time != None) \
-#                             .filter(ExchangeOperations.fiscal_storno_time == None)
-#
-#                         exchange_operations_storno = db.session.query(literal_column('2').label('type'),
-#                                                                       ExchangeOperations.real_id.label('id'),
-#                                                                       ExchangeOperations.operation_time.label(
-#                                                                           'operation_time')) \
-#                             .filter(ExchangeOperations.department_id == department.id) \
-#                             .filter(ExchangeOperations.operation_time != None) \
-#                             .filter(ExchangeOperations.fiscal_time != None) \
-#                             .filter(ExchangeOperations.storno_time != None) \
-#                             .filter(ExchangeOperations.rate_time != None) \
-#                             .filter(ExchangeOperations.fiscal_storno_time == None)
-#
-#                         cashflow_operations = db.session.query(literal_column('3').label('type'),
-#                                                                CashflowOperations.real_id.label('id'),
-#                                                                CashflowOperations.operation_time.label(
-#                                                                    'operation_time')) \
-#                             .filter(CashflowOperations.department_id == department.id) \
-#                             .filter(CashflowOperations.operation_time != None) \
-#                             .filter(CashflowOperations.confirmation_time != None) \
-#                             .filter(CashflowOperations.fiscal_time == None) \
-#                             .filter(CashflowOperations.refusal_time == None)
-#
-#                         sub = union_all(exchange_operations, exchange_operations_storno, cashflow_operations).alias(
-#                             'sub')
-#
-#                         operations = db.session.query(sub.c.type, sub.c.id) \
-#                             .order_by(sub.c.operation_time) \
-#                             .all()
-#
-#                         if operations:
-#                             for operation in operations:
-#
-#                                 print('{} {}'.format(operation.type, operation.id))
-#                                 try:
-#                                     if operation.type == 1:
-#                                         eop = ExchangeOperations.query.get(operation.id)
-#                                         eop.operation_time = datetime.datetime.now()
-#                                         exchange_data = department.prro_exchange(eop, 0, False)
-#                                         flash(
-#                                             'Отделение {} обменная операция успешно фискализована, идентификатор {}'.format(
-#                                                 department.full_name,
-#                                                 operation.id))
-#                                     elif operation.type == 2:
-#                                         eop = ExchangeOperations.query.get(operation.id)
-#                                         eop.storno_time = datetime.datetime.now()
-#                                         exchange_data = department.prro_storno_exchange(eop, 0, False)
-#                                         flash(
-#                                             'Отделение {} обменная операция сторно успешно фискализована, идентификатор {}'.format(
-#                                                 department.full_name,
-#                                                 operation.id))
-#                                     elif operation.type == 3:
-#                                         cfo = CashflowOperations.query.get(operation.id)
-#                                         cfo.operation_time = datetime.datetime.now()
-#                                         department.prro_cashflow(cfo, 0, False)
-#                                         flash(
-#                                             'Отделение {} операция подкрепления/инкассации успешно фискализована, идентификатор {}'.format(
-#                                                 department.full_name,
-#                                                 operation.id))
-#                                     elif operation.type == 3:
-#                                         flash('{} платежи пока не сделаны, пропущено'.format(department.full_name),
-#                                               'warning')
-#
-#                                 except Exception as e:
-#                                     return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-#                         else:
-#                             flash('{} нет операций для фискализации, пропущено'.format(department.full_name),
-#                                   'warning')
-#
-#                     except Exception as e:
-#                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-#                 else:
-#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-#
-#     else:
-#         flash('У вас немає доступу для даної операції!', 'error')
-
-# @action('prro_post_z_post_close_shift', lazy_gettext('Отправить Z отчет и закрыть смену на пРРО'),
-#         lazy_gettext('Ви впевнені, що хочете отправить Z отчет и закрыть смену на пРРО?'))
-# def prro_post_z_post_close_shift(self, ids):
-#     if not current_user.is_anonymous and current_user.is_permissions(10):
-#
-#         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-#         # count = 0
-#         for m in query.all():
-#
-#             if m.department_id:
-#                 department = Departments.query.get(m.department_id)
-#
-#                 if department.rro_type == "prro":
-#                     try:
-#                         z_report_data = department.prro_get_xz(True, 0, False)
-#                         flash(
-#                             '{} отправлен Z отчет номер {}'.format(department.full_name, z_report_data['z_number']))
-#                     except Exception as e:
-#                         return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-#                 else:
-#                     flash('Касовий апарат відділення не пРРО, а {}'.format(department.rro_type), 'error')
-#     else:
-#         flash('У вас немає доступу для даної операції!', 'error')
 
 
 class DepartmentKeysAdmin(Filters, ModelView):
