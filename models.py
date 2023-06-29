@@ -160,6 +160,9 @@ def get_department(data):
     else:
         key = department.get_prro_key()
 
+    if not department.next_local_number:
+        department.prro_fix()
+
     return department, key
 
 def close_offline_session(rro_id):
@@ -944,9 +947,6 @@ class Departments(Base):
             # self.sender.local_check_number = shift.prro_localchecknumber
 
     def prro_open_shift(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
-
-        if not self.next_local_number:
-            self.prro_fix()
 
         operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
         server_time = None
