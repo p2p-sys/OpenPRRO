@@ -963,7 +963,7 @@ class Departments(Base):
                 # self.sender.local_check_number = last_shift.prro_localchecknumber
                 # self.sender.offline_session_id = last_shift.prro_offline_session_id
                 # self.sender.offline_seed = last_shift.prro_offline_seed
-                return last_shift, False, [], last_shift.offline
+                return last_shift, False, ['Стан зміни за БД: відкрита, наступний локальний номер {}'.format(self.next_local_number)], last_shift.offline
             # else:
             #     self.sender.local_number = last_shift.pid + 1
             #     self.sender.local_check_number = 1
