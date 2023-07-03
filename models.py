@@ -658,6 +658,7 @@ class Departments(Base):
                 else:
                     messages.append(
                         'Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
+                    return messages, False
 
             if self.next_offline_local_number != int(registrar_state['OfflineNextLocalNum']):
                 messages.append('Виправлено значення next_offline_local_number з {} на {}'.format(
