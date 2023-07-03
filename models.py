@@ -702,7 +702,7 @@ class Departments(Base):
 
         db.session.commit()
 
-        if len(messages) == 0:
+        if len(messages) < 3:
             messages.append('ПРРО працює в штатному режимі, всі ОК')
 
         return messages, True
