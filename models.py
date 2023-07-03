@@ -246,7 +246,6 @@ def close_offline_session(rro_id):
         command = 'pck'
         ret = sender.post_data(command, data, return_cmd_data=False)
         try:
-            data = json.loads(ret)
             return data
         except:
             print(ret)
@@ -652,9 +651,23 @@ class Departments(Base):
 
                 data = close_offline_session(self.rro_id)
                 if data:
+
+                    data = json.loads(data)
+
+                    self.prro_offline_session_id = data['OfflineSessionId']
+                    self.prro_offline_seed = data['OfflineSeed']
+
                     self.offline_status = False
+                    self.offline_prev_hash = None
+
+                    self.next_local_number += 1
+                    self.next_offline_local_number = 1
+
+                    db.session.commit()
+                    print('{} успішно закрили оффлайн сесію'.format(self.rro_id))
 
                     messages.append('Успішно закрили оффлайн сесію')
+
                 else:
                     messages.append(
                         'Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
