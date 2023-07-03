@@ -206,15 +206,6 @@ def close_offline_session(rro_id):
     '''
 
     xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-    # print(xml.decode('windows-1251'))
-
-    # try:
-    #     signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role, tax=False,
-    #                               tsp=False, ocsp=False)
-    # except Exception as e:
-    #     signer.update_bid(db, department_key)
-    #     signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role, tax=False,
-    #                               tsp=False, ocsp=False)
 
     try:
         signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
@@ -227,7 +218,7 @@ def close_offline_session(rro_id):
 
     signed_docs.append(signed_data)
 
-    print('Всего чеков {}'.format(len(signed_docs)))
+    print('Усього чеків {}'.format(len(signed_docs)))
 
     cnt = 0
     packet = 0
@@ -235,7 +226,7 @@ def close_offline_session(rro_id):
     # for signed_doc in signed_docs:
     #
     lngth = len(signed_docs)
-    for s in range(1, lngth, 100):
+    for s in range(0, lngth, 100):
 
         data = b''
         for t in range(20):
@@ -249,7 +240,7 @@ def close_offline_session(rro_id):
                 cnt += 1
                 # print(cnt)
 
-        print('{} пакет {} размер пакета {}'.format(department.rro_id, packet, len(data)))
+        print('{} пакет {} розмір пакету {}'.format(department.rro_id, packet, len(data)))
         packet += 1
 
         command = 'pck'
