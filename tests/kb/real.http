@@ -1,0 +1,31 @@
+POST http://127.0.0.1:5000/api/real
+Content-Type: application/json
+
+#   "UID": "8436bc2e-fe17-11ed-bb8b-48e7da29ecdf",
+
+{
+  "rro_id": 4000371338,
+  "key_id": 180,
+  "testing": true,
+  "reals": [
+    {
+      "NAME": "Улыбка",
+      "UNITNM": "шт",
+      "AMOUNT": 2,
+      "PRICE": 100,
+      "COST": 200
+    }
+  ],
+  "pays": [
+    {
+      "PAYFORMCD": 0,
+      "PAYFORMNM": "Готівка",
+      "SUM": 200
+    }
+  ],
+    "taxes": [
+
+  ]
+}
+
+###

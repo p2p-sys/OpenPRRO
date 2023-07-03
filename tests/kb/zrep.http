@@ -1,0 +1,10 @@
+POST http://127.0.0.1:5000/api/zrep
+Content-Type: application/json
+
+{
+  "rro_id":4000096193,
+  "tax_id":"209957639",
+  "testing": true
+}
+
+###

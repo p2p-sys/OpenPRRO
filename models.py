@@ -206,15 +206,6 @@ def close_offline_session(rro_id):
     '''
 
     xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-    # print(xml.decode('windows-1251'))
-
-    # try:
-    #     signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role, tax=False,
-    #                               tsp=False, ocsp=False)
-    # except Exception as e:
-    #     signer.update_bid(db, department_key)
-    #     signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role, tax=False,
-    #                               tsp=False, ocsp=False)
 
     try:
         signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
@@ -227,7 +218,7 @@ def close_offline_session(rro_id):
 
     signed_docs.append(signed_data)
 
-    print('Всего чеков {}'.format(len(signed_docs)))
+    print('Усього чеків {}'.format(len(signed_docs)))
 
     cnt = 0
     packet = 0
@@ -235,7 +226,7 @@ def close_offline_session(rro_id):
     # for signed_doc in signed_docs:
     #
     lngth = len(signed_docs)
-    for s in range(1, lngth, 100):
+    for s in range(0, lngth, 100):
 
         data = b''
         for t in range(20):
@@ -249,7 +240,7 @@ def close_offline_session(rro_id):
                 cnt += 1
                 # print(cnt)
 
-        print('{} пакет {} размер пакета {}'.format(department.rro_id, packet, len(data)))
+        print('{} пакет {} розмір пакету {}'.format(department.rro_id, packet, len(data)))
         packet += 1
 
         command = 'pck'
@@ -710,7 +701,7 @@ class Departments(Base):
 
         db.session.commit()
 
-        if len(messages) == 0:
+        if len(messages) < 3:
             messages.append('ПРРО працює в штатному режимі, всі ОК')
 
         return messages, True
@@ -971,7 +962,7 @@ class Departments(Base):
                 # self.sender.local_check_number = last_shift.prro_localchecknumber
                 # self.sender.offline_session_id = last_shift.prro_offline_session_id
                 # self.sender.offline_seed = last_shift.prro_offline_seed
-                return last_shift, False, [], last_shift.offline
+                return last_shift, False, ['Стан зміни за БД: відкрита, наступний локальний номер {}'.format(self.next_local_number)], last_shift.offline
             # else:
             #     self.sender.local_number = last_shift.pid + 1
             #     self.sender.local_check_number = 1

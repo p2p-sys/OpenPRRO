@@ -1,0 +1,9 @@
+POST http://127.0.0.1:5000/api/advance
+Content-Type: application/json
+
+{
+  "rro_id": 4000371338,
+  "sum": 1000
+}
+
+###
