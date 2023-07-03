@@ -1,9 +1,0 @@
-POST http://127.0.0.1:5000/api/storno
-Content-Type: application/json
-
-{
-  "rro_id": 4000371338,
-  "tax_id": "1109064319"
-}
-
-###

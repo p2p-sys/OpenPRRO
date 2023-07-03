@@ -19,7 +19,7 @@ WTF_CSRF_TIME_LIMIT = 5400
 DATABASE_NAME = 'openprro'
 DATABASE_USER = 'openprro'
 DATABASE_PWD = 'openprro'
-DATABASE_HOST = 'pma.liftmedia.kz'
+DATABASE_HOST = '127.0.0.1'
 
 SQLALCHEMY_DATABASE_URI = "mysql+pymysql://{}:{}@{}/{}?charset=utf8mb4".format(DATABASE_USER, DATABASE_PWD, DATABASE_HOST,
                                                                             DATABASE_NAME)

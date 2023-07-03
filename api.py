@@ -795,7 +795,7 @@ class ApiView(FlaskView):
                              shift_tax_id='{}'.format(shift.tax_id),
                              error_code=0,
                              tax_visual=visual,
-                             offline=bool(offline))
+                             offline=offline)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -861,7 +861,7 @@ class ApiView(FlaskView):
                              shift_tax_id='{}'.format(shift.tax_id),
                              error_code=0,
                              tax_visual=visual,
-                             offline=bool(offline),
+                             offline=offline,
                              tax_id_advance=tax_id_advance,
                              qr_advance=qr_advance,
                              visual_advance=visual_advance)
@@ -983,8 +983,7 @@ class ApiView(FlaskView):
                              shift_tax_id='{}'.format(shift.tax_id),
                              error_code=0,
                              tax_visual=visual,
-                             offline=bool(offline)
-                             )
+                             offline=offline)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
