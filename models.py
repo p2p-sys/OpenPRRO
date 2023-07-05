@@ -461,6 +461,9 @@ class Departments(Base):
     offline_prev_hash = Column('offline_prev_hash', String(64), comment='Геш попереднього офлайн документа',
                                nullable=True)
 
+    telegram_offline_error_sended = Column('telegram_offline_error_sended', Boolean, nullable=True,
+                                comment='Ознака відправки помилки по телеграм боту')
+
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.full_name)
 
@@ -471,9 +474,9 @@ class Departments(Base):
 
     def set_signer_type(self):
 
-        if self.taxform_key and self.prro_key:
+        if self.prro_key:
             from utils.SendData2 import SendData2
-            sender = SendData2(db, self.taxform_key, None, 0, "")
+            sender = SendData2(db, self.prro_key, self, 0, "")
 
             operators = sender.post_data("cmd", {"Command": "Operators"})
 
@@ -482,7 +485,7 @@ class Departments(Base):
                     operators = operators['Operators']
                     if operators:
                         for operator in operators:
-                            print(operator)
+                            # print(operator)
                             SubjectKeyId = operator['SubjectKeyId']
                             if SubjectKeyId == self.prro_key.public_key:
 
