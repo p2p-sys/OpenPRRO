@@ -42,3 +42,9 @@ TESTING_OFFLINE = False
 
 # Адреса фіскального сервера
 FS_URL = 'http://fs.tax.gov.ua:8609/fs/'
+
+TELEGRAM_BOT = False
+
+TELEGRAM_BOT_TOKEN = '000000000:AbcdefghAbcdefghAbcdefgh'
+
+TELEGRAM_BOT_CHAT = '1234567890'
