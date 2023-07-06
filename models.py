@@ -1309,6 +1309,8 @@ class Departments(Base):
 
             self.prro_set_next_number()
 
+            cabinet_url = None
+
             if offline:
                 tax_id = offline_tax_id
 
@@ -1359,12 +1361,13 @@ class Departments(Base):
 
             else:
                 try:
-                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                    coded_string, cabinet_url = self.sender.GetCheckExt(tax_id, 3)
                 except Exception as e:
                     coded_string = None
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
-                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
+            if not cabinet_url:
+                cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
+                    self.rro_id, tax_id, operation_time.strftime("%Y%m%d"), operation_time.strftime("%H%M%S"), summa)
 
             messages = []
             if self.offline_status:
@@ -1375,7 +1378,7 @@ class Departments(Base):
             messages.append(msg)
             print('{}: {} {} '.format(fiscal_time, self.full_name, msg))
 
-            return tax_id, shift, shift_opened, qr, coded_string, offline
+            return tax_id, shift, shift_opened, cabinet_url, coded_string, offline
         else:
             raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
 
@@ -1493,6 +1496,8 @@ class Departments(Base):
 
             db.session.commit()
 
+            cabinet_url = None
+
             if offline:
                 tax_id = offline_tax_id
 
@@ -1542,12 +1547,13 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
             else:
                 try:
-                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                    coded_string, cabinet_url = self.sender.GetCheckExt(tax_id, 3)
                 except Exception as e:
                     coded_string = None
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
-                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
+            if not cabinet_url:
+                cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
+                    self.rro_id, tax_id, operation_time.strftime("%Y%m%d"), operation_time.strftime("%H%M%S"), summa)
 
             messages = []
 
@@ -1559,7 +1565,7 @@ class Departments(Base):
             messages.append(msg)
             print('{}: {} {} '.format(fiscal_time, self.full_name, msg))
 
-            return tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance
+            return tax_id, shift, shift_opened, cabinet_url, coded_string, offline, tax_id_advance, qr_advance, visual_advance
 
         else:
             raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
@@ -1676,6 +1682,8 @@ class Departments(Base):
 
             db.session.commit()
 
+            cabinet_url = None
+
             if offline:
                 tax_id = offline_tax_id
 
@@ -1726,12 +1734,13 @@ class Departments(Base):
 
             else:
                 try:
-                    coded_string = self.sender.GetCheckExt(tax_id, 3)
+                    coded_string, cabinet_url = self.sender.GetCheckExt(tax_id, 3)
                 except Exception as e:
                     coded_string = None
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
-                tax_id, self.rro_id, operation_time.strftime("%Y%m%d"), summa)
+            if not cabinet_url:
+                cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
+                    self.rro_id, tax_id, operation_time.strftime("%Y%m%d"), operation_time.strftime("%H%M%S"), summa)
 
             messages = []
 
@@ -1743,7 +1752,7 @@ class Departments(Base):
             messages.append(msg)
             print('{}: {} {} '.format(fiscal_time, self.full_name, msg))
 
-            return tax_id, shift, shift_opened, qr, coded_string, offline, tax_id_advance, qr_advance, visual_advance
+            return tax_id, shift, shift_opened, cabinet_url, coded_string, offline, tax_id_advance, qr_advance, visual_advance
         else:
             raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
 
@@ -1801,6 +1810,8 @@ class Departments(Base):
 
                 self.offline_prev_hash = xml_hash
 
+                storno_tax_id = offline_tax_id
+
             else:
                 fiscal_time = datetime.datetime.strptime(
                     '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
@@ -1825,7 +1836,6 @@ class Departments(Base):
                 print('{}: {} сохранили чек сторно в режиме онлайн '.format(fiscal_time, self.full_name))
 
             pid = self.next_local_number
-            storno_tax_id = self.sender.last_ordertaxnum
 
             # fiscal_error_code = self.sender.last_fiscal_error_code
             # fiscal_error_txt = self.sender.last_fiscal_error_txt
@@ -1888,6 +1898,8 @@ class Departments(Base):
 
             db.session.commit()
 
+            cabinet_url = None
+
             if offline:
                 storno_tax_id = offline_tax_id
 
@@ -1936,10 +1948,14 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
             else:
-                coded_string = self.sender.GetCheckExt(storno_tax_id, 3)
+                try:
+                    coded_string, cabinet_url = self.sender.GetCheckExt(storno_tax_id, 3)
+                except Exception as e:
+                    coded_string = None
 
-            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
-                storno_tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
+            if not cabinet_url:
+                cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
+                    self.rro_id, storno_tax_id, operation_time.strftime("%Y%m%d"), operation_time.strftime("%H%M%S"), 0)
 
             messages = []
 
@@ -1951,7 +1967,7 @@ class Departments(Base):
             messages.append(msg)
             print('{}: {} {} '.format(fiscal_time, self.full_name, msg))
 
-            return storno_tax_id, shift, shift_opened, qr, coded_string, offline
+            return storno_tax_id, shift, shift_opened, cabinet_url, coded_string, offline
         else:
             raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
 
@@ -1962,6 +1978,9 @@ class Departments(Base):
         qr_advance = None
         visual_advance = None
         tax_id_advance = None
+
+        summa = 0
+        discount = 0
 
         if doc_uid:
             sale = Sales.query.filter(Sales.doc_uid == doc_uid).first()
@@ -1989,8 +2008,6 @@ class Departments(Base):
 
                 offline = self.offline_status
 
-                summa = 0
-                discount = 0
                 if reals:
                     for real in reals:
                         summa += real['COST']
@@ -2222,12 +2239,13 @@ class Departments(Base):
         else:
             tax_id = sale.tax_id
 
+        cabinet_url = None
+
         try:
             sender = SendData2(db, key, self, self.rro_id, "")
-            coded_string = sender.GetCheckExt(tax_id, 3)
+            coded_string, cabinet_url = sender.GetCheckExt(tax_id, 3)
         except Exception as e:
-
-            coded_string = False
+            coded_string = None
 
         if not coded_string:
 
@@ -2359,8 +2377,10 @@ class Departments(Base):
 
             coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
-        qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}&sm={}'.format(
-            tax_id, self.rro_id, sale.operation_time.strftime("%Y%m%d"), sale.sum)
+        if not cabinet_url:
+            cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
+                self.rro_id, tax_id, sale.operation_time.strftime("%Y%m%d"), sale.operation_time.strftime("%H%M%S"),
+                summa)
 
         # if sale.fiscal_ticket:
         #     fiscal_ticket = base64.b64encode(sale.fiscal_ticket)
@@ -2380,13 +2400,15 @@ class Departments(Base):
             "tax_id": tax_id,
             "shift": shift,
             "shift_opened": shift_opened,
-            "qr": qr,
+            "shift_opened_datetime": shift.operation_time,
+            "qr": cabinet_url,
             "tax_visual": coded_string,
             "offline": offline,
             "tax_id_advance": tax_id_advance,
             "qr_advance": qr_advance,
             "tax_visual_advance": visual_advance,
             "fiscal_ticket": sale.fiscal_ticket,
+            "testing": sale.testing,
             "uid": sale.doc_uid,
         }
         return ret

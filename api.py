@@ -1064,39 +1064,24 @@ class ApiView(FlaskView):
 
             message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
 
-            if check["tax_id_advance"]:
-                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]),
-                                 tax_id_advance='{}'.format(check["tax_id_advance"]),
-                                 qr=check["qr"], qr_advance=check["qr_advance"],
-                                 message=message,
-                                 shift_opened_datetime=check["shift.operation_time"],
-                                 shift_opened=check["shift_opened"],
-                                 shift_tax_id='{}'.format(check["shift"].tax_id),
-                                 error_code=0,
-                                 tax_visual=check["tax_visual"],
-                                 tax_visual_advance=check["tax_visual_advance"],
-                                 offline=check["offline"],
-                                 fiscal_ticket=check["fiscal_ticket"],
-                                 uid=check['uid']
-                                 )
-                logger.info(f'Відповідь: {answer.json}')
-                return answer
+            answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]),
+                             tax_id_advance=check["tax_id_advance"],
+                             qr=check["qr"], qr_advance=check["qr_advance"],
+                             message=message,
+                             shift_opened_datetime=check["shift_opened_datetime"],
+                             shift_opened=check["shift_opened"],
+                             shift_tax_id='{}'.format(check["shift"].tax_id),
+                             error_code=0,
+                             tax_visual=check["tax_visual"],
+                             tax_visual_advance=check["tax_visual_advance"],
+                             offline=bool(check["offline"]),
+                             fiscal_ticket=check["fiscal_ticket"],
+                             testing=check["operations"],
+                             uid=check['uid']
+                             )
 
-            else:
-                answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), qr=check["qr"],
-                                 message=message,
-                                 shift_opened_datetime=check["shift"].operation_time,
-                                 shift_opened=check["shift_opened"],
-                                 shift_tax_id='{}'.format(check["shift"].tax_id),
-                                 error_code=0,
-                                 tax_visual=check["tax_visual"],
-                                 offline=check["offline"],
-                                 fiscal_ticket=check["fiscal_ticket"],
-                                 uid=check['uid']
-                                 )
-
-                logger.info(f'Відповідь: {answer.json}')
-                return answer
+            logger.info(f'Відповідь: {answer.json}')
+            return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
@@ -2035,7 +2020,16 @@ class ApiView(FlaskView):
             sender, department = get_sender(request)
 
             if 'from' in data:
-                datetime_from = dateutil.parser.isoparse(data['from'])
+                try:
+                    datetime_from = dateutil.parser.isoparse(data['from'])
+                except:
+                    try:
+                        datetime_from = datetime.datetime.strptime(data['from'], '%Y-%m-%dT%H:%M:%S')
+                    except Exception as e:
+                        msg = 'Обов\'язковий параметр from має невірний формат {}'.format(e)
+                        answer = jsonify(status='error', message=msg, error_code=1)
+                        logger.error(f'Відповідь: {answer.json}')
+                        return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: from!'
                 answer = jsonify(status='error', message=msg, error_code=1)
@@ -2043,7 +2037,16 @@ class ApiView(FlaskView):
                 return answer
 
             if 'to' in data:
-                datetime_to = dateutil.parser.isoparse(data['to'])
+                try:
+                    datetime_to = dateutil.parser.isoparse(data['to'])
+                except:
+                    try:
+                        datetime_to = datetime.datetime.strptime(data['to'], '%Y-%m-%dT%H:%M:%S')
+                    except Exception as e:
+                        msg = 'Обов\'язковий параметр to має невірний формат {}'.format(e)
+                        answer = jsonify(status='error', message=msg, error_code=1)
+                        logger.error(f'Відповідь: {answer.json}')
+                        return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: to!'
                 answer = jsonify(status='error', message=msg, error_code=1)

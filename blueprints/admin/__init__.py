@@ -1147,14 +1147,14 @@ class DepartmentKeysAdmin(Filters, ModelView):
                         if certs > 0:
                             # result, update_key_data_text, public_key = key.update_key_data()
                             if certs == 1:
-                                flash('{} получено сертификатов {}'.format(key.id, certs))
+                                flash('{} отримано сертифікатів {}'.format(key.id, certs))
                             else:
-                                flash('{} получено сертификатов {}'.format(key.id, certs), 'warning')
+                                flash('{} отримано сертифікатів {}'.format(key.id, certs), 'warning')
 
                         else:
-                            flash('{} {}'.format(key.id, 'не получилось'), 'error')
+                            flash('{} {}'.format(key.id, 'не вийшло'), 'error')
                     else:
-                        flash('{} ключ приватбанка'.format(key.id))
+                        flash('{} ключ приватбанку'.format(key.id))
 
                     result, update_key_data_text, public_key = key.update_key_data()
                     if result:

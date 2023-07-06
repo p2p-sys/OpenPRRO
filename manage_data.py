@@ -414,5 +414,45 @@ def departments_set_signer_type():
             print(department.rro_id, e)
 
 
+@fucli.command('department_keys_cert_fetch')
+def department_keys_cert_fetch():
+    from utils.Sign import Sign
+
+    department_keys = DepartmentKeys.query \
+        .filter(DepartmentKeys.cert1_content == None) \
+        .all()
+
+    for key in department_keys:
+        try:
+            signer = Sign()
+            box_id = signer.add_key(key.key_data, key.key_password)
+
+            urls = [
+                'http://acskidd.gov.ua/services/cmp/',
+                'http://uakey.com.ua/services/cmp/',
+                'http://masterkey.ua/services/cmp/',
+                'http://ca.informjust.ua/services/cmp/',
+                # 'http://ca.csd.ua/public/x509/cmp/',
+                # 'http://ca.gp.gov.ua/cmp/'
+            ]
+            if not b'privatbank' in key.key_data:
+                certs = signer.cert_fetch(box_id, urls)
+                if certs > 0:
+                    # result, update_key_data_text, public_key = key.update_key_data()
+                    print('{} отримано сертифікатів {}'.format(key.id, certs))
+
+                else:
+                    print('{} {}'.format(key.id, 'не вийшло'))
+            else:
+                print('{} ключ приватбанку'.format(key.id))
+
+            result, update_key_data_text, public_key = key.update_key_data()
+            if result:
+                db.session.commit()
+
+        except Exception as e:
+            print(key.id, e)
+
+
 if __name__ == '__main__':
     fucli()

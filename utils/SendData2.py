@@ -690,6 +690,7 @@ class SendData2(object):
             "RegistrarNumFiscal": self.rro_fn,  # Фіскальний номер ПРРО
             "NumFiscal": check_id,  # Фіскальний номер чека
             "Type": type,  # Тип даних запита документа
+            "AcquireCabinetUrl": True,  # Ознака запиту посилання на сторінку візуалізації чека в Електронному кабінеті платника податків (false/true)
         }
         json_string = self.post_data("cmd", data, True)
         # print(json_string)
@@ -700,13 +701,13 @@ class SendData2(object):
                 if 'Data' in data:
                     coded_string = data['Data']
                     if coded_string:
-                        return coded_string
+                        return coded_string, data['CabinetUrl']
                     else:
                         message = data['ResultText']
                         # message = "Документ не знайдено"
                         raise Exception(message)
 
-        return False
+        return False, False
 
     def GetZReport(self, rro_id, check_id, original=False):
         """ Запит Z-звіту """

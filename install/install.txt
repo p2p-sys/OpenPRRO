@@ -51,12 +51,11 @@ sudo mysql_secure_installation
 # копируем архив OpenPrro в папку /home/signer-agent/
 
 # копируем модули служб
-cp /root/openprro/install/agent.zip /home/signer-agent/
 cd /home/signer-agent/
-unzip agent.zip
-rm agent.zip
+git clone https://github.com/dstucrypt/agent
 cd agent
-npm update
+npm install
+wget https://iit.com.ua/download/productfiles/CACertificates.p7b
 
 #
 chown -R signer-agent:signer-agent /home/signer-agent
