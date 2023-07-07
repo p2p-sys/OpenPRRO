@@ -314,8 +314,8 @@ class SendData2(object):
                     return 9
 
             print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-            return False
-            # raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(error))
+            # return False
+            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 
             # if error.find('CheckLocalNumberInvalid') != -1:
             #     need_num = int(error[error.find('дорівнювати')+12:])
