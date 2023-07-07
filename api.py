@@ -1076,7 +1076,7 @@ class ApiView(FlaskView):
                              tax_visual_advance=check["tax_visual_advance"],
                              offline=bool(check["offline"]),
                              fiscal_ticket=check["fiscal_ticket"],
-                             testing=check["operations"],
+                             testing=check["testing"],
                              uid=check['uid']
                              )
 
