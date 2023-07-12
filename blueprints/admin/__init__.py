@@ -278,11 +278,15 @@ class DepartmentsAdmin(Filters, ModelView):
                 if not department.prro_key:
                     flash('{} не заданий ключ для підпису пРРО'.format(department.id), 'error')
 
-                result = department.set_signer_type()
-                if result:
-                    flash('{} тип підпису ключів оновлено'.format(department.id))
-                else:
-                    flash('{} не вдалося оновити тип підпису ключів'.format(department.id))
+                try:
+                    result = department.set_signer_type()
+                    if result:
+                        flash('{} тип підпису ключів оновлено'.format(department.id))
+                    else:
+                        flash('{} не вдалося оновити тип підпису ключів'.format(department.id))
+
+                except Exception as e:
+                    flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
@@ -328,7 +332,6 @@ class DepartmentsAdmin(Filters, ModelView):
                     from utils.SendData2 import SendData2
                     sender = SendData2(db, None, department, rro_id, "")
 
-                    # try:
                     registrar_state = sender.TransactionsRegistrarState()
 
                     if not registrar_state:
@@ -336,13 +339,6 @@ class DepartmentsAdmin(Filters, ModelView):
                             "{} номер {}. Фіскального номера немає у доступі, або сервер податкової не працює".format(
                                 department.full_name, rro_id), 'error')
                     else:
-                        # if sender.department_name != sender.rro_department_name:
-                        #     flash(
-                        #         '{} налоговый объект имеет название {}, но в самом РРО название {}'.format(
-                        #             department.full_name, sender.department_name,
-                        #             sender.rro_department_name),
-                        #         'warning')
-
                         access = "РРО в податкової: {} ".format(registrar_state['TaxObject']['Name'])
 
                         if registrar_state:
@@ -353,12 +349,6 @@ class DepartmentsAdmin(Filters, ModelView):
                                 shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
                                     registrar_state["NextLocalNum"])
 
-                            # last_shift = Shifts.query \
-                            #     .order_by(Shifts.operation_time.desc()) \
-                            #     .filter(Shifts.department_id == department.id) \
-                            #     .first()
-
-                            # if last_shift:
                             if department.offline_status == True:
                                 print('{} знаходиться в режимі офлайн!'.format(department.full_name))
 
@@ -366,12 +356,9 @@ class DepartmentsAdmin(Filters, ModelView):
                             shift_state = "Стан зміни невідомо. "
 
                         flash('{} номер {}. {}. {}'.format(department.full_name, rro_id, access, shift_state))
-                    #     except Exception as e:
-                    #         flash('{} помилка, не удалось запросить состояние смены, возможно печать не имеет доступа к '
-                    #               'фискальным данным'.format(
-                    #             e), 'error')
+
                 except Exception as e:
-                    flash('{} помилка {}'.format(department.full_name, e), 'error')
+                    flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')

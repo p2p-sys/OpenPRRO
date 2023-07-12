@@ -313,87 +313,23 @@ class SendData2(object):
                 if message.find('реєстраційних') != -1:
                     return 9
 
-            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-            # return False
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+            if message.find('CheckLocalNumberInvalid') != -1:
+                return 9
 
-            # if error.find('CheckLocalNumberInvalid') != -1:
-            #     need_num = int(error[error.find('дорівнювати')+12:])
-            #     print(need_num)
-            #     if need_num > self.department.next_local_number:
-            #         data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            #         if data:
-            #             self.last_fiscal_error_txt = ''
-            #             self.last_fiscal_error_code = 0
-            #             return True
-            #     # else:
-            #     #     return need_num
-            #
-            # elif error.find('ShiftNotOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            #     print(data)
-            #     if data:
-            #         self.last_fiscal_error_txt = ''
-            #         self.last_fiscal_error_code = 0
-            #         return True
-            #
-            # elif error.find('ShiftAlreadyOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            #     print(data)
-            #     if data:
-            #         self.last_fiscal_error_txt = ''
-            #         self.last_fiscal_error_code = 0
-            #         return True
-            #
-            # elif error.find('InvalidTin') != -1:
-            #     # import telegram
-            #     #
-            #     # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
-            #     #
-            #     # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
-            #     #
-            #     # bot.sendMessage(chat_id='-333840622',
-            #     #                 text='{}'.format(''.join(msg)))
-            #
-            #     return 9
-            #
-            # elif error.find('DocumentValidationError') != -1:
-            #     if error.find('реєстраційних') != -1:
-            #         # import telegram
-            #         #
-            #         # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
-            #         #
-            #         # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
-            #         #
-            #         # bot.sendMessage(chat_id='-333840622',
-            #         #                 text='{}'.format(''.join(msg)))
-            #
-            #         return 9
-            #
-            #     if error.find('Службові чеки не підлягають візуалізації') != -1:
-            #         return error
-            #
-            # elif error.find('ShiftAlreadyOpened') != -1:
-            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            #     print(data)
-            #     if data:
-            #         self.last_fiscal_error_txt = ''
-            #         self.last_fiscal_error_code = 0
-            #         return True
+            if message.find('ShiftNotOpened') != -1:
+                return 9
 
-            # self.last_fiscal_error_txt = error
+            if message.find('ShiftAlreadyOpened') != -1:
+                return 9
 
-            # import telegram
-            #
-            # bot = telegram.Bot(token='1088250775:AAHqkHC2U0btonL1DHR-Gdc-QaKKtNpt-v0')
-            #
-            # msg = '{} Ошибка пРРО на {}: {}'.format(self.department.org_name, self.department.name, error)
-            #
-            # bot.sendMessage(chat_id='-333840622',
-            #                 text='{}'.format(''.join(msg)))
+            if message.find('InvalidTin') != -1:
+                return 9
 
-            # raise Exception(
-            #     '{}'.format(error))
+            if message.find('Код помилки') != -1:
+                print("{} Помилка надсилання даних на фіскальний сервер: {}".format(self.rro_fn, message))
+                raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+            else:
+                return False
 
         elif answer.status_code == 204:
             self.last_fiscal_error_txt = "no_content"
@@ -1048,7 +984,7 @@ class SendData2(object):
             if registrar_state:
                 if 'ShiftState' in registrar_state:
                     if registrar_state['ShiftState'] == 1:
-                        print("Смена успешно открыта")
+                        print("{} Зміна успішно відкрита".format(self.rro_fn))
                         self.last_xml = xml
                         return True
                 else:

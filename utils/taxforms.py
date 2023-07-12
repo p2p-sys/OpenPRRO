@@ -751,13 +751,10 @@ class TaxForms(object):
 
         doc_type = 0
 
-        # doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
         doc_cnt = self.doc_cnt
 
         period_type = 1
 
-        # 2655 0039628794 J1391801 1 00000008 31122020 2655.XML
-        # '{:010.0f}'.format(int(EDRPOU))
         '''
             1-4	C_REG C_RAJ	Код ГНИ получателя.
             5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
@@ -944,23 +941,25 @@ class TaxForms(object):
 
         print(xml.decode('windows-1251'))
 
-        # return True
         print(filename)
 
         return self.tax_send(xml, self.TAX_EMAIL, filename), filename
 
-    # Повідомлення про об’єкти оподаткування або об’єкти, пов’язані з оподаткуванням або через які провадиться діяльність. Форма № 20-ОПП
+    '''
+        Повідомлення про об’єкти оподаткування або об’єкти, пов’язані з оподаткуванням
+        або через які провадиться діяльність. Форма № 20-ОПП
+    '''
     def send_20OPP(self, values):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
-        # J1312004
+        # J1312005
         # department = Departments.query.get(m.department_id)
 
         if 'ФОП' in self.company_key.name:
             doc = 'F13'
-            xsdname = 'F1312004.xsd'
+            xsdname = 'F1312005.xsd'
         else:
             doc = 'J13'
-            xsdname = 'J1312004.xsd'
+            xsdname = 'J1312005.xsd'
 
         data = self.tax_infos(2)
 
@@ -977,23 +976,18 @@ class TaxForms(object):
         doc_mounth = dt.strftime("%-m")
         doc_year = dt.strftime("%Y")
 
-        # doc = 'J13'
-
         doc_sub = '120'
 
-        # doc_ver = 3 # c 1 декабря 2021 г.
-        doc_ver = 4  # c 19 января 2022 г.
+        doc_ver = 5  # 10.07.2023
 
         doc_stan = 1
 
         doc_type = 0
 
-        # doc_cnt = self.get_last_number(doc_year, doc_mounth, doc, doc_sub, doc_ver)
         doc_cnt = self.doc_cnt
 
         period_type = 1
 
-        # 2655 0039628794 J1391801 1 00000008 31122020 2655.XML
         # '{:010.0f}'.format(int(EDRPOU))
         '''
             1-4	C_REG C_RAJ	Код ГНИ получателя.
@@ -1137,13 +1131,7 @@ class TaxForms(object):
         for value in values:
             ''' Код ознаки надання інформації '''
             T1RXXXXG2 = etree.SubElement(DECLARBODY, "T1RXXXXG2", ROWNUM=str(line))
-            # Статус отделения: 1 - активное, 2 - приостановленное, 3 - ликвидированное
-            # if department.status != 3 and not department.rro_id:
             T1RXXXXG2.text = '{}'.format(value['T1RXXXXG2'])
-            # elif department.status == 3:
-            #     T1RXXXXG2.text = '{}'.format(6)
-            # else:
-            #     T1RXXXXG2.text = '{}'.format(3)
 
             ''' Тип об’єкта оподаткування '''
             T1RXXXXG3 = etree.SubElement(DECLARBODY, "T1RXXXXG3", ROWNUM=str(line))
@@ -1157,14 +1145,9 @@ class TaxForms(object):
             T1RXXXXG5 = etree.SubElement(DECLARBODY, "T1RXXXXG5", ROWNUM=str(line))
             T1RXXXXG5.text = '{}'.format(value['T1RXXXXG5'])
 
-            if 'T1RXXXXG6' in value:
-                ''' код за КОАТУУ '''
-                T1RXXXXG6 = etree.SubElement(DECLARBODY, "T1RXXXXG6", ROWNUM=str(line))
-                T1RXXXXG6.text = '{}'.format(value['T1RXXXXG6'])
-            else:
-                ''' код за КАТОТТГ '''
-                T1RXXXXG6S = etree.SubElement(DECLARBODY, "T1RXXXXG6S", ROWNUM=str(line))
-                T1RXXXXG6S.text = '{}'.format(value['T1RXXXXG6S'])
+            ''' код за КАТОТТГ '''
+            T1RXXXXG6S = etree.SubElement(DECLARBODY, "T1RXXXXG6S", ROWNUM=str(line))
+            T1RXXXXG6S.text = '{}'.format(value['T1RXXXXG6S'])
 
             ''' область, район, населений пункт '''
             T1RXXXXG7S = etree.SubElement(DECLARBODY, "T1RXXXXG7S", ROWNUM=str(line))
@@ -1222,14 +1205,14 @@ class TaxForms(object):
     # Заява про реєстрацію програмного реєстратора розрахункових операцій за формою № 1-ПРРО
     def send_1PRRO(self, dpi_id, R03G3S_value=None, R04G11S_value=None, R04G2S_value=None, values=None):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
-        # J1316604
+        # J1316605
 
         if 'ФОП' in self.company_key.name:
             doc = 'F13'
-            xsdname = 'F1316604.xsd'
+            xsdname = 'F1316605.xsd'
         else:
             doc = 'J13'
-            xsdname = 'J1316604.xsd'
+            xsdname = 'J1316605.xsd'
 
         data = self.tax_infos(2)
 
@@ -1277,7 +1260,8 @@ class TaxForms(object):
                 break
 
         if C_TERRIT == None:
-            msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, спробуйте надіслати форму ще раз'.format(
+            msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, ' \
+                  'спробуйте надіслати форму ще раз'.format(
                 dpi_id)
             print(msg)
             raise Exception(msg)
@@ -1297,7 +1281,7 @@ class TaxForms(object):
 
         doc_sub = '166'
 
-        doc_ver = 4  # с 1 декабря 2021 г.
+        doc_ver = 5  # 10.07.2023
 
         doc_stan = 1
 
@@ -1436,18 +1420,6 @@ class TaxForms(object):
 
         DECLARBODY = etree.SubElement(DECLAR, "DECLARBODY")
 
-        # Статус отделения: 1 - активное, 2 - приостановленное, 3 - ликвидированное
-        # if department.status != 3 and department.rro_id:
-        #     ''' Дія: Зміни (крім перереєстрації) '''
-        #     M015 = etree.SubElement(DECLARBODY, "M015")
-        #     M015.text = '{}'.format(1)
-        # elif department.status != 3 and not department.rro_id:
-
-        # elif department.status == 3:
-        #     ''' Дія: Скасування реєстрації '''
-        #     M012 = etree.SubElement(DECLARBODY, "M012")
-        #     M012.text = '{}'.format(1)
-
         if R04G2S_value:
             M012 = etree.SubElement(DECLARBODY, "M012")
             M012.text = '{}'.format(1)
@@ -1478,9 +1450,9 @@ class TaxForms(object):
                 "Ну вдалося отримати дані з податкового кабінету, ідентифікатор об’єкта оподаткування {}".format(
                     dpi_id))
 
-        ''' КОАТУУ '''
-        HKOATUU = etree.SubElement(DECLARBODY, "HKOATUU")
-        HKOATUU.text = '{}'.format(C_TERRIT)
+        ''' КАТОТТГ '''
+        DGKATOTTG = etree.SubElement(DECLARBODY, "DGKATOTTG")
+        DGKATOTTG.text = '{}'.format(C_TERRIT)
 
         ''' назва ГО '''
         R03G3S = etree.SubElement(DECLARBODY, "R03G3S")
