@@ -1248,6 +1248,7 @@ class TaxForms(object):
         ADDRESS = None
         TO_CODE = None
         OBJECT_NAME_NAME = None
+        KATOTTG = None
 
         print(values)
         for value in values:
@@ -1257,9 +1258,10 @@ class TaxForms(object):
                 OBJECT_NAME_NAME = value["NAME"]
                 TYPE_OBJECT_NAME = value["TYPE_OBJECT_NAME"]
                 ADDRESS = value["ADDRESS"]
+                KATOTTG = value["KATOTTG"]
                 break
 
-        if C_TERRIT == None:
+        if KATOTTG == None:
             msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, ' \
                   'спробуйте надіслати форму ще раз'.format(
                 dpi_id)
@@ -1451,8 +1453,8 @@ class TaxForms(object):
                     dpi_id))
 
         ''' КАТОТТГ '''
-        DGKATOTTG = etree.SubElement(DECLARBODY, "DGKATOTTG")
-        DGKATOTTG.text = '{}'.format(C_TERRIT)
+        HKATOTTG = etree.SubElement(DECLARBODY, "HKATOTTG")
+        HKATOTTG.text = '{}'.format(KATOTTG)
 
         ''' назва ГО '''
         R03G3S = etree.SubElement(DECLARBODY, "R03G3S")

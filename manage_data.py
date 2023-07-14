@@ -453,6 +453,21 @@ def department_keys_cert_fetch():
         except Exception as e:
             print(key.id, e)
 
+@fucli.command('set_key_info')
+def set_key_info():
+
+    department_keys = DepartmentKeys.query \
+        .filter(DepartmentKeys.acsk == None) \
+        .all()
+
+    for key in department_keys:
+        try:
+            result, update_key_data_text, public_key = key.update_key_data()
+            if result:
+                db.session.commit()
+            # print(result, update_key_data_text, public_key)
+        except Exception as e:
+            print(key.id, e)
 
 if __name__ == '__main__':
     fucli()

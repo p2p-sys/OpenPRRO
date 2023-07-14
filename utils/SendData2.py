@@ -38,8 +38,10 @@ class SendData2(object):
 
         if rro_fn:
             self.rro_fn = rro_fn
-        else:
+        elif department:
             self.rro_fn = department.rro_id
+        else:
+            self.rro_fn = 0
 
         self.shift_state = 0
 
