@@ -369,6 +369,7 @@ def fix_all():
     departments = Departments.query \
         .filter(Departments.rro_id != None) \
         .filter(Departments.prro_key != None) \
+        .filter(Departments.next_local_number == None) \
         .all()
 
     for department in departments:

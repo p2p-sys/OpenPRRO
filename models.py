@@ -435,7 +435,7 @@ class Departments(Base):
 
     entity = Column('entity', Integer, comment='Ідентифікатор запису ГО', nullable=True)
 
-    zn = Column('zn', Integer, comment='Локальний номер реєстратора розрахункових операцій (64 символи)',
+    zn = Column('zn', String(32), comment='Локальний номер реєстратора розрахункових операцій (64 символи)',
                 nullable=True)
 
     single_tax = Column('single_tax', Boolean, default=False, nullable=True, comment='Єдиний податок')
@@ -541,37 +541,37 @@ class Departments(Base):
             registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
 
         if self.zn != zn:
-            messages.append('Исправляем заводской номер с {} на {}'.format(self.zn, zn))
+            messages.append('Виправляємо заводський номер с {} на {}'.format(self.zn, zn))
             self.zn = zn
 
         address = registrar_state['TaxObject']['Address']
         if self.address != address:
-            messages.append('Исправляем адрес с {} на {}'.format(self.address, address))
+            messages.append('Виправляємо адресу з {} на {}'.format(self.address, address))
             self.address = address
 
         tin = registrar_state['TaxObject']['Tin']
         if self.tin != tin:
-            messages.append('Исправляем TIN с {} на {}'.format(self.tin, tin))
+            messages.append('Виправляємо TIN з {} на {}'.format(self.tin, tin))
             self.tin = tin
 
         ipn = registrar_state['TaxObject']['Ipn']
         if self.ipn != ipn:
-            messages.append('Исправляем IPN с {} на {}'.format(self.ipn, ipn))
+            messages.append('Виправляємо IPN з {} на {}'.format(self.ipn, ipn))
             self.ipn = ipn
 
         org_name = registrar_state['TaxObject']['OrgName']
         if self.org_name != org_name:
-            messages.append('Исправляем назву с {} на {}'.format(self.org_name, org_name))
+            messages.append('Виправляємо назву OrgName з {} на {}'.format(self.org_name, org_name))
             self.org_name = org_name
 
         name = registrar_state['TaxObject']['Name']
         if self.name != name:
-            messages.append('Исправляем назву с {} на {}'.format(self.name, name))
+            messages.append('Виправляємо назву з {} на {}'.format(self.name, name))
             self.name = name
 
         prro_name = registrar_state['TaxObject']['TransactionsRegistrars'][0]['Name']
         if self.name != name:
-            messages.append('Исправляем назву ПРРО с {} на {}'.format(self.prro_name, prro_name))
+            messages.append('Виправляємо назву ПРРО з {} на {}'.format(self.prro_name, prro_name))
             self.prro_name = prro_name
 
         self.entity = registrar_state['TaxObject']['Entity']
