@@ -18,7 +18,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from flask_login import current_user
 
-from config import TIMEZONE, LOGFILE
+from config import TIMEZONE, LOGFILE, CMP_URLS
 from utils.SendData2 import SendData2
 
 db = SQLAlchemy()
@@ -898,21 +898,8 @@ class Departments(Base):
             print('Переходимо в офлайн режим')
             self.offline_status = True
 
-            # shift.prro_offline_local_number = self.next_offline_local_number
-
-            # Для офлайн нужно добавить номер, т.к. мы не знаем прошел чек или нет
-            # self.next_local_number += 1  # = self.sender.local_number
+            # Для офлайну потрібно додати номер, т.к. ми не знаємо пройшов чек чи ні
             self.next_local_number += 1
-
-            # self.prro_localchecknumber += 1  # = self.sender.local_check_number
-
-            # self.sender.local_number = self.next_local_number
-            # self.sender.local_check_number = self.prro_localchecknumber
-
-            # self.sender.local_number = self.next_local_number
-            # self.sender.offline_local_number = self.next_offline_local_number
-            # self.sender.offline_seed = self.prro_offline_seed
-            # self.sender.offline_session_id = self.prro_offline_session_id
 
             xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False,
                                                                      revoke=False)
@@ -932,24 +919,11 @@ class Departments(Base):
             )
             db.session.add(off)
 
-            # shift.prro_localnumber += 1  # = self.sender.local_number
-            # shift.prro_localchecknumber += 1  # = self.sender.local_check_number
-            #
-            # shift.prro_offline_local_number += 1
-
-            # self.sender.local_number += 1
-            # self.sender.offline_local_number += 1
-            #
-            # self.next_local_number = self.sender.local_number
-            # self.next_offline_local_number = self.sender.offline_local_number
-
             self.offline_prev_hash = None
             db.session.commit()
             print('Зберегли новий документ відкриття оффлайн сесії')
 
             self.prro_set_next_number()
-
-            # self.sender.local_check_number = shift.prro_localchecknumber
 
     def prro_open_shift(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
 
@@ -2740,26 +2714,11 @@ class DepartmentKeys(Base):
                     unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
 
                     try:
-                        # print(box_id)
                         infos = signer.info(box_id)
                         if not infos[0]:
                             if not b'privatbank' in self.key_data:
-                                # print(self.key_data)
-                                # box_id = signer.update_bid(db, self)
-
-                                urls = [
-                                    'http://acskidd.gov.ua/services/cmp/',
-                                    'http://uakey.com.ua/services/cmp/',
-                                    'http://masterkey.ua/services/cmp/',
-                                    'http://ca.informjust.ua/services/cmp/',
-                                    # 'http://ca.oschadbank.ua/public/cmp/',
-                                    # 'http://ca.csd.ua/public/x509/cmp/',
-                                    # 'http://ca.gp.gov.ua/cmp/'
-                                ]
-
                                 try:
-                                    certs = signer.cert_fetch(box_id, urls)
-
+                                    certs = signer.cert_fetch(box_id, CMP_URLS)
                                     if certs == 0:
                                         return False, 'Не вдалося автоматично отримати сертифікати з АЦСК', None
                                 except Exception as e:
@@ -2861,7 +2820,6 @@ class DepartmentKeys(Base):
                                                     if unpacked_key['contents']:
                                                         self.encrypt_content = unpacked_key['contents']
 
-            # self.key_role = None
             self.key_data_txt = key_content
 
             if not self.key_role:
@@ -2882,10 +2840,11 @@ class DepartmentKeys(Base):
             if not self.key_role:
                 return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None
 
-            self.key_password = ''
-            self.key_data = None
-            self.cert1_data = None
-            self.cert2_data = None
+            if self.key_content and self.cert1_content:
+                self.key_password = ''
+                self.key_data = None
+                self.cert1_data = None
+                self.cert2_data = None
 
             return True, 'Дані успішно зчитані з ключа та оновлені!', self.public_key
 

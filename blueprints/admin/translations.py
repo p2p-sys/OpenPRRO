@@ -1,5 +1,5 @@
 TRANSLATIONS = {
-    'id' : 'ID',
+    'id' : 'Iдентифікатор',
     'number' : 'Номер',
     'comments' : 'Комментар',
     'document' : 'Документ',
@@ -85,7 +85,7 @@ TRANSLATIONS = {
     'department.rro_type': 'Тип РРО',
     'department.rro_id': 'Номер РРО',
     'department.full_name': 'Відділення',
-    'key_role': 'Роль ключа (не обов\'язково)',
+    'key_role': 'Роль ключа',
     'rro_id': 'Номер РРО',
     'taxform_key': 'Ключ для підпису податкових форм',
     'prro_key': 'Ключ для підпису чеків',
@@ -130,4 +130,9 @@ TRANSLATIONS = {
     'offline_session_duration': 'Тривалість оффлайн сесії',
     'offline_session_monthly_duration': 'Тривалість оффлайн сесії з початку місяця',
     'last_offline_session_start': 'Час початку оффлайн сесії',
+    'key_role_tax_form': 'Роль ключа для підписання податкових форм',
+    'offline_prev_hash': 'Хеш попереднього офлайн документа',
+    'telegram_offline_error_sended': 'Ознака відправки помилки по телеграм боту',
+    'prro_offline_session_id': 'Ідентифікатор офлайн сесії',
+    'prro_offline_seed': 'Секретне число для обчислення фіскального номера офлайн документа'
 }

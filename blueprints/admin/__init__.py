@@ -190,7 +190,7 @@ class DepartmentsAdmin(Filters, ModelView):
     can_view_details = True
 
     column_filters = (
-        'id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered', 'offline')
+        'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status')
 
     column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
                    'offline']
@@ -223,6 +223,10 @@ class DepartmentsAdmin(Filters, ModelView):
         'offline': [
             (0, 'Відключений'),
             (1, 'Включений')
+        ],
+        'offline_status': [
+            (0, 'Нi'),
+            (1, 'Так')
         ]
     }
 
@@ -239,8 +243,14 @@ class DepartmentsAdmin(Filters, ModelView):
         (1, 'Включений')
     ]]
 
+    _offline_status_choices = [(choice, label) for choice, label in [
+        (0, 'Нi'),
+        (1, 'Так')
+    ]]
+
     column_choices = {'signer_type': _signer_type_choices,
-                      'offline': _offline_choices}
+                      'offline': _offline_choices,
+                      'offline_status': _offline_status_choices}
 
     def is_accessible(self):
         if not current_user.is_anonymous and current_user.is_permissions(10):
@@ -461,7 +471,8 @@ class DepartmentsAdmin(Filters, ModelView):
                     msg, status = department.prro_fix()
 
                     if not status:
-                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
+                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg),
+                              'error')
                     else:
                         flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, msg))
 
@@ -1031,8 +1042,7 @@ class DepartmentKeysAdmin(Filters, ModelView):
         'name', 'key_data', 'key_data_txt', 'begin_time', 'end_time', 'path', 'type', 'create_date', 'public_key',
         'cert1_data', 'cert2_data', 'key_content', 'box_id', 'sign', 'encrypt', 'key_tax_registered',
         'edrpou', 'ceo_fio', 'ceo_tin', 'key_data', 'encrypt_content', 'cert1_content', 'cert2_content',
-        'taxform_key_departments',
-        'prro_key_departments')
+        'taxform_key_departments', 'prro_key_departments')
 
     column_editable_list = ['key_password']
 
@@ -1046,6 +1056,7 @@ class DepartmentKeysAdmin(Filters, ModelView):
             ('other', 'Інше'),
         ],
     }
+    form_choices['key_role_tax_form'] = form_choices['key_role']
 
     _key_role_type_choices = [(choice, label) for choice, label in [
         ('personal', 'Особистий'),
@@ -1058,13 +1069,7 @@ class DepartmentKeysAdmin(Filters, ModelView):
         ('None', 'Не вказано'),
     ]]
 
-    column_choices = {'key_role': _key_role_type_choices}
-
-    # column_default_sort = [('full_name', False)]
-
-    # column_default_sort = [[(cast(Departments.legal_number, Integer), False)]
-
-    # column_editable_list = []
+    column_choices = {'key_role': _key_role_type_choices, 'key_role_tax_form': _key_role_type_choices, }
 
     can_create = True
     can_delete = True
@@ -1106,52 +1111,6 @@ class DepartmentKeysAdmin(Filters, ModelView):
                     db.session.commit()
                 else:
                     flash('{} {}'.format(key.id, update_key_data_text), 'error')
-
-    @action('cert_fetch', lazy_gettext('Завантажити сертифікати ключів'),
-            lazy_gettext('Ви впевнені, що хочете завантажити сертифікати ключів?'))
-    def cert_fetch(self, ids):
-        if not current_user.is_anonymous and current_user.is_permissions(10):
-
-            query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-
-            for key in query.all():
-                from utils.Sign import Sign
-
-                signer = Sign()
-                try:
-                    box_id = signer.add_key(key.key_data, key.key_password)
-
-                    urls = [
-                        'http://acskidd.gov.ua/services/cmp/',
-                        'http://uakey.com.ua/services/cmp/',
-                        'http://masterkey.ua/services/cmp/',
-                        'http://ca.informjust.ua/services/cmp/',
-                        # 'http://ca.csd.ua/public/x509/cmp/',
-                        # 'http://ca.gp.gov.ua/cmp/'
-                    ]
-                    if not b'privatbank' in key.key_data:
-                        certs = signer.cert_fetch(box_id, urls)
-                        if certs > 0:
-                            # result, update_key_data_text, public_key = key.update_key_data()
-                            if certs == 1:
-                                flash('{} отримано сертифікатів {}'.format(key.id, certs))
-                            else:
-                                flash('{} отримано сертифікатів {}'.format(key.id, certs), 'warning')
-
-                        else:
-                            flash('{} {}'.format(key.id, 'не вийшло'), 'error')
-                    else:
-                        flash('{} ключ приватбанку'.format(key.id))
-
-                    result, update_key_data_text, public_key = key.update_key_data()
-                    if result:
-                        # flash('{} {}'.format(key.id, update_key_data_text))
-                        db.session.commit()
-                    # else:
-                    #     flash('{} {}'.format(key.id, update_key_data_text), 'error')
-
-                except Exception as e:
-                    flash('{} помилка {}'.format(key.id, e), 'error')
 
     def after_model_change(self, _form, model, is_created):
 
@@ -1256,6 +1215,23 @@ class IndexAdmin(Filters, BaseView):
 
         index_form = FlaskForm
 
+        index_form.departments_active = Departments.query \
+            .filter(Departments.rro_id != None) \
+            .count()
+
+        index_form.key_active = DepartmentKeys.query \
+            .filter(DepartmentKeys.key_content != None) \
+            .filter(DepartmentKeys.cert1_content != None) \
+            .count()
+
+        index_form.departments_offline_on = Departments.query \
+            .filter(Departments.offline == True) \
+            .count()
+
+        index_form.departments_offline_status_on = Departments.query \
+            .filter(Departments.offline_status == True) \
+            .count()
+
         return self.render(self._template, form=index_form)
 
     def is_accessible(self):
@@ -1269,10 +1245,10 @@ class IndexAdmin(Filters, BaseView):
 
 
 def connect_admin_panel(app, db):
-    index_view = IndexAdmin(session=db.session, name='Головна', url='/admin', endpoint='admin',
-                            menu_icon_type='fa', menu_icon_value='fa-bar-chart')
+    index_view = IndexAdmin(session=db.session, name='Аналітика', url='/admin', endpoint='admin',
+                            menu_icon_type='fa', menu_icon_value='fa-area-chart')
 
-    admin = Admin(app, 'АРМ', base_template='my_master.html', template_mode='bootstrap3',
+    admin = Admin(app, 'OpenPRRO', base_template='my_master.html', template_mode='bootstrap3',
                   category_icon_classes={
                       'Доступи': 'fa fa-users',
                       'пРРО': 'fa fa-lock',
@@ -1282,21 +1258,16 @@ def connect_admin_panel(app, db):
         RolesAdmin(db.session, name='Ролі', category='Доступи', menu_icon_type='fa', menu_icon_value='fa-server'))
 
     admin.add_view(PermissionAdmin(db.session, name='Дозволи', category='Доступи', menu_icon_type='fa',
-                                   menu_icon_value='fa-server'))
+                                   menu_icon_value='fa-universal-access'))
 
     add_view(admin, UsersAdmin(session=db.session, name='Користувачі', category='Доступи', menu_icon_type='fa',
                                menu_icon_value='fa-users'), template_folder='templates')
 
     admin.add_view(
-        DepartmentsAdmin(db.session, name='Об\'єкти господарювання', category='Довідники', menu_icon_type='fa',
-                         menu_icon_value='fa-building-o'))
+        DepartmentsAdmin(db.session, name='РРО', category='Довідники', menu_icon_type='fa',
+                         menu_icon_value='fa-calculator'))
 
     add_view(admin, DepartmentKeysAdmin(db.session, name='КЕП', category='Довідники', static_folder='static',
                                         endpoint='department_keys', menu_icon_type='fa',
-                                        menu_icon_value='fa-sign-language'),
+                                        menu_icon_value='fa-key'),
              template_folder='templates')
-
-    # add_view(admin, CompanyKeysAdmin(db.session, name='КЕП компанії', category='пРРО', static_folder='static',
-    #                                  endpoint='company_keys', menu_icon_type='fa',
-    #                                  menu_icon_value='fa-address-card'),
-    #          template_folder='templates')

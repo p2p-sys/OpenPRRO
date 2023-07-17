@@ -75,6 +75,7 @@ class Connection:
         return self.TYPES.get(typ_code), byte_len
 
     def command(self, type_name, buf):
+
         header = self.encode_len(type_name, len(buf))
         self.ohmac.update(header)
         self.ohmac.update(buf)
