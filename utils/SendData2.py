@@ -259,8 +259,8 @@ class SendData2(object):
         print(answer.status_code)
 
         message = answer.text
-        # if command == "cmd":
-        print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
+        if command == "cmd":
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
 
         if message.find('ShiftAlreadyOpened') != -1:
             error_rro_pos = message.find('наразі відкрито особою')
@@ -301,6 +301,7 @@ class SendData2(object):
             raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 
         if answer.status_code == 204:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
             raise Exception('{}'.format(
                 "Помилка 204. На фіскальному сервері немає об'єктів для роботи. Будь ласка, перевірте в"
                 " Електронному кабінеті ДПС (Програмне РРО - Касири) наявність ідетифікатора вашого сертифіката."
@@ -308,9 +309,11 @@ class SendData2(object):
                 " потрібен час для синхронізації даних між серверами ДПС."))
 
         if answer.status_code == 500:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
             return False
 
         if answer.status_code >= 400:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
             if message.find('CryptographyError') != -1:
                 # Переходимо до офлайну
                 return False
@@ -344,6 +347,7 @@ class SendData2(object):
                 return False
 
         elif answer.status_code == 204:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
             self.last_fiscal_error_txt = "no_content"
             raise Exception('{}'.format(answer.text))
             # return False
@@ -987,27 +991,13 @@ class SendData2(object):
             return base64.b64encode(xml).decode(), signed_data, offline_tax_number, sha256(xml).hexdigest()
 
         ret = self.post_data("doc", xml)
-
         if ret:
             if ret == 9:
                 return ret
 
-            registrar_state = self.TransactionsRegistrarState()
-
-            if registrar_state:
-                if 'ShiftState' in registrar_state:
-                    if registrar_state['ShiftState'] == 1:
-                        print("{} Зміна успішно відкрита".format(self.rro_fn))
-                        self.last_xml = xml
-                        return True
-                else:
-                    self.server_time = None
-
-            else:
-                print("Ошибка проверки открытия смены")
-
-        else:
-            print("Ошибка открытия смены")
+            print("{} Зміна успішно відкрита".format(self.rro_fn))
+            self.last_xml = xml
+            return True
 
         return False
 

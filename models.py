@@ -724,6 +724,17 @@ class Departments(Base):
 
                     operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
+                    open_shift_fiscal_num = registrar_state['OpenShiftFiscalNum']
+
+                    if open_shift_fiscal_num.find('.') != -1:
+                        tax_id = None
+                        offline_tax_id = open_shift_fiscal_num
+                        offline = True
+                    else:
+                        tax_id = open_shift_fiscal_num
+                        offline_tax_id = None
+                        offline = False
+
                     shift = Shifts(
                         department_id=self.id,
                         operation_type=1,
@@ -731,9 +742,10 @@ class Departments(Base):
                         fiscal_time=operation_time,
                         server_time=operation_time,
                         pid=registrar_state['FirstLocalNum'],
-                        tax_id=registrar_state['OpenShiftFiscalNum'],
+                        tax_id=tax_id,
+                        offline_tax_id=offline_tax_id,
                         fiscal_shift_id=registrar_state['ShiftId'],
-                        offline=False,
+                        offline=offline,
                         testing=registrar_state['Testing'],
                         cashier=""
                     )
@@ -1689,7 +1701,7 @@ class Departments(Base):
             operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
-            offline = self.offline_status
+            offline_status = self.offline_status
 
             check = Sales.query \
                 .filter(or_(Sales.tax_id == tax_id, Sales.offline_tax_id == tax_id)) \
@@ -1713,12 +1725,12 @@ class Departments(Base):
             if not check:
                 raise ("Не знайшов чек із фіскальним номером {}".format(tax_id))
 
-            if not offline:
+            if not offline_status:
 
                 ret = self.sender.post_storno(tax_id, operation_time, testing=shift.testing)
                 if not ret:
                     if self.offline:
-                        offline = True
+                        offline_status = True
                     else:
                         raise Exception('{}'.format(
                             "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
@@ -1729,14 +1741,14 @@ class Departments(Base):
                         ret = self.sender.post_storno(tax_id, operation_time, testing=shift.testing)
                         if not ret:
                             if self.offline:
-                                offline = True
+                                offline_status = True
                             else:
                                 raise Exception('{}'.format(
                                     "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
                 server_time = self.sender.server_time
 
-            if offline:
+            if offline_status:
                 self.prro_to_offline(operation_time)
                 fiscal_time = operation_time
                 fiscal_ticket = None
@@ -1790,7 +1802,7 @@ class Departments(Base):
                 fiscal_ticket=fiscal_ticket,
                 testing=shift.testing,
                 offline_fiscal_xml_signed=signed_xml,
-                offline=offline,
+                offline=offline_status,
                 offline_tax_id=offline_tax_id,
                 offline_session_id=self.prro_offline_session_id,
                 doc_uid=doc_uid,
@@ -1807,7 +1819,7 @@ class Departments(Base):
 
             cabinet_url = None
 
-            if offline:
+            if offline_status:
                 storno_tax_id = offline_tax_id
 
                 check_visual = '{}'.format(self.org_name)
@@ -1861,10 +1873,11 @@ class Departments(Base):
                 coded_string = base64.b64encode(check_visual.encode('UTF-8'))
 
             else:
+                coded_string = None
                 try:
                     coded_string, cabinet_url = self.sender.GetCheckExt(storno_tax_id, 3)
                 except Exception as e:
-                    coded_string = None
+                    pass
 
             if not cabinet_url:
                 cabinet_url = 'https://cabinet.tax.gov.ua/cashregs/check?fn={}&id={}&date={}&time={}&sm={:.2f}'.format(
@@ -2325,16 +2338,16 @@ class Departments(Base):
 
         server_time = None
 
-        offline = self.offline_status
+        offline_status = self.offline_status
 
-        if not offline:
+        if not offline_status:
 
             ret = self.sender.close_shift(dt=operation_time, testing=shift.testing)
 
             if not self.sender.server_time:
                 if not ret:
                     if self.offline:
-                        offline = True
+                        offline_status = True
                     else:
                         raise Exception('{}'.format(
                             "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
@@ -2345,14 +2358,14 @@ class Departments(Base):
                         ret = self.sender.close_shift(dt=operation_time, testing=shift.testing)
                         if not ret:
                             if self.offline:
-                                offline = True
+                                offline_status = True
                             else:
                                 raise Exception('{}'.format(
                                     "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
-                server_time = self.sender.server_time
+            # offline_status = True
 
-            if offline:
+            if offline_status:
                 self.prro_to_offline(operation_time)
                 fiscal_time = operation_time
                 fiscal_ticket = None
@@ -2361,9 +2374,11 @@ class Departments(Base):
                 xml, signed_xml, offline_tax_id, xml_hash = self.sender.close_shift(dt=operation_time,
                                                                                     testing=shift.testing,
                                                                                     offline=True,
-                                                                                    prev_hash=self.offline_prev_hash)
+                                                                                    prev_hash=None)
 
                 self.offline_prev_hash = xml_hash
+
+                tax_id = None
 
             else:
                 fiscal_time = datetime.datetime.strptime(
@@ -2373,7 +2388,9 @@ class Departments(Base):
 
                 offline_tax_id = None
 
-        tax_id = self.sender.last_ordertaxnum
+                tax_id = self.sender.last_ordertaxnum
+
+                server_time = self.sender.server_time
 
         if self.sender.last_xml:
             xml = base64.b64encode(self.sender.last_xml).decode()
@@ -2396,17 +2413,25 @@ class Departments(Base):
             pid=self.next_local_number,
             tax_id=tax_id,
             xml=xml,
+            offline_fiscal_xml_signed=signed_xml,
             fiscal_ticket=fiscal_ticket,
             fiscal_shift_id=shift.fiscal_shift_id,
             shift_id=shift.id,
             testing=shift.testing,
-            offline=offline,
-            offline_session_id=self.prro_offline_session_id
+            offline=offline_status,
+            offline_session_id=self.prro_offline_session_id,
+            offline_tax_id=offline_tax_id
         )
+
+        if offline_status:
+            tax_id = close_shift.offline_tax_id
+        else:
+            tax_id = close_shift.tax_id
 
         db.session.add(close_shift)
 
         self.shift_state = 0
+        self.offline_prev_hash = None
 
         db.session.commit()
 

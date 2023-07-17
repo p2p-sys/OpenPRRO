@@ -1428,25 +1428,18 @@ class ApiView(FlaskView):
 
             if z_report_tax_id:
 
-                if tax_id_inkass:
-                    answer = jsonify(status='success', data=z_report_data,
-                                     message='Зміна успішно закрита, Z звіт надіслано',
-                                     error_code=0, z_report_tax_id=z_report_tax_id,
-                                     close_shift_tax_id=close_shift_tax_id,
-                                     z_report_visual=coded_string,
-                                     tax_id_inkass=tax_id_inkass,
-                                     qr_inkass=qr_inkass,
-                                     visual_inkass=visual_inkass)
-                    logger.info(f'Відповідь: {answer.json}')
-                    return answer
-                else:
-                    answer = jsonify(status='success', data=z_report_data,
-                                     message='Зміна успішно закрита, Z звіт надіслано',
-                                     error_code=0, z_report_tax_id=z_report_tax_id,
-                                     close_shift_tax_id=close_shift_tax_id,
-                                     z_report_visual=coded_string)
-                    logger.info(f'Відповідь: {answer.json}')
-                    return answer
+                answer = jsonify(status='success', data=z_report_data,
+                                 message='Зміна успішно закрита, Z звіт надіслано',
+                                 error_code=0,
+                                 z_report_tax_id=z_report_tax_id,
+                                 close_shift_tax_id=close_shift_tax_id,
+                                 z_report_visual=coded_string,
+                                 tax_id_inkass=tax_id_inkass,
+                                 qr_inkass=qr_inkass,
+                                 visual_inkass=visual_inkass)
+                logger.info(f'Відповідь: {answer.json}')
+                return answer
+
             else:
                 answer = jsonify(status='error', message='Помилка закриття Z звіту', error_code=-1)
                 logger.error(f'Відповідь: {answer.json}')
