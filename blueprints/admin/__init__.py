@@ -396,14 +396,6 @@ class DepartmentsAdmin(Filters, ModelView):
                                 "{} номер {}. Фискального номера нет в доступе, либо сервер налоговой не работает".format(
                                     department.full_name, rro_id), 'error')
                         else:
-                            if sender.department_name != sender.rro_department_name:
-                                flash(
-                                    '{} налоговый объект имеет название {}, но в самом РРО название {}'.format(
-                                        department.full_name, sender.department_name,
-                                        sender.rro_department_name),
-                                    'warning')
-
-                            access = "РРО в податкової: {} ".format(sender.department_name)
 
                             if registrar_state:
                                 # if registrar_state['ShiftState'] == 0:
@@ -441,13 +433,10 @@ class DepartmentsAdmin(Filters, ModelView):
 
                                 else:
                                     shift_state = "Стан зміни невідомо. "
-                                # else:
-                                #     shift_state = "Стан зміни: відкрита, сл. лок. ном. {}".format(
-                                #         registrar_state["NextLocalNum"])
                             else:
                                 shift_state = "Стан зміни невідомо. "
 
-                            flash('{} номер {}. {}. {}'.format(department.full_name, rro_id, access, shift_state))
+                            flash('{} номер {}. {}'.format(department.full_name, rro_id, shift_state))
                     except Exception as e:
                         flash('{} помилка, не удалось запросить состояние смены, возможно печать не имеет доступа к '
                               'фискальным данным'.format(
@@ -697,122 +686,6 @@ class DepartmentsAdmin(Filters, ModelView):
         else:
             flash('У вас немає доступу для даної операції!', 'error')
 
-    # @action('prro_close_shift', lazy_gettext('Закрити зміну пРРО без Z звіту'),
-    #         lazy_gettext('Ви впевнені, що хочете закрить смену пРРО без Z отчета?'))
-    # def prro_close_shift(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #         # count = 0
-    #         for department in query.all():
-    #
-    #             try:
-    #                 rro_id = department.rro_id
-    #
-    #                 from utils.SendData2 import SendData2
-    #                 # from utils.Sign import Sign
-    #
-    #                 # signer = Sign()
-    #
-    #                 # sender = SendData2(signer, m.box_id, rro_id, "")
-    #                 sender = SendData2(db, department.prro_key, rro_id, "")
-    #
-    #                 # try:
-    #                 #     server_state = sender.ServerState()
-    #                 # except Exception as e:
-    #                 #     if str(e) == 'ENOENT':
-    #                 #         box_id = signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-    #                 #         sender.set_box_id(box_id)
-    #                 server_state = sender.ServerState()
-    #                 #
-    #                 #         m.box_id = box_id
-    #                 #         db.session.commit()
-    #                 #
-    #                 #     else:
-    #                 #         raise Exception(
-    #                 #             'помилка криптографии {}'.format(e))
-    #
-    #                 if server_state:
-    #
-    #                     objects = sender.Objects()
-    #
-    #                     if not sender.zn:
-    #                         access = "Фіскального номера немає в доступі"
-    #                     else:
-    #                         access = "Необхідний РРО є в базі податкової: {}, {}, {} ".format(sender.org_name,
-    #                                                                                           sender.address,
-    #                                                                                           sender.department_name)
-    #
-    #                         registrar_state = sender.TransactionsRegistrarState()
-    #
-    #                         if registrar_state:
-    #                             if registrar_state['ShiftState'] == 0:
-    #                                 shift_state = "Стан зміни: закрита. "
-    #                             else:
-    #                                 shift_state = "Стан зміни: відкрита. "
-    #                                 sender.close_shift()
-    #                                 registrar_state = sender.TransactionsRegistrarState()
-    #
-    #                                 if registrar_state:
-    #                                     if registrar_state['ShiftState'] == 0:
-    #                                         shift_state = "Стан зміни: успешно закрита. "
-    #                                         flash(
-    #                                             'Касовий апарат пРРО відділення {} номер {}. {}. {}. {}'.format(
-    #                                                 department.full_name,
-    #                                                 rro_id, server_state,
-    #                                                 access, shift_state))
-    #                                     else:
-    #                                         shift_state = "Стан зміни: осталась відкрита. "
-    #                                         flash(
-    #                                             'Касовий апарат пРРО відділення {} номер {}. {}. {}. {}'.format(
-    #                                                 department.full_name,
-    #                                                 rro_id, server_state,
-    #                                                 access, shift_state))
-    #
-    #                         else:
-    #                             shift_state = "Стан зміни невідомо. "
-    #                             flash('Касовий апарат пРРО відділення {} номер {}. {}. {}. {}'.format(
-    #                                 department.full_name,
-    #                                 rro_id, server_state,
-    #                                 access, shift_state))
-    #
-    #                 else:
-    #                     flash('Сервер податкової не працює', 'error')
-    #             except Exception as e:
-    #                 flash('{} помилка {}'.format(department.full_name, e), 'error')
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
-
-    # @action('prro_fix_local_number', lazy_gettext('Исправить локальные номера'),
-    #         lazy_gettext('Ви впевнені, що хочете исправить локальные номера?'))
-    # def prro_fix_local_number(self, ids):
-    #     if not current_user.is_anonymous and current_user.is_permissions(10):
-    #
-    #         query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #         # count = 0
-    #         for department in query.all():
-    #
-    #             try:
-    #
-    #                 local_id = data['local_id']
-    #                 last_shift = Shifts.query \
-    #                     .order_by(Shifts.operation_time.desc()) \
-    #                     .filter(Shifts.department_id == department.id) \
-    #                     .first()
-    #
-    #                 if last_shift:
-    #                     last_shift.prro_localnumber = local_id
-    #                     db.session.commit()
-    #
-    #                 # tax_id = department.prro_inkass(1000)
-    #                 # flash(
-    #                 #     '{} отправлена инкассация, получен фискальный номер {}'.format(department.full_name, tax_id))
-    #             except Exception as e:
-    #                 return flash('{} помилка: {}'.format(department.full_name, e), 'error')
-    #
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
-
     @action('prro_get_fiscal_operations', lazy_gettext('Получить фискальные данные текущей смены пРРО'),
             lazy_gettext('Ви впевнені, що хочете получить фискальные данные текущей смены пРРО?'))
     def prro_get_fiscal_operations(self, ids):
@@ -830,18 +703,6 @@ class DepartmentsAdmin(Filters, ModelView):
 
                     # try:
                     server_state = sender.ServerState()
-                    # except Exception as e:
-                    #     if str(e) == 'ENOENT':
-                    #         box_id = signer.get_box_id(m.key_content.encode(), m.cert1_data, m.cert2_data)
-                    #         sender.set_box_id(box_id)
-                    #         server_state = sender.ServerState()
-                    #
-                    #         m.box_id = box_id
-                    #         db.session.commit()
-                    #
-                    #     else:
-                    #         raise Exception(
-                    #             'помилка криптографии {}'.format(e))
 
                     shift_state = ""
 
@@ -850,7 +711,7 @@ class DepartmentsAdmin(Filters, ModelView):
                         objects = sender.Objects()
                         print(objects)
 
-                        if not sender.zn:
+                        if not objects:
                             access = "Фіскального номера немає в доступі"
                         else:
                             registrar_state = sender.TransactionsRegistrarState()
@@ -1172,6 +1033,124 @@ class DepartmentKeysAdmin(Filters, ModelView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login.auth', next=request.url))
 
+class OfflineChecksAdmin(Filters, ModelView):
+    template_folder = 'templates'
+    static_folder = 'static'
+
+    extra_js = ['static/payment_operations.js']
+    # root_path = ''
+    can_view_details = True
+    can_export = False
+    column_default_sort = ('operation_time', True)
+
+    can_create = False
+    can_edit = False
+    can_delete = False
+
+    def __init__(self, session, name=None, **kwargs):
+        super(OfflineChecksAdmin, self).__init__(OfflineChecks, session, name=name, static_folder='static',
+                                                     **kwargs)
+
+    column_filters = ['department', 'operation_time', 'server_time']
+
+    column_sortable_list = (
+        'department.rro_id', 'operation_time', 'server_time')
+
+    column_list = ['department', 'operation_time', 'server_time']
+
+    # column_searchable_list = ['department.legal_number', 'currency_amount', 'operation_time', 'payment_time',
+    #                           'fiscal_time',
+    #                           'cancel_time', 'department.legal_number',
+    #                           'currency.code']
+
+    # @action('cancel_payments', lazy_gettext('Скасування (повернення) операції'),
+    #         lazy_gettext('Ви впевнені, що хочете cкасувати (повернення) обрані операції?'))
+    # def action_cancel_payments(self, ids):
+    #     if (current_user.is_permissions(135) or current_user.is_permissions(10)):
+    #         try:
+    #             query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+    #
+    #             count = 0
+    #             for m in query.all():
+    #                 try:
+    #                     if m.collected == 1:
+    #                         msg = 'Неможливо скасувати проінкасований платіж у автоматичному режимі! Зверніться до оператора "710"'
+    #                         flash('{}: {}'.format(m.real_id, msg), 'error')
+    #
+    #                     elif m.transaction_id:
+    #                         service_code = current_app.config['PAYMENT_SERVICE_CODE']
+    #
+    #                         if str(m.service_id) == service_code:
+    #                             client_id = '*'
+    #                         else:
+    #                             client_id = m.recipient.account
+    #
+    #                         bank_answer = sendPaymentCancel(m.department_id, m.service_id, client_id, m.real_id,
+    #                                                         m.transaction_id)
+    #
+    #                         if bank_answer and isinstance(bank_answer, list):
+    #
+    #                             status = int(bank_answer[1])
+    #                             payment_status = PaymentStatuses.query.get(status)
+    #
+    #                             if status == 30:
+    #                                 m.cancel_time = datetime.datetime.now()
+    #                                 db.session.commit()
+    #
+    #                                 department = Departments.query.get(m.department_id)
+    #
+    #                                 if department.rro_type == "prro":
+    #                                     try:
+    #                                         department.prro_payment_cashflow(m, 0, False)
+    #                                     except Exception as e:
+    #                                         db.session.rollback()
+    #                                         flash('{}: {}'.format(m.real_id, e), 'error')
+    #
+    #                             flash('{}: {}'.format(m.real_id, payment_status.name), 'info')
+    #
+    #                         else:
+    #                             flash('{}: {}'.format(m.real_id, str(bank_answer)), 'error')
+    #                     else:
+    #                         msg = 'У операції немає коду транзакції'
+    #                         flash('{}: {}'.format(m.real_id, msg), 'error')
+    #
+    #                     count += 1
+    #
+    #                 except Exception as e:
+    #                     flash('{}({})'.format(str(e), str(m)), 'error')
+    #
+    #             # flash(ngettext('Запити на скасування операцій були відправлені.',
+    #             #                '%(count)s запитів скасування операцій були відправлені.',
+    #             #                count,
+    #             #                count=count), 'success')
+    #         except Exception as ex:
+    #             if not self.handle_view_exception(ex):
+    #                 raise
+    #             flash(gettext('Не вдалося відправити запити на скасування операцій. %(error)s', error=str(ex)),
+    #                   'error')
+    #     else:
+    #         flash('У вас немає доступу для даної операції!', 'error')
+
+    def filterDeps(self, query):
+        return query
+
+    def get_query(self):
+        return self.session.query(self.model)
+
+    def get_count_query(self):
+        return self.session.query(func.count(self.model.id)).select_from(self.model)
+
+    def is_accessible(self):
+        if not current_user.is_anonymous and current_user.is_permissions(10):
+            self.can_create = False
+            self.can_edit = True
+            self.can_delete = True
+            return True
+        else:
+            return False
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login.auth', next=request.url))
 
 def add_view(self, view, static_folder=None, template_folder=None, root_path=None):
     ''' Custom view adder to override blueprint.root_path '''
@@ -1271,3 +1250,6 @@ def connect_admin_panel(app, db):
                                         endpoint='department_keys', menu_icon_type='fa',
                                         menu_icon_value='fa-key'),
              template_folder='templates')
+
+    add_view(admin, OfflineChecksAdmin(db.session, name='Від/закр офлайн режиму', category='Операції',
+                                       menu_icon_type='fa', menu_icon_value='fa-cc-mastercard'))

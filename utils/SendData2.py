@@ -125,7 +125,7 @@ class SendData2(object):
                                                  self.department.next_local_number,
                                                  self.rro_fn, self.department.zn)
 
-        print(str)
+        # print(str)
         # Від текстового рядку розраховується геш за алгоритмом CRC32
         # (див. https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs),
         # як десяткове беззнаковое число
@@ -181,7 +181,7 @@ class SendData2(object):
     def post_data(self, command, data, return_cmd_data=False):
 
         if TESTING_OFFLINE:
-            url = 'http://127.0.0.1/'.format(FS_URL)
+            url = 'http://127.0.0.1:9999/'.format(FS_URL)
         else:
             url = '{}{}'.format(FS_URL, command)
 
@@ -190,8 +190,8 @@ class SendData2(object):
 
         if command == "cmd":
             data = json.dumps(data).encode('utf8')
-        else:
-            self.server_time = None
+
+        self.server_time = None
 
         # проверим актуальность ключа криптографии
         print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Починаю підписувати'))
@@ -206,7 +206,7 @@ class SendData2(object):
                 self.db.session.commit()
 
         except Exception as e:
-            print('CryproError post_data 2 {}'.format(e))
+            print('{} {} CryproError post_data 2 {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             raise Exception('{}'.format(
                 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
@@ -219,18 +219,18 @@ class SendData2(object):
             # else:
             # return False
             start = datetime.now(tz.gettz(TIMEZONE))
-            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Починаю відправляти до податкової'))
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, 'Починаю відправляти до податкової'))
             answer = requests.post(url, data=request_body, headers=headers, timeout=15)
-            print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Закінчив відправляти до податкової'))
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, 'Закінчив відправляти до податкової'))
             stop = datetime.now(tz.gettz(TIMEZONE))
-            print('{} Операція зайняла за часом {} секунд'.format(stop, (stop - start).total_seconds()))
+            print('{} {} Операція зайняла за часом {} секунд'.format(stop, self.rro_fn, (stop - start).total_seconds()))
 
             ''' For tests offline uncomment '''
             # if command == "doc":
             #     return False
 
         except Exception as e:
-            print('Error {}: {}'.format(self.department.name, e))
+            print('{} {} Помилка надсилання даних: {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             # time.sleep(3)
             # if command != "cmd":
             #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
@@ -259,8 +259,8 @@ class SendData2(object):
         print(answer.status_code)
 
         message = answer.text
-        if command == "cmd":
-            print(message)
+        # if command == "cmd":
+        print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
 
         if message.find('ShiftAlreadyOpened') != -1:
             error_rro_pos = message.find('наразі відкрито особою')
@@ -435,7 +435,7 @@ class SendData2(object):
                         if len(offline_seed) > 0:
                             self.department.prro_offline_seed = offline_seed[0]
 
-                        print("Документ с локальным номером {} и фискальным номером {} успешно отражен".format(ordernum,
+                        print("Документ з локальним номером {} та фіскальним номером {} успішно відображено".format(ordernum,
                                                                                                                ordertaxnum))
                         if ordernum == self.department.next_local_number:
                             self.last_ordernum = ordernum
@@ -451,8 +451,8 @@ class SendData2(object):
 
                             return True
                         else:
-                            print("Какая-то проблема с нумерацией, локальный номер в памяти {}, серверный локальный "
-                                  "номер {}, серверный фискальный номер {}")
+                            print("Якась проблема з нумерацією, локальний номер у пам'яті {}, серверний локальний "
+                                  "номер {}, серверний фіскальний номер {}")
                     else:
                         raise Exception("Помилка, код {}: {}".format(error_code, error_text))
 
@@ -582,6 +582,7 @@ class SendData2(object):
             "Original": original,  # Признак запроса оригинала, направленного продавцом
         }
         data = self.post_data("cmd", data, True)
+        return data
         # print(data)
 
     def GetCheckExt(self, check_id, type):
@@ -1626,18 +1627,16 @@ class SendData2(object):
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
-        ret = self.post_data("doc", xml)
-        if ret:
-            if ret == 9:
-                return ret
-
-            print("Чек продажи успешно отправлен")
-            self.last_xml = xml
-            return True
         else:
-            print("Ошибка отправки чека продажи")
+            ret = self.post_data("doc", xml)
+            if ret:
+                if ret == 9:
+                    return ret
 
-        return False
+                self.last_xml = xml
+                return True
+
+            return False
 
     def post_z(self, dt, x_data, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек відкриття зміни (форма №3-ПРРО) """
