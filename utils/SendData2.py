@@ -311,26 +311,36 @@ class SendData2(object):
             return False
 
         if answer.status_code >= 400:
+            if message.find('CryptographyError') != -1:
+                # Переходимо до офлайну
+                return False
+
             if message.find('DocumentValidationError') != -1:
                 if message.find('реєстраційних') != -1:
+                    # Код помилки для виклику процедури виправлення даних
                     return 9
 
             if message.find('CheckLocalNumberInvalid') != -1:
+                # Код помилки для виклику процедури виправлення даних
                 return 9
 
             if message.find('ShiftNotOpened') != -1:
+                # Код помилки для виклику процедури виправлення даних
                 return 9
 
             if message.find('ShiftAlreadyOpened') != -1:
+                # Код помилки для виклику процедури виправлення даних
                 return 9
 
             if message.find('InvalidTin') != -1:
+                # Код помилки для виклику процедури виправлення даних
                 return 9
 
             if message.find('Код помилки') != -1:
                 print("{} Помилка надсилання даних на фіскальний сервер: {}".format(self.rro_fn, message))
                 raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
             else:
+                # Переходимо до офлайну
                 return False
 
         elif answer.status_code == 204:
