@@ -43,6 +43,17 @@ TESTING_OFFLINE = False
 # Адреса фіскального сервера
 FS_URL = 'http://fs.tax.gov.ua:8609/fs/'
 
+# Адреси для автоматичного завантаження сертифікатів
+CMP_URLS = [
+    'http://acskidd.gov.ua/services/cmp/',
+    'http://uakey.com.ua/services/cmp/',
+    'http://masterkey.ua/services/cmp/',
+    'http://ca.informjust.ua/services/cmp/',
+    'http://ca.oschadbank.ua/public/cmp/',
+    'http://ca.csd.ua/public/x509/cmp/',
+    'http://ca.gp.gov.ua/cmp/'
+]
+
 TELEGRAM_BOT = False
 
 TELEGRAM_BOT_TOKEN = '000000000:AbcdefghAbcdefghAbcdefgh'
