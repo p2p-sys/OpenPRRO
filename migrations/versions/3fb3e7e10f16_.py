@@ -382,7 +382,7 @@ def upgrade():
                existing_comment='Локальный номер чека',
                existing_nullable=True)
     op.alter_column('sales', 'tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фіскальний номер онлайн чека',
                existing_comment='Фискальный номер чека',
                existing_nullable=True)
@@ -407,7 +407,7 @@ def upgrade():
                existing_comment='Время сторно',
                existing_nullable=True)
     op.alter_column('sales', 'storno_tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фіскальний номер онлайн чека сторно',
                existing_comment='Фискальный номер чека сторно',
                existing_nullable=True)
@@ -469,7 +469,7 @@ def upgrade():
                existing_comment='Фискальный номер смены',
                existing_nullable=True)
     op.alter_column('shifts', 'tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фіскальний номер онлайн чека',
                existing_comment='Фискальный номер чека',
                existing_nullable=True)
@@ -570,7 +570,7 @@ def upgrade():
                existing_comment='Локальный номер чека',
                existing_nullable=True)
     op.alter_column('stornos', 'tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фіскальний номер онлайн чека',
                existing_comment='Фискальный номер чека',
                existing_nullable=True)
@@ -642,7 +642,7 @@ def upgrade():
                existing_comment='Время отправки на фискальный сервер (для пРРО)',
                existing_nullable=True)
     op.alter_column('z_reports', 'tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фіскальний номер онлайн чека',
                existing_comment='Фискальный номер чека',
                existing_nullable=True)
@@ -881,7 +881,7 @@ def downgrade():
                existing_comment='Текстовий вміст надісланого чека',
                existing_nullable=True)
     op.alter_column('shifts', 'tax_id',
-               existing_type=mysql.INTEGER(display_width=11),
+               existing_type=mysql.VARCHAR(length=32),
                comment='Фискальный номер чека',
                existing_comment='Фіскальний номер онлайн чека',
                existing_nullable=True)
