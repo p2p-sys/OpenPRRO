@@ -1130,7 +1130,7 @@ class Departments(Base):
             msg = 'Зберегли відкриття зміни в режимі онлайн'
 
         messages.append(msg)
-        print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+        print('{} {} {} '.format(fiscal_time, self.rro_id, msg))
 
         return shift, True, messages, self.offline_status
 
@@ -1905,8 +1905,6 @@ class Departments(Base):
         visual_advance = None
         tax_id_advance = None
 
-        offline_status = self.offline_status
-
         summa = 0
         discount = 0
 
@@ -1939,6 +1937,8 @@ class Departments(Base):
                         summa += real['COST']
                         if 'DISCOUNTSUM' in real:
                             discount += real['DISCOUNTSUM']
+
+                offline_status = self.offline_status
 
                 if not offline_status:
 
@@ -2153,7 +2153,7 @@ class Departments(Base):
 
             offline_status = sale.offline
 
-        if offline_status:
+        if sale.offline:
             tax_id = sale.offline_tax_id
         else:
             tax_id = sale.tax_id
@@ -2161,7 +2161,7 @@ class Departments(Base):
         cabinet_url = None
 
         coded_string = None
-        if not offline_status:
+        if not self.offline_status:
             try:
                 sender = SendData2(db, key, self, self.rro_id, "")
                 coded_string, cabinet_url = sender.GetCheckExt(tax_id, 3)
@@ -2321,7 +2321,7 @@ class Departments(Base):
             "shift_opened_datetime": shift.operation_time,
             "qr": cabinet_url,
             "tax_visual": coded_string,
-            "offline": offline_status,
+            "offline": sale.offline,
             "tax_id_advance": tax_id_advance,
             "qr_advance": qr_advance,
             "tax_visual_advance": visual_advance,
