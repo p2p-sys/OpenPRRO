@@ -1033,12 +1033,11 @@ class DepartmentKeysAdmin(Filters, ModelView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login.auth', next=request.url))
 
+
 class OfflineChecksAdmin(Filters, ModelView):
     template_folder = 'templates'
     static_folder = 'static'
 
-    extra_js = ['static/payment_operations.js']
-    # root_path = ''
     can_view_details = True
     can_export = False
     column_default_sort = ('operation_time', True)
@@ -1049,87 +1048,18 @@ class OfflineChecksAdmin(Filters, ModelView):
 
     def __init__(self, session, name=None, **kwargs):
         super(OfflineChecksAdmin, self).__init__(OfflineChecks, session, name=name, static_folder='static',
-                                                     **kwargs)
+                                                 **kwargs)
 
-    column_filters = ['department', 'operation_time', 'server_time']
+    column_filters = ['department.rro_id', 'operation_time', 'server_time']
 
-    column_sortable_list = (
-        'department.rro_id', 'operation_time', 'server_time')
+    column_sortable_list = ('id', 'department.rro_id', 'operation_time', 'server_time')
 
-    column_list = ['department', 'operation_time', 'server_time']
+    column_list = ['id', 'department', 'department.rro_id', 'operation_time', 'server_time']
 
-    # column_searchable_list = ['department.legal_number', 'currency_amount', 'operation_time', 'payment_time',
-    #                           'fiscal_time',
-    #                           'cancel_time', 'department.legal_number',
-    #                           'currency.code']
+    column_searchable_list = ['department.rro_id']
 
-    # @action('cancel_payments', lazy_gettext('Скасування (повернення) операції'),
-    #         lazy_gettext('Ви впевнені, що хочете cкасувати (повернення) обрані операції?'))
-    # def action_cancel_payments(self, ids):
-    #     if (current_user.is_permissions(135) or current_user.is_permissions(10)):
-    #         try:
-    #             query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-    #
-    #             count = 0
-    #             for m in query.all():
-    #                 try:
-    #                     if m.collected == 1:
-    #                         msg = 'Неможливо скасувати проінкасований платіж у автоматичному режимі! Зверніться до оператора "710"'
-    #                         flash('{}: {}'.format(m.real_id, msg), 'error')
-    #
-    #                     elif m.transaction_id:
-    #                         service_code = current_app.config['PAYMENT_SERVICE_CODE']
-    #
-    #                         if str(m.service_id) == service_code:
-    #                             client_id = '*'
-    #                         else:
-    #                             client_id = m.recipient.account
-    #
-    #                         bank_answer = sendPaymentCancel(m.department_id, m.service_id, client_id, m.real_id,
-    #                                                         m.transaction_id)
-    #
-    #                         if bank_answer and isinstance(bank_answer, list):
-    #
-    #                             status = int(bank_answer[1])
-    #                             payment_status = PaymentStatuses.query.get(status)
-    #
-    #                             if status == 30:
-    #                                 m.cancel_time = datetime.datetime.now()
-    #                                 db.session.commit()
-    #
-    #                                 department = Departments.query.get(m.department_id)
-    #
-    #                                 if department.rro_type == "prro":
-    #                                     try:
-    #                                         department.prro_payment_cashflow(m, 0, False)
-    #                                     except Exception as e:
-    #                                         db.session.rollback()
-    #                                         flash('{}: {}'.format(m.real_id, e), 'error')
-    #
-    #                             flash('{}: {}'.format(m.real_id, payment_status.name), 'info')
-    #
-    #                         else:
-    #                             flash('{}: {}'.format(m.real_id, str(bank_answer)), 'error')
-    #                     else:
-    #                         msg = 'У операції немає коду транзакції'
-    #                         flash('{}: {}'.format(m.real_id, msg), 'error')
-    #
-    #                     count += 1
-    #
-    #                 except Exception as e:
-    #                     flash('{}({})'.format(str(e), str(m)), 'error')
-    #
-    #             # flash(ngettext('Запити на скасування операцій були відправлені.',
-    #             #                '%(count)s запитів скасування операцій були відправлені.',
-    #             #                count,
-    #             #                count=count), 'success')
-    #         except Exception as ex:
-    #             if not self.handle_view_exception(ex):
-    #                 raise
-    #             flash(gettext('Не вдалося відправити запити на скасування операцій. %(error)s', error=str(ex)),
-    #                   'error')
-    #     else:
-    #         flash('У вас немає доступу для даної операції!', 'error')
+    form_excluded_columns = ('operation_type', 'fiscal_ticket', 'xml', 'fiscal_xml', 'offline_fiscal_xml_signed',
+                             'testing')
 
     def filterDeps(self, query):
         return query
@@ -1151,6 +1081,7 @@ class OfflineChecksAdmin(Filters, ModelView):
 
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login.auth', next=request.url))
+
 
 def add_view(self, view, static_folder=None, template_folder=None, root_path=None):
     ''' Custom view adder to override blueprint.root_path '''

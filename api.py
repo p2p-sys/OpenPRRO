@@ -1189,21 +1189,29 @@ class ApiView(FlaskView):
 
             message = 'Відправлено чек повернення, отримано фіскальний номер {}'.format(check["tax_id"])
 
+            if check["shift"].tax_id == 0:
+                shift_tax_id = check["shift"].offline_tax_id
+            else:
+                shift_tax_id = check["shift"].tax_id
+
             answer = jsonify(status='success',
                              tax_id='{}'.format(check["tax_id"]),
                              local_id=check["local_id"],
-                             tax_id_advance='{}'.format(check["tax_id_advance"]),
+                             tax_id_advance=check["tax_id_advance"],
                              qr=check["qr"], qr_advance=check["qr_advance"],
                              message=message,
-                             shift_opened_datetime=check["shift.operation_time"],
+                             shift_opened_datetime=check["shift_opened_datetime"],
                              shift_opened=check["shift_opened"],
                              shift_tax_id=str(shift_tax_id),
                              error_code=0,
                              tax_visual=check["tax_visual"],
                              tax_visual_advance=check["tax_visual_advance"],
-                             offline=check["offline"],
+                             offline=bool(check["offline"]),
                              fiscal_ticket=check["fiscal_ticket"],
+                             testing=check["testing"],
+                             uid=check['uid']
                              )
+
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
