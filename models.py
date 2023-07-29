@@ -192,6 +192,9 @@ def close_offline_session(rro_id):
     sender.offline_local_number = int(registrar_state['OfflineNextLocalNum'])
     sender.offline_seed = registrar_state['OfflineSeed']
     sender.offline_session_id = registrar_state['OfflineSessionId']
+    
+    department.next_offline_local_number = int(registrar_state['OfflineNextLocalNum'])
+    department.next_local_number = int(registrar_state['NextLocalNum'])
 
     offline_tax_number = sender.calculate_offline_tax_number(offline_dt,
                                                                         prev_hash=None)
