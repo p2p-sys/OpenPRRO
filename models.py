@@ -193,7 +193,7 @@ def close_offline_session(rro_id):
     sender.offline_seed = registrar_state['OfflineSeed']
     sender.offline_session_id = registrar_state['OfflineSessionId']
 
-    offline_tax_number = department.sender.calculate_offline_tax_number(offline_dt,
+    offline_tax_number = sender.calculate_offline_tax_number(offline_dt,
                                                                         prev_hash=None)
 
     """ Коніц офлайн сесії """
