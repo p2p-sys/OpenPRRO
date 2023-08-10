@@ -4,7 +4,7 @@ from flask_login import login_user, logout_user, login_required
 
 from models import Users, db
 from flask_login import LoginManager
-from blueprints.login.forms import LoginForm, ChangePasswordForm, CheckUserForm
+from blueprints.login.forms import LoginForm, CheckUserForm
 import datetime
 import time
 
@@ -26,9 +26,7 @@ def on_register(state):
 
 @login.route('/auth', methods=['GET'], endpoint='auth')
 def auth():
-    loginForm = LoginForm()
-    changeForm = ChangePasswordForm()
-    return render_template('login.html', loginForm=loginForm, changeForm=changeForm)
+    return render_template('login.html', loginForm=LoginForm())
 
 
 @login_required
@@ -54,9 +52,6 @@ def check_password():
 
     if current_app.config['NO_PWD_CHECK']:
         if user:
-            # if not user.is_active:
-            #     return jsonify({'status': 'Користувач був деактивований', 'msg': 'Користувач був деактивований'})
-
             user.last_login = datetime.datetime.now()
             db.session.commit()
 
@@ -68,49 +63,14 @@ def check_password():
 
     if user and user.check_password(form.pwd.data):
 
-        # if not user.is_active:
-        #     return jsonify({'status': 'Вы были деактивированы', 'msg': 'Вы были деактивированы'})
-        if not user.last_login:
-            return jsonify({'status': 'first_login',
-                            'msg': 'Это Ваш первый вход, необходимо изменить пароль, придумайте свой пароль и введите его два раза в окне ниже, после нажмите "Изменить"'})
-
         user.last_login = datetime.datetime.now()
         db.session.commit()
         login_user(user)
 
         session.update({'current_user': user.id})
-        # current_app.logger.info('Successfull login')
         return jsonify({'status': 'success'})
     else:
         time.sleep(5)
         current_app.logger.error('Failed login: %s password %s IP %s', form.usr.data, form.pwd.data,
                                  request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
-        return jsonify({'status': 'Неверное имя пользователя или пароль'})
-
-
-@login.route('/change_password', methods=['POST'], endpoint='change_password')
-def change_password():
-    form = ChangePasswordForm(request.form)
-    if not form.validate_on_submit():
-        return jsonify({'errors': form.errors})
-
-    user = Users.query.filter(Users.login == form.usr.data).first()
-    if user and user.check_password(form.pwd.data):
-        if not user.is_active:
-            msg = 'Вы были отключены от системы'
-            # current_app.logger.error(msg)
-            return jsonify({'status': msg})
-
-        user.set_password(form.new_pwd.data)
-        user.last_login = datetime.datetime.now()
-        db.session.commit()
-        login_user(user)
-
-        current_app.logger.info('Successfull password change and login')
-        session.update({'current_user': user.id})
-        return jsonify({'status': 'success'})
-    else:
-        time.sleep(3)
-        current_app.logger.error('Failed login: %s password %s IP %s', form.usr.data, form.pwd.data,
-                                 request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
-        return jsonify({'status': 'Неверное имя пользователя или пароль'})
+        return jsonify({'status': 'Неправильне ім\'я користувача або пароль'})

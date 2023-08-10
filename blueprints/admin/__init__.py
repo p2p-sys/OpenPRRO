@@ -190,7 +190,7 @@ class DepartmentsAdmin(Filters, ModelView):
     can_view_details = True
 
     column_filters = (
-        'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status')
+        'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status', 'shift_state')
 
     column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
                    'offline']
@@ -227,6 +227,11 @@ class DepartmentsAdmin(Filters, ModelView):
         'offline_status': [
             (0, 'Нi'),
             (1, 'Так')
+        ],
+        'shift_state': [
+            (0, 'Закрита'),
+            (1, 'Відкрита'),
+            (None, 'Невідомо'),
         ]
     }
 
@@ -248,9 +253,17 @@ class DepartmentsAdmin(Filters, ModelView):
         (1, 'Так')
     ]]
 
+    _shift_state_choices = [(choice, label) for choice, label in [
+        (0, 'Закрита'),
+        (1, 'Відкрита'),
+        (None, 'Невідомо'),
+    ]]
+
     column_choices = {'signer_type': _signer_type_choices,
                       'offline': _offline_choices,
-                      'offline_status': _offline_status_choices}
+                      'offline_status': _offline_status_choices,
+                      'shift_state': _shift_state_choices
+                      }
 
     def is_accessible(self):
         if not current_user.is_anonymous and current_user.is_permissions(10):
@@ -312,14 +325,17 @@ class DepartmentsAdmin(Filters, ModelView):
             query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
 
             for department in query.all():
-                department = Departments.query.get(department.id)
+                try:
+                    department = Departments.query.get(department.id)
 
-                if department.taxform_key_id:
-                    company_key = department.taxform_key
-                    sender = TaxForms(company_key=company_key)
-                    status = sender.send_5PRRO(department)
-                    if status:
-                        flash('{}: форма отправлена!'.format(department.full_name))
+                    if department.taxform_key_id:
+                        company_key = department.taxform_key
+                        sender = TaxForms(company_key=company_key)
+                        status = sender.send_5PRRO(department)
+                        if status:
+                            flash('{}: форма отправлена!'.format(department.full_name))
+                except Exception as e:
+                    flash('{} помилка: {}'.format(department.full_name, e), 'error')
 
                 else:
                     flash('Не вказано ключа для підпису податкових форм!', 'error')
@@ -406,7 +422,7 @@ class DepartmentsAdmin(Filters, ModelView):
 
                                         print('Смена есть, статус {}'.format(shift.operation_type))
                                         if shift.operation_type == 1:
-                                            operation_time = datetime.datetime.now()
+                                            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
                                             print(
                                                 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем')
                                             shift.offline = False
@@ -457,13 +473,37 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    msg, status = department.prro_fix()
+                    messages, status = department.prro_fix()
 
                     if not status:
-                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg),
+                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, messages),
                               'error')
                     else:
-                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, msg))
+                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, messages))
+
+                except Exception as msg:
+                    flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
+
+        else:
+            flash('У вас немає доступу для даної операції!', 'error')
+
+    @action('prro_to_online', lazy_gettext('Вивести з офлайн режиму'),
+            lazy_gettext('Ви впевнені, що хочете вивести РРО з офлайн режиму?'))
+    def prro_to_online(self, ids):
+        if not current_user.is_anonymous and current_user.is_permissions(10):
+
+            query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+
+            for department in query.all():
+
+                try:
+                    messages, status = department.prro_to_online()
+
+                    if not status:
+                        flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, messages),
+                              'error')
+                    else:
+                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, messages))
 
                 except Exception as msg:
                     flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
@@ -1127,19 +1167,38 @@ class IndexAdmin(Filters, BaseView):
 
         index_form.departments_active = Departments.query \
             .filter(Departments.rro_id != None) \
+            .filter(Departments.closed == False) \
+            .filter(Departments.prro_key_id != None) \
             .count()
+
+        now = datetime.datetime.now(tz.gettz(TIMEZONE))
 
         index_form.key_active = DepartmentKeys.query \
             .filter(DepartmentKeys.key_content != None) \
             .filter(DepartmentKeys.cert1_content != None) \
+            .filter(DepartmentKeys.begin_time < now) \
+            .filter(DepartmentKeys.end_time > now) \
             .count()
 
         index_form.departments_offline_on = Departments.query \
+            .filter(Departments.rro_id != None) \
+            .filter(Departments.closed == False) \
+            .filter(Departments.prro_key_id != None) \
             .filter(Departments.offline == True) \
             .count()
 
         index_form.departments_offline_status_on = Departments.query \
+            .filter(Departments.rro_id != None) \
+            .filter(Departments.closed == False) \
+            .filter(Departments.prro_key_id != None) \
             .filter(Departments.offline_status == True) \
+            .count()
+
+        index_form.departments_shift_opened = Departments.query \
+            .filter(Departments.rro_id != None) \
+            .filter(Departments.closed == False) \
+            .filter(Departments.prro_key_id != None) \
+            .filter(Departments.shift_state == 1) \
             .count()
 
         return self.render(self._template, form=index_form)

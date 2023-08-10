@@ -48,9 +48,16 @@ class TaxForms(object):
 
         self.company_key = company_key
 
-        self.TAX_EMAIL = '{}@tax.gov.ua'.format(company_key.edrpou)
+        if company_key.edrpou:
+            edrpou = company_key.edrpou
+        elif company_key.ceo_tin:
+            edrpou = company_key.ceo_tin
+        else:
+            raise Exception('Не заданий код ЄДРПОУ або РНОКПП')
 
-        self.EDRPOU = self.company_key.edrpou
+        self.TAX_EMAIL = '{}@tax.gov.ua'.format(edrpou)
+
+        self.EDRPOU = edrpou
 
         if self.company_key.taxform_count:
             if self.company_key.taxform_count < 100000:
@@ -197,6 +204,7 @@ class TaxForms(object):
                                                encoding='utf-8').decode('utf-8')
 
         return xml.encode('utf-8')
+
     @staticmethod
     def get_delete_xml(signed_id):
 
@@ -547,7 +555,7 @@ class TaxForms(object):
             'CERTYPE': 'UA1',
             'RCV_NAME': 'test',
             'FILENAME': filename,
-            'EDRPOU': self.company_key.edrpou,
+            'EDRPOU': self.EDRPOU,
             'ENCODING': 'WIN'
         }
 
@@ -622,10 +630,14 @@ class TaxForms(object):
         tsp = False
         ocsp = False
 
-        unsigned_data = self.company_key.edrpou.encode()
+        unsigned_data = self.EDRPOU.encode()
 
         signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form, tax=False, tsp=tsp,
                                   ocsp=ocsp)
+
+        # for tests uncomment:
+        # with open('send_data.raw', 'wb') as file:
+        #     file.write(signed_data)
 
         signed_data_base64 = base64.b64encode(signed_data)
 
@@ -664,7 +676,7 @@ class TaxForms(object):
         tsp = False
         ocsp = False
 
-        unsigned_data = self.company_key.edrpou.encode()
+        unsigned_data = self.EDRPOU.encode()
 
         signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form,
                                   tax=False,
@@ -721,12 +733,27 @@ class TaxForms(object):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
         # J1391802
 
-        if 'ФОП' in self.company_key.name:
-            doc = 'F13'
-            xsdname = 'F1391802.xsd'
+        data = self.tax_infos(1)
+        if 'NAME' in data["values"][0]:
+            name = data["values"][0]["NAME"]
         else:
+            name = self.company_key.name
+
+        if 'ТОВ' in name:
             doc = 'J13'
             xsdname = 'J1391802.xsd'
+        else:
+            doc = 'F13'
+            xsdname = 'F1391802.xsd'
+
+        if 'TIN' in data["values"][0]:
+            edrpou = data["values"][0]["TIN"]
+        elif self.company_key.edrpou:
+            edrpou = self.company_key.edrpou
+        elif self.company_key.ceo_tin:
+            edrpou = self.company_key.ceo_tin
+        else:
+            raise Exception('Не заданий код ЄДРПОУ або РНОКПП')
 
         data = self.tax_infos(2)
 
@@ -774,7 +801,7 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),
+            int(edrpou),
             # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
@@ -800,7 +827,7 @@ class TaxForms(object):
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
         ''' Податковий номер (5-8 цифр з лідируючими нулями) або реєстраційний номер облікової картки платника податків (10 цифр з лідируючим нулем) або серія та номер паспорта або номер паспорта у вигляді ID картки (9 цифр з лідируючими нулями) '''
         TIN = etree.SubElement(DECLARHEAD, "TIN")
-        TIN.text = '{}'.format(self.company_key.edrpou)
+        TIN.text = '{}'.format(edrpou)
 
         ''' Код документа '''
         C_DOC = etree.SubElement(DECLARHEAD, "C_DOC")
@@ -891,7 +918,7 @@ class TaxForms(object):
 
         ''' Идентификационный (регистрационный) номер учетной карточки предприятия  или предпринимателя. Проще говоря - его ИНН (ИИН для предпринимателя) '''
         HTIN = etree.SubElement(DECLARBODY, "HTIN")
-        HTIN.text = '{}'.format(self.company_key.edrpou)
+        HTIN.text = '{}'.format(edrpou)
 
         ''' ФИО плательщика налога или название предприятия, от имени которого подается отчет '''
         HNAME = etree.SubElement(DECLARBODY, "HNAME")
@@ -903,7 +930,7 @@ class TaxForms(object):
 
         ''' Реєстраційний номер облікової картки платника податків або серія (за наявності), номер паспорта1 '''
         T1RXXXXG2S = etree.SubElement(DECLARBODY, "T1RXXXXG2S", ROWNUM=str(1))
-        T1RXXXXG2S.text = '{:010.0f}'.format(int(self.company_key.edrpou))
+        T1RXXXXG2S.text = '{:010.0f}'.format(int(edrpou))
 
         ''' Ідентифікатор ключа суб’єкта '''
         T1RXXXXG3S = etree.SubElement(DECLARBODY, "T1RXXXXG3S", ROWNUM=str(1))
@@ -949,17 +976,33 @@ class TaxForms(object):
         Повідомлення про об’єкти оподаткування або об’єкти, пов’язані з оподаткуванням
         або через які провадиться діяльність. Форма № 20-ОПП
     '''
+
     def send_20OPP(self, values):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
         # J1312005
         # department = Departments.query.get(m.department_id)
 
-        if 'ФОП' in self.company_key.name:
-            doc = 'F13'
-            xsdname = 'F1312005.xsd'
+        data = self.tax_infos(1)
+        if 'NAME' in data["values"][0]:
+            name = data["values"][0]["NAME"]
         else:
+            name = self.company_key.name
+
+        if 'ТОВ' in name:
             doc = 'J13'
             xsdname = 'J1312005.xsd'
+        else:
+            doc = 'F13'
+            xsdname = 'F1312005.xsd'
+
+        if 'TIN' in data["values"][0]:
+            edrpou = data["values"][0]["TIN"]
+        elif self.company_key.edrpou:
+            edrpou = self.company_key.edrpou
+        elif self.company_key.ceo_tin:
+            edrpou = self.company_key.ceo_tin
+        else:
+            raise Exception('Не заданий код ЄДРПОУ або РНОКПП')
 
         data = self.tax_infos(2)
 
@@ -1008,7 +1051,7 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),
+            int(edrpou),
             # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
@@ -1034,7 +1077,7 @@ class TaxForms(object):
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
         ''' Податковий номер (5-8 цифр з лідируючими нулями) або реєстраційний номер облікової картки платника податків (10 цифр з лідируючим нулем) або серія та номер паспорта або номер паспорта у вигляді ID картки (9 цифр з лідируючими нулями) '''
         TIN = etree.SubElement(DECLARHEAD, "TIN")
-        TIN.text = '{}'.format(self.company_key.edrpou)
+        TIN.text = '{}'.format(edrpou)
 
         ''' Код документа '''
         C_DOC = etree.SubElement(DECLARHEAD, "C_DOC")
@@ -1121,7 +1164,7 @@ class TaxForms(object):
 
         ''' Идентификационный (регистрационный) номер учетной карточки предприятия  или предпринимателя. Проще говоря - его ИНН (ИИН для предпринимателя) '''
         HTIN = etree.SubElement(DECLARBODY, "HTIN")
-        HTIN.text = '{}'.format(self.company_key.edrpou)
+        HTIN.text = '{}'.format(edrpou)
 
         ''' ФИО плательщика налога или название предприятия, от имени которого подается отчет '''
         HNAME = etree.SubElement(DECLARBODY, "HNAME")
@@ -1203,16 +1246,31 @@ class TaxForms(object):
         return self.tax_send(xml, self.TAX_EMAIL, filename), filename
 
     # Заява про реєстрацію програмного реєстратора розрахункових операцій за формою № 1-ПРРО
-    def send_1PRRO(self, dpi_id, R03G3S_value=None, R04G11S_value=None, R04G2S_value=None, values=None):
+    def send_1PRRO(self, dpi_id, R03G3S_value=None, R04G11S_value=None, R04G2S_value=None, KATOTTG=None):
         # https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
         # J1316605
 
-        if 'ФОП' in self.company_key.name:
-            doc = 'F13'
-            xsdname = 'F1316605.xsd'
+        data = self.tax_infos(1)
+        if 'NAME' in data["values"][0]:
+            name = data["values"][0]["NAME"]
         else:
+            name = self.company_key.name
+
+        if 'ТОВ' in name:
             doc = 'J13'
             xsdname = 'J1316605.xsd'
+        else:
+            doc = 'F13'
+            xsdname = 'F1316605.xsd'
+
+        if 'TIN' in data["values"][0]:
+            edrpou = data["values"][0]["TIN"]
+        elif self.company_key.edrpou:
+            edrpou = self.company_key.edrpou
+        elif self.company_key.ceo_tin:
+            edrpou = self.company_key.ceo_tin
+        else:
+            raise Exception('Не заданий код ЄДРПОУ або РНОКПП')
 
         data = self.tax_infos(2)
 
@@ -1248,7 +1306,6 @@ class TaxForms(object):
         ADDRESS = None
         TO_CODE = None
         OBJECT_NAME_NAME = None
-        KATOTTG = None
 
         print(values)
         for value in values:
@@ -1262,8 +1319,7 @@ class TaxForms(object):
                 break
 
         if KATOTTG == None:
-            msg = 'Не вдалося отримати дані податкового кабінету для заповнення форми з кодом {}, ' \
-                  'спробуйте надіслати форму ще раз'.format(
+            msg = 'Не вдалося отримати обов\'язковий параметр КАТОТТГ з податкового кабінету для заповнення форми з кодом {}'.format(
                 dpi_id)
             print(msg)
             raise Exception(msg)
@@ -1315,7 +1371,7 @@ class TaxForms(object):
         filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
             TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(self.company_key.edrpou),
+            int(edrpou),
             # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
@@ -1341,7 +1397,7 @@ class TaxForms(object):
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
         ''' Податковий номер (5-8 цифр з лідируючими нулями) або реєстраційний номер облікової картки платника податків (10 цифр з лідируючим нулем) або серія та номер паспорта або номер паспорта у вигляді ID картки (9 цифр з лідируючими нулями) '''
         TIN = etree.SubElement(DECLARHEAD, "TIN")
-        TIN.text = '{}'.format(self.company_key.edrpou)
+        TIN.text = '{}'.format(edrpou)
 
         ''' Код документа '''
         C_DOC = etree.SubElement(DECLARHEAD, "C_DOC")
@@ -1436,7 +1492,7 @@ class TaxForms(object):
 
         ''' Идентификационный (регистрационный) номер учетной карточки предприятия  или предпринимателя. Проще говоря - его ИНН (ИИН для предпринимателя) '''
         HTIN = etree.SubElement(DECLARBODY, "HTIN")
-        HTIN.text = '{}'.format(self.company_key.edrpou)
+        HTIN.text = '{}'.format(edrpou)
 
         if KOD_PDV:
             ''' ІПН (для платників ПДВ) '''

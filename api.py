@@ -155,141 +155,144 @@ class ApiView(FlaskView):
     @csrf.exempt
     def add_department(self):
 
-        # try:
-        data = request.get_json()
-        logger.info(f'Надійшов запит /add_department: {data}')
-        if not data:
-            msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
-                  'application/json '
-            answer = jsonify(status='error', message=msg, error_code=1)
-            logger.error(f'Відповідь: {answer.json}')
-            return answer
-
-        if 'department_id' in data:
-            department_id = data['department_id']
-        else:
-            department_id = None
-
-        if 'name' in data:
-            name = data['name']
-        else:
-            name = ''
-
-        if 'address' in data:
-            address = data['address']
-        else:
-            address = ''
-
-        if 'rro_id' in data:
-            rro_id = data['rro_id']
-
-            try:
-                rro_id = int(rro_id)
-            except:
-                msg = 'Невірний номер РРО {}, значення має бути числовим'.format(rro_id)
-                answer = jsonify(status='error', message=msg, error_code=-1)
+        try:
+            data = request.get_json()
+            logger.info(f'Надійшов запит /add_department: {data}')
+            if not data:
+                msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
+                      'application/json '
+                answer = jsonify(status='error', message=msg, error_code=1)
                 logger.error(f'Відповідь: {answer.json}')
                 return answer
 
-            if len(str(rro_id)) != 10:
-                msg = 'Невірний номер РРО {}, довжина номера має бути 10 знаків'.format(rro_id)
-                answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
+            if 'department_id' in data:
+                department_id = data['department_id']
+            else:
+                department_id = None
 
-            if int(rro_id) < 4000000001:
-                msg = 'Невірний номер РРО {}, номер повинен починатися з цифри 4'.format(rro_id)
-                answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
+            if 'name' in data:
+                name = data['name']
+            else:
+                name = ''
 
-            department = Departments.query.filter(Departments.rro_id == rro_id).first()
-            if department:
-                # return jsonify(status='success', department_id=department.id, signer_type=department.signer_type,
-                #                error_code=0)
-                # #
-                msg = 'Підрозділ з rro {} вже існує!'.format(rro_id)
-                answer = jsonify(status='error', message=msg, error_code=3, department_id=department.id,
-                                 signer_type=department.signer_type)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
-        else:
-            rro_id = None
+            if 'address' in data:
+                address = data['address']
+            else:
+                address = ''
 
-        if 'main_key_id' in data:
-            taxform_key_id = data['main_key_id']
-            key_id = DepartmentKeys.query.get(taxform_key_id)
-            if not key_id:
-                msg = 'Ключ main_key_id з ідентифікатором {} не існує'.format(taxform_key_id)
-                answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
-        else:
-            taxform_key_id = None
+            if 'rro_id' in data:
+                rro_id = data['rro_id']
 
-        if 'prro_key_id' in data:
-            prro_key_id = data['prro_key_id']
-            key_id = DepartmentKeys.query.get(prro_key_id)
-            if not key_id:
-                msg = 'Ключ prro_key_id з ідентифікатором {} не існує'.format(prro_key_id)
-                answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
-        else:
-            prro_key_id = None
+                try:
+                    rro_id = int(rro_id)
+                except:
+                    msg = 'Невірний номер РРО {}, значення має бути числовим'.format(rro_id)
+                    answer = jsonify(status='error', message=msg, error_code=-1)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
 
-        if 'offline' in data:
-            offline = data['offline']
-        else:
-            offline = False
+                if len(str(rro_id)) != 10:
+                    msg = 'Невірний номер РРО {}, довжина номера має бути 10 знаків'.format(rro_id)
+                    answer = jsonify(status='error', message=msg, error_code=-1)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
 
-        if department_id:
-            department = Departments.query.get(department_id)
-            if not department:
+                if int(rro_id) < 4000000001:
+                    msg = 'Невірний номер РРО {}, номер повинен починатися з цифри 4'.format(rro_id)
+                    answer = jsonify(status='error', message=msg, error_code=-1)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
+
+                department = Departments.query.filter(Departments.rro_id == rro_id).first()
+                if department:
+                    # return jsonify(status='success', department_id=department.id, signer_type=department.signer_type,
+                    #                error_code=0)
+                    # #
+                    msg = 'Підрозділ з rro {} вже існує!'.format(rro_id)
+                    answer = jsonify(status='error', message=msg, error_code=3, department_id=department.id,
+                                     signer_type=department.signer_type)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
+            else:
+                rro_id = None
+
+            if 'main_key_id' in data:
+                taxform_key_id = data['main_key_id']
+                key_id = DepartmentKeys.query.get(taxform_key_id)
+                if not key_id:
+                    msg = 'Ключ main_key_id з ідентифікатором {} не існує'.format(taxform_key_id)
+                    answer = jsonify(status='error', message=msg, error_code=-1)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
+            else:
+                taxform_key_id = None
+
+            if 'prro_key_id' in data:
+                prro_key_id = data['prro_key_id']
+                key_id = DepartmentKeys.query.get(prro_key_id)
+                if not key_id:
+                    msg = 'Ключ prro_key_id з ідентифікатором {} не існує'.format(prro_key_id)
+                    answer = jsonify(status='error', message=msg, error_code=-1)
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
+            else:
+                prro_key_id = None
+
+            if 'offline' in data:
+                offline = data['offline']
+            else:
+                offline = True
+
+            if department_id:
+                department = Departments.query.get(department_id)
+                if not department:
+                    department = Departments(
+                        id=department_id,
+                        full_name=name,
+                        address=address,
+                        rro_id=rro_id,
+                        taxform_key_id=taxform_key_id,
+                        prro_key_id=prro_key_id,
+                        offline=offline
+                    )
+                    db.session.add(department)
+                    db.session.commit()
+                else:
+                    answer = jsonify(status='error', message=f'Підрозділ з department_id {department_id} вже існує!')
+                    logger.error(f'Відповідь: {answer.json}')
+                    return answer
+            else:
                 department = Departments(
-                    id=department_id,
                     full_name=name,
                     address=address,
                     rro_id=rro_id,
                     taxform_key_id=taxform_key_id,
-                    prro_key_id=prro_key_id,
-                    offline=offline
+                    prro_key_id=prro_key_id
                 )
                 db.session.add(department)
                 db.session.commit()
-            else:
-                answer = jsonify(status='error', message=f'Підрозділ з department_id {department_id} вже існує!')
-                logger.error(f'Відповідь: {answer.json}')
-                return answer
-        else:
-            department = Departments(
-                full_name=name,
-                address=address,
-                rro_id=rro_id,
-                taxform_key_id=taxform_key_id,
-                prro_key_id=prro_key_id
-            )
-            db.session.add(department)
-            db.session.commit()
 
-        if department.taxform_key:
-            result = department.set_signer_type()
+            try:
+                if department.taxform_key:
+                    result = department.set_signer_type()
+            except Exception as e:
+                pass
 
-        try:
-            messages = department.prro_fix()
+            try:
+                messages = department.prro_fix()
+            except Exception as e:
+                messages = [str(e)]
+
+            answer = jsonify(status='success', department_id=department.id, signer_type=department.signer_type,
+                             error_code=0, messages=messages)
+
+            logger.info(f'Відповідь: {answer.json}')
+            return answer
+
         except Exception as e:
-            messages = [str(e)]
-
-        answer = jsonify(status='success', department_id=department.id, signer_type=department.signer_type,
-                         error_code=0, messages=messages)
-
-        logger.info(f'Відповідь: {answer.json}')
-        return answer
-
-        # except Exception as e:
-        #     answer = jsonify(status='error', message=str(e))
-        #     logger.error(f'Відповідь: {answer.json}')
-        #     return answer
+            answer = jsonify(status='error', message=str(e))
+            logger.error(f'Відповідь: {answer.json}')
+            return answer
 
     @route('/departments', methods=['GET', 'POST'],
            endpoint='departments')
@@ -666,18 +669,19 @@ class ApiView(FlaskView):
 
                 rro_id = data['rro_id']
 
+                key = None
+
                 if 'key_id' in data:
                     key_id = data['key_id']
-                    key = DepartmentKeys.query \
-                        .filter(DepartmentKeys.id == key_id) \
-                        .first()
-                    if not key:
-                        msg = 'Ключ з key_id {} не існує!'.format(key_id)
-                        answer = jsonify(status='error', message=msg, error_code=1)
-                        logger.error(f'Відповідь: {answer.json}')
-                        return answer
-                else:
-                    key = None
+                    if key_id:
+                        key = DepartmentKeys.query \
+                            .filter(DepartmentKeys.id == key_id) \
+                            .first()
+                        if not key:
+                            msg = 'Ключ з key_id {} не існує!'.format(key_id)
+                            answer = jsonify(status='error', message=msg, error_code=1)
+                            logger.error(f'Відповідь: {answer.json}')
+                            return answer
 
                 department = Departments.query.filter(Departments.rro_id == rro_id).first()
 
@@ -689,10 +693,14 @@ class ApiView(FlaskView):
 
                 else:
 
-                    rro_id = department.rro_id
+                    if not key and not department.prro_key:
+                        msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
+                        answer = jsonify(status='error', message=msg, error_code=1)
+                        logger.error(f'Відповідь: {answer.json}')
+                        return answer
 
                     from utils.SendData2 import SendData2
-                    sender = SendData2(db, None, department, rro_id, "")
+                    sender = SendData2(db, key, department, department.rro_id, "")
 
                     registrar_state = sender.TransactionsRegistrarState()
 
@@ -1003,7 +1011,7 @@ class ApiView(FlaskView):
 
             answer = jsonify(status='success',
                              tax_id='{}'.format(tax_id), qr=qr,
-                             message=f'Відправлено сторінку документа {tax_id}, отримано фіскальний номер {storno_tax_id}',
+                             message=f'Відправлено сторно документа {tax_id}, отримано фіскальний номер {storno_tax_id}',
                              shift_opened_datetime=shift.operation_time,
                              shift_opened=shift_opened,
                              shift_tax_id=str(shift_tax_id),
@@ -2536,12 +2544,17 @@ class ApiView(FlaskView):
             else:
                 R04G2S_value = None
 
+            if 'KATOTTG' in data:
+                KATOTTG = data['KATOTTG']
+            else:
+                KATOTTG = None
+
             # ідентифікатор об’єкта оподаткування
             if 'dpi_id' in data:
                 dpi_id = data['dpi_id']
                 sender = TaxForms(company_key=key)
                 status, filename = sender.send_1PRRO(dpi_id, R03G3S_value=R03G3S, R04G11S_value=R04G11S,
-                                                     R04G2S_value=R04G2S_value)
+                                                     R04G2S_value=R04G2S_value, KATOTTG=KATOTTG)
                 if status:
                     answer = jsonify(status='success', message='Форму 1-ПРРО відправлено', filename=filename,
                                      error_code=0)

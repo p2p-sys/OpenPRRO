@@ -115,10 +115,10 @@ uwsgi --ini wsgi.ini
 
 
 # копируем службы в /etc/systemd/system
-systemctl daemon-reload
+cp install/services/* /etc/systemd/system
 
 #запускаем службы
-
+systemctl daemon-reload
 systemctl start openprro
 systemctl enable openprro
 systemctl status openprro

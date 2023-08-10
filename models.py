@@ -7,7 +7,7 @@ import logging
 from dateutil import tz
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from sqlalchemy import Column, ForeignKey, String, union_all, literal_column, or_
+from sqlalchemy import Column, ForeignKey, String, union_all, literal_column, or_, Index
 
 from sqlalchemy.sql.sqltypes import Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Time, \
     LargeBinary, JSON, TEXT
@@ -151,11 +151,11 @@ def get_department(data):
 
         if department:
             if key != department.prro_key:
-                print("РРО {} отримано новий ключ, був {} став {}".format(rro_id, department.prro_key, key))
+                print("{} {} Отримано новий ключ, був {} став {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key, key))
                 department.prro_key_id = key.id
                 db.session.commit()
             else:
-                print("РРО {} ключ не змінювався, дані поточного ключа {}".format(rro_id, key))
+                print("{} {} Ключ не змінювався, дані поточного ключа {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key))
 
     else:
         key = department.get_prro_key()
@@ -186,15 +186,18 @@ def close_offline_session(rro_id):
 
     print(registrar_state)
 
-    offline_dt = datetime.datetime.now()
+    offline_dt = datetime.datetime.now(tz.gettz(TIMEZONE))
 
-    sender.local_number = int(registrar_state['NextLocalNum'])
-    sender.offline_local_number = int(registrar_state['OfflineNextLocalNum'])
-    sender.offline_seed = registrar_state['OfflineSeed']
-    sender.offline_session_id = registrar_state['OfflineSessionId']
+    # sender.local_number = int(registrar_state['NextLocalNum'])
+    # sender.offline_local_number = int(registrar_state['OfflineNextLocalNum'])
+    # sender.offline_seed = registrar_state['OfflineSeed']
+    # sender.offline_session_id = registrar_state['OfflineSessionId']
+    department.next_local_number = int(registrar_state['NextLocalNum'])
+    department.next_offline_local_number = int(registrar_state['OfflineNextLocalNum'])
+    department.prro_offline_session_id = registrar_state['OfflineSessionId']
+    department.prro_offline_seed = registrar_state['OfflineSeed']
 
-    offline_tax_number = department.sender.calculate_offline_tax_number(offline_dt,
-                                                                        prev_hash=None)
+    offline_tax_number = sender.calculate_offline_tax_number(offline_dt, prev_hash=None)
 
     """ Коніц офлайн сесії """
     CHECK = sender.get_check_xml(103, offline=True, dt=offline_dt, prev_hash=None,
@@ -401,7 +404,7 @@ class Departments(Base):
     auto_close_time = Column('auto_close_time', Time, comment='Час автоматичного закриття зміни', default=None,
                              nullable=True)
 
-    offline = Column('offline', SmallInteger, default=0, nullable=False, comment='Режим офлайн вкл/викл')
+    offline = Column('offline', SmallInteger, default=1, nullable=False, comment='Режим офлайн вкл/викл')
 
     offline_supported = Column('offline_supported', SmallInteger, default=1, nullable=True,
                                comment='Дозвіл переходу в режим офлайн по податковій')
@@ -519,6 +522,12 @@ class Departments(Base):
 
         messages = []
 
+        to_online_messages, to_online_status = self.prro_to_online()
+        if to_online_status:
+            return to_online_messages, True
+
+        messages += to_online_messages
+
         from utils.SendData2 import SendData2
         sender = SendData2(db, None, self, self.rro_id, "")
 
@@ -538,7 +547,6 @@ class Departments(Base):
             self.next_local_number = int(registrar_state['NextLocalNum'])
 
         zn = int(registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
-
         if self.zn != zn:
             messages.append('Виправляємо заводський номер с {} на {}'.format(self.zn, zn))
             self.zn = zn
@@ -601,7 +609,7 @@ class Departments(Base):
                         self.next_offline_local_number = 1
 
                         db.session.commit()
-                        print('{} успішно закрили оффлайн сесію'.format(self.rro_id))
+                        # print('{} успішно закрили оффлайн сесію'.format(self.rro_id))
 
                         messages.append('Успішно закрили оффлайн сесію')
 
@@ -641,7 +649,7 @@ class Departments(Base):
 
             for session in offline_sessions:
                 department = Departments.query.get(session.department_id)
-                session.server_time = datetime.datetime.now()
+                session.server_time = datetime.datetime.now(tz.gettz(TIMEZONE))
                 db.session.commit()
                 messages.append('{} успішно видалили оффлайн сесію'.format(department.rro_id))
 
@@ -662,8 +670,9 @@ class Departments(Base):
             self.closed = registrar_state['Closed']
 
         if self.tin or self.ipn:
-            shift, shift_opened, messages, offline = self.prro_open_shift(False)
-            print(registrar_state)
+            shift, shift_opened, shift_messages, offline = self.prro_open_shift(False)
+            messages += shift_messages
+            # print(registrar_state)
 
             if shift:
                 testing = registrar_state['Testing']
@@ -760,8 +769,13 @@ class Departments(Base):
 
         db.session.commit()
 
-        if len(messages) < 3:
-            messages.append('ПРРО працює в штатному режимі, всі ОК')
+        if len(messages) < 4:
+            if registrar_state['Testing']:
+                messages.append('ПРРО працює у тестовому режимі, всі ОК')
+            else:
+                messages.append('ПРРО працює в штатному режимі, всі ОК')
+
+        print('{} {} Результат тестування {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, messages))
 
         return messages, True
 
@@ -914,15 +928,15 @@ class Departments(Base):
             raise Exception('{} Для переходу в режим офлайн немає всіх даних. '
                             'Дочекайтесь відновлення зв\'язку з податковою'.format(message))
 
-        if self.offline_session_duration > 36 \
+        if self.offline_session_duration > 36 * 60 \
                 or (self.last_offline_session_start
-                    and operation_time - self.last_offline_session_start > datetime.timedelta(hours=36)):
+                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36*60)):
             raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «36 годин»'
                             ' протягом офлайн сесії'.format(message))
 
-        if self.offline_session_monthly_duration > 168 \
+        if self.offline_session_monthly_duration > 168 * 60 \
                 or (self.last_offline_session_start
-                    and operation_time - self.last_offline_session_start > datetime.timedelta(hours=168)):
+                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168*60)):
             raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «168 годин»'
                             ' протягом календарного місяця'.format(message))
 
@@ -963,6 +977,269 @@ class Departments(Base):
             self.prro_set_next_number()
         else:
             print('{} {} РРО перебуває в офлайн режимі'.format(operation_time, self.rro_id))
+
+    def prro_to_online(self):
+
+        from lxml import etree
+
+        from utils.Sign import Sign
+        from utils.SendData2 import SendData2
+
+        list_msgs = []
+
+        to_online_status = False
+
+        signer = Sign()
+
+        offline_sessions = OfflineChecks.query \
+            .filter(OfflineChecks.server_time == None) \
+            .filter(OfflineChecks.department_id == self.id) \
+            .order_by(OfflineChecks.server_time) \
+            .all()
+
+        if len(offline_sessions) == 0:
+            return ['Немає нових офлайн сесій'], False
+
+        for session in offline_sessions:
+
+            signed_docs = []
+
+            print('{} {} Почали обробку'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+            # continue
+
+            # last_shift = Shifts.query \
+            #     .order_by(Shifts.operation_time.desc()) \
+            #     .filter(Shifts.department_id == department.id) \
+            #     .first()
+
+            # if last_shift:
+            # if not last_shift.offline:
+            # session.server_time = datetime.datetime.now()
+            # db.session.commit()
+            # print('{} успешно удалили оффлайн сессию'.format(department.rro_id))
+            # continue
+
+            try:
+                # Необхідно визначити останній чек відправився чи ні
+                sender = SendData2(db, self.prro_key, self, self.rro_id, "")
+
+                registrar_state = sender.TransactionsRegistrarState()
+
+                if not registrar_state:
+                    if len(sender.last_fiscal_error_txt) > 0:
+                        list_msgs.append('Помилка {}'.format(sender.last_fiscal_error_txt))
+                    continue
+
+                if registrar_state:
+                    if 'ShiftState' in registrar_state:
+                        tax_next_local_num = registrar_state['NextLocalNum']
+
+                        shift, shift_opened, messages, offline = self.prro_open_shift(False)
+
+                        department_key = self.prro_key
+
+                        operations = self.get_offine_operations(session)
+
+                        print('{} {} Кількість офлайн операцій {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                          self.rro_id, len(operations)))
+
+                        for operation in operations:
+                            print('{} {} operation.type = {} operation.pid = {} operation.offline_tax_id = {}'.format(
+                                datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                self.rro_id,
+                                operation.type, operation.pid, operation.offline_tax_id))
+                            if operation.type == 0:
+                                print('{} {} Початок оффлайн сесії у {}'.format(
+                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                    self.rro_id,
+                                    operation.operation_time))
+
+                            if registrar_state['ShiftState'] == 1 and 1 < operation.type < 10:
+                                if operation.type == 0 and tax_next_local_num == operation.pid:
+                                    # якщо номери не збіглися, потрібно видалити останній чек
+                                    # переформуємо чек відкриття сесії офлайн
+                                    offline_check = OfflineChecks.query.get(operation.id)
+                                    operation_time = offline_check.operation_time
+                                    testing = offline_check.testing
+                                    # offline_check.pid = NextLocalNum
+                                    sender.local_number = offline_check.pid
+                                    sender.offline_session_id = registrar_state['OfflineSessionId']
+                                    sender.offline_seed = registrar_state['OfflineSeed']
+                                    sender.offline_local_number = 1
+
+                                    # якщо перший чек, не можна скасовувати відкриття зміни, інакше буде помилка
+                                    '''
+                                    Код помилки: 10 PackageValidationError
+                                    Помилка обробки документа за № 0 в пакеті, дислокація 4:
+                                    Останній документ поточної зміни (фіскальний номер 197242641) має тип 'OpenShift' і не може бути відкликаний
+                                    '''
+                                    # if NumLocal == 1:
+                                    #     revoke = False
+                                    # else:
+                                    #     revoke = True
+
+                                    revoke = True
+
+                                    xml, signed_xml, offline_tax_id = sender.to_offline(operation_time,
+                                                                                        testing=testing, revoke=revoke)
+
+                                    offline_check.offline_fiscal_xml_signed = signed_xml
+                                    print('Переформували чек відкриття сесії офлайн')
+                                    if operation.pid >= tax_next_local_num:
+                                        # print(operation.pid, operation.operation_time)
+                                        signed_docs.append(signed_xml)
+                                else:
+                                    # print(operation.pid, operation.operation_time, tax_next_local_num)
+                                    signed_docs.append(operation.offline_fiscal_xml_signed)
+
+                            else:
+                                # print(operation.pid, operation.operation_time, tax_next_local_num)
+                                # if operation.pid >= NextLocalNum:
+                                signed_docs.append(operation.offline_fiscal_xml_signed)
+
+                        offline_dt = datetime.datetime.now(tz.gettz(TIMEZONE))
+
+                        self.sender.local_number = self.next_local_number
+                        self.sender.offline_local_number = self.next_offline_local_number
+                        self.sender.offline_seed = self.prro_offline_seed
+                        self.sender.offline_session_id = self.prro_offline_session_id
+
+                        offline_tax_number = self.sender.calculate_offline_tax_number(offline_dt,
+                                                                                      prev_hash=shift.prev_hash)
+
+                        """ Коніц офлайн сесії """
+                        CHECK = self.sender.get_check_xml(103, offline=True, dt=offline_dt,
+                                                          prev_hash=shift.prev_hash,
+                                                          offline_tax_number=offline_tax_number)
+
+                        '''
+                        <!--Ознака відкликання останнього онлайн документа через дублювання офлайн документом-->
+                        <REVOKELASTONLINEDOC>true</REVOKELASTONLINEDOC>
+                        '''
+
+                        xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
+                        print(xml)
+
+                        try:
+                            signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
+                        except Exception as e:
+                            print('{] {} Помилка {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
+                            list_msgs.append('Помилка {}'.format(e))
+                            box_id = signer.update_bid(department_key.db, department_key)
+                            signed_data = signer.sign(box_id, xml, role=department_key.key_role)
+                            department_key.box_id = box_id
+                            db.session.commit()
+
+                        signed_docs.append(signed_data)
+
+                        print('{} {} Усього чеків {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
+                                                             len(signed_docs)))
+
+                        cnt = 0
+                        packet = 0
+
+                        # for signed_doc in signed_docs:
+                        #
+                        lngth = len(signed_docs)
+                        # print(signed_docs)
+                        for s in range(0, lngth, 100):
+
+                            data = b''
+                            for t in range(20):
+
+                                if cnt < lngth:
+                                    signed_doc = signed_docs[cnt]
+                                    # print(signed_doc)
+                                    lenb = len(signed_doc).to_bytes(4, byteorder="little", signed=True)
+                                    # print(len(signed_doc))
+                                    data = data + lenb + signed_doc
+                                    cnt += 1
+                                    # print(cnt)
+
+                            print('{} {} Пакет {} розмір пакету {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                           self.rro_id, packet, len(data)))
+                            packet += 1
+
+                            command = 'pck'
+                            ret = self.sender.post_data(command, data, return_cmd_data=False)
+                            print('{} {} Відповідь сервера {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                      self.rro_id, ret))
+                            if len(sender.last_fiscal_error_txt) > 0:
+                                list_msgs.append('Відповідь сервера {}'.format(sender.last_fiscal_error_txt))
+
+                            if ret:
+                                if ret == 'OK':
+                                    continue
+
+                                try:
+                                    data = json.loads(ret)
+                                except:
+                                    break
+
+                                shift.offline = False
+
+                                server_time = datetime.datetime.now()
+
+                                for operation in operations:
+                                    # print(operation.type, operation.pid)
+                                    signed_docs.append(operation.offline_fiscal_xml_signed)
+
+                                    if operation.type == 0:
+                                        offline_check = OfflineChecks.query.get(operation.id)
+                                        offline_check.server_time = server_time
+
+                                    elif operation.type == 1 or operation.type == 10:
+                                        open_shift = Shifts.query.get(operation.id)
+                                        open_shift.server_time = server_time
+
+                                    elif operation.type == 2:
+                                        advance = Advances.query.get(operation.id)
+                                        advance.server_time = server_time
+
+                                    elif operation.type == 3:
+                                        inkasses_operation = Incasses.query.get(operation.id)
+                                        inkasses_operation.server_time = server_time
+
+                                    elif operation.type == 4:
+                                        podkreps_operation = Podkreps.query.get(operation.id)
+                                        podkreps_operation.server_time = server_time
+
+                                    elif operation.type == 5:
+                                        sales_operation = Sales.query.get(operation.id)
+                                        sales_operation.server_time = server_time
+
+                                    elif operation.type == 9:
+                                        z_report = ZReports.query.get(operation.id)
+                                        z_report.server_time = server_time
+
+                                self.prro_offline_session_id = data['OfflineSessionId']
+                                self.prro_offline_seed = data['OfflineSeed']
+
+                                self.offline_status = False
+                                self.offline_prev_hash = None
+
+                                db.session.commit()
+
+                                self.prro_set_next_number()
+
+                                print('{} {} Успішно закрили оффлайн сесію'.format(
+                                    datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+                                list_msgs.append('Успішно закрили оффлайн сесію')
+
+                                msg, status = self.prro_fix()
+                                if status:
+                                    print(msg)
+                                    list_msgs += msg
+
+                                to_online_status = True
+
+            except Exception as e:
+                print('{} {} {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
+                list_msgs.append('Помилка {}'.format(e))
+
+            # print(list_msgs)
+
+        return list_msgs, to_online_status
 
     def prro_open_shift(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
 
@@ -2362,7 +2639,7 @@ class Departments(Base):
                                 raise Exception('{}'.format(
                                     "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
-            # offline_status = True
+            offline_status = True
 
             if offline_status:
                 self.prro_to_offline(operation_time)
@@ -2373,7 +2650,7 @@ class Departments(Base):
                 xml, signed_xml, offline_tax_id, xml_hash = self.sender.close_shift(dt=operation_time,
                                                                                     testing=shift.testing,
                                                                                     offline=True,
-                                                                                    prev_hash=None)
+                                                                                    prev_hash=self.offline_prev_hash)
 
                 self.offline_prev_hash = xml_hash
 
@@ -2434,11 +2711,22 @@ class Departments(Base):
 
         db.session.commit()
 
+        messages = []
+        if self.offline_status:
+            msg = 'Зберегли закриття зміни в режимі офлайн'
+        else:
+            msg = 'Зберегли закриття зміни в режимі онлайн'
+
+        messages.append(msg)
+        print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+
         self.prro_set_next_number()
 
         return tax_id
 
     def prro_get_xz(self, send_z=False, key=None, testing=False, balance=0):
+
+        self.prro_fix()
 
         last_shift = Shifts.query \
             .order_by(Shifts.operation_time.desc()) \
@@ -2463,7 +2751,7 @@ class Departments(Base):
                 '''
                 {'UID': '43ada995-e8e5-483c-be33-d040c52ffbae', 'ShiftState': 1, 'ZRepPresent': False, 'Testing': False, 'Totals': {'Real': {'Sum': 13170.0, 'PwnSumIssued': 0.0, 'PwnSumReceived': 0.0, 'RndSum': 0.0, 'NoRndSum': 0.0, 'TotalCurrencySum': 0.0, 'TotalCurrencyCommission': 0.0, 'OrdersCount': 62, 'TotalCurrencyCost': 0, 'PayForm': [{'PayFormCode': 0, 'PayFormName': 'ГОТІВКА', 'Sum': 13170.0}], 'Tax': [{'Type': 0, 'Name': 'ПДВ 20%', 'Letter': 'A', 'Prc': 20.0, 'Sign': False, 'Turnover': 17500.0, 'TurnoverDiscount': 0.0, 'SourceSum': 12370.0, 'Sum': 2474.0}, {'Type': 3, 'Name': 'ПДВ 0%', 'Letter': 'Б', 'Prc': 0.0, 'Sign': False, 'Turnover': 800.0, 'TurnoverDiscount': 0.0, 'SourceSum': 800.0, 'Sum': 0.0}]}, 'Ret': {'Sum': 840.0, 'PwnSumIssued': 0.0, 'PwnSumReceived': 0.0, 'RndSum': 0.0, 'NoRndSum': 0.0, 'TotalCurrencySum': 0.0, 'TotalCurrencyCommission': 0.0, 'OrdersCount': 4, 'TotalCurrencyCost': 0, 'PayForm': [{'PayFormCode': 0, 'PayFormName': 'ГОТІВКА', 'Sum': 840.0}], 'Tax': [{'Type': 0, 'Name': 'ПДВ', 'Letter': 'A', 'Prc': 20.0, 'Sign': False, 'Turnover': 1200.0, 'TurnoverDiscount': 0.0, 'SourceSum': 840.0, 'Sum': 168.0}]}, 'Cash': None, 'Currency': None, 'ServiceInput': 9000.0, 'ServiceOutput': 3000.0}}
                 '''
-                raise Exception('Зміну не можна закрити в режимі офлайн!')
+                raise Exception('Виникла помилка відправки документів - відсутній зв\'язок з сервером податкової')
 
             if balance > 0:
                 tax_id_inkass, shift_inkass, shift_opened_inkass, qr_inkass, visual_inkass, offline_inkass, tax_id_advance, qr_advance, visual_advance = self.prro_inkass(
@@ -2474,11 +2762,9 @@ class Departments(Base):
                 tax_id_inkass = None
 
             x_data = self.sender.LastShiftTotals()
-            # print(x_data)
-            # raise Exception('Зміну не можна закрити в режимі офлайн!')
 
             if not x_data:
-                raise Exception('Зміну не можна закрити в режимі офлайн!')
+                raise Exception('Виникла помилка відправки документів - відсутній зв\'язок з сервером податкової')
 
             # shift_state = x_data['ShiftState']
             z_rep_present = x_data['ZRepPresent']
@@ -2617,6 +2903,15 @@ class Departments(Base):
 
                 db.session.commit()
 
+                messages = []
+                if self.offline_status:
+                    msg = 'Зберегли Z звiт в режимі офлайн'
+                else:
+                    msg = 'Зберегли Z звiт в режимі онлайн'
+
+                messages.append(msg)
+                print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+
                 self.prro_set_next_number()
 
                 close_shift_tax_id = self.prro_close_shift(shift)
@@ -2626,14 +2921,7 @@ class Departments(Base):
                 except Exception as e:
                     z_visual_data = None
 
-                messages = []
-                if self.offline_status:
-                    msg = 'Зберегли Z звiт в режимі офлайн'
-                else:
-                    msg = 'Зберегли Z звiт в режимі онлайн'
-
-                messages.append(msg)
-                print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+                self.prro_fix()
 
                 return x_data, z_report.tax_id, close_shift_tax_id, z_visual_data, tax_id_inkass, qr_inkass, visual_inkass
 
@@ -2663,6 +2951,8 @@ class Departments(Base):
                                                                              self.next_offline_local_number,
                                                                              self.next_offline_local_number + 1))
             self.next_offline_local_number += 1
+        else:
+            self.next_offline_local_number = 1
 
         db.session.commit()
 
@@ -3488,3 +3778,10 @@ class ZReports(Base):
 # ===================================
 #       INDEXES & CONSTRAINS
 # ===================================
+
+shifts_doc_uid_idx = Index('shifts_doc_uid_idx', Shifts.doc_uid)
+advances_doc_uid_idx = Index('advances_doc_uid_idx', Advances.doc_uid)
+podkreps_doc_uid_idx = Index('podkreps_doc_uid_idx', Podkreps.doc_uid)
+incasses_doc_uid_idx = Index('incasses_doc_uid_idx', Incasses.doc_uid)
+stornos_doc_uid_idx = Index('stornos_doc_uid_idx', Stornos.doc_uid)
+sales_doc_uid_idx = Index('sales_doc_uid_idx', Sales.doc_uid)

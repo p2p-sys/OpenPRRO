@@ -103,6 +103,10 @@ class SendData2(object):
             • Загальна сума оплати по документу класу «Чек» (формат «0.00») (якщо елемент присутній)
             • Геш попереднього документа (крім першого документа, створеного в межах офлайн сесії)
         '''
+
+        if not self.department.prro_offline_session_id:
+            raise Exception('Для цього номера РРО режим оффлайн заборонено')
+
         check_date = offline_dt.strftime("%d%m%Y")  # ddmmyyyy
         check_time = offline_dt.strftime("%H%M%S")  # hhmmss
 
@@ -125,7 +129,9 @@ class SendData2(object):
                                                  self.department.next_local_number,
                                                  self.rro_fn, self.department.zn)
 
-        # print(str)
+        print('{} {} Для розрахунку офлайн номера використовуються такі дані: {}, prev_hash={}, doc_sum={}'
+              .format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, str, prev_hash, doc_sum))
+
         # Від текстового рядку розраховується геш за алгоритмом CRC32
         # (див. https://github.com/damieng/DamienGKit/blob/master/CSharp/DamienG.Library/Security/Cryptography/Crc32.cs),
         # як десяткове беззнаковое число
@@ -144,14 +150,13 @@ class SendData2(object):
             # Контрольне число не може дорівнювати 0. Якщо у результаті розрахунку контрольного числа одержано 0, призначається значення 1.
             control_int = 1
 
-        if not self.department.prro_offline_session_id:
-            raise Exception('Для цього номера РРО режим оффлайн заборонено')
+        offline_tax_number = '{}.{}.{}'.format(self.department.prro_offline_session_id,
+                                               self.department.next_offline_local_number, control_int)
 
-        offline_tax_number = '{}.{}.{}'.format(self.department.prro_offline_session_id, self.department.next_offline_local_number, control_int)
+        print('{} {} Розрахований фіскальний офлайн номер: {}'
+              .format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, offline_tax_number))
 
         return offline_tax_number
-
-        # print(str_crc32_hash)
 
     def get_fiscal_data_by_local_number(self, local_number, data):
         # print(self.department.next_local_number)
@@ -180,6 +185,9 @@ class SendData2(object):
 
     def post_data(self, command, data, return_cmd_data=False):
 
+        self.last_fiscal_error_code = 0
+        self.last_fiscal_error_txt = ''
+
         if TESTING_OFFLINE:
             url = 'http://127.0.0.1:9999/'.format(FS_URL)
         else:
@@ -190,11 +198,12 @@ class SendData2(object):
 
         if command == "cmd":
             data = json.dumps(data).encode('utf8')
+            print('{} {} JSON запит {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, data))
 
         self.server_time = None
 
         # проверим актуальность ключа криптографии
-        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Починаю підписувати'))
+        print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         try:
             try:
                 signed_data = self.signer.sign(self.key.box_id, data, role=self.key.key_role)
@@ -207,10 +216,11 @@ class SendData2(object):
 
         except Exception as e:
             print('{} {} CryproError post_data 2 {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            self.last_fiscal_error_txt = str(e)
             raise Exception('{}'.format(
                 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-        print('{} {}'.format(datetime.now(tz.gettz(TIMEZONE)), 'Перестав підписувати'))
+        print('{} {} Перестав підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         request_body = zlib.compress(signed_data)
 
         try:
@@ -221,7 +231,8 @@ class SendData2(object):
             start = datetime.now(tz.gettz(TIMEZONE))
             print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, 'Починаю відправляти до податкової'))
             answer = requests.post(url, data=request_body, headers=headers, timeout=15)
-            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, 'Закінчив відправляти до податкової'))
+            print(
+                '{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, 'Закінчив відправляти до податкової'))
             stop = datetime.now(tz.gettz(TIMEZONE))
             print('{} {} Операція зайняла за часом {} секунд'.format(stop, self.rro_fn, (stop - start).total_seconds()))
 
@@ -231,6 +242,8 @@ class SendData2(object):
 
         except Exception as e:
             print('{} {} Помилка надсилання даних: {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            self.last_fiscal_error_code = 500
+            self.last_fiscal_error_txt = str(e)
             # time.sleep(3)
             # if command != "cmd":
             #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
@@ -256,52 +269,17 @@ class SendData2(object):
             InvalidQueryParameter = 11, Некоректний параметр запиту
             CryptographyError = 12 Помилка криптографічних функцій        
         '''
-        print(answer.status_code)
+        print('{} {} Код відповіді {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, answer.status_code))
 
         message = answer.text
         if command == "cmd":
-            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
+            print('{} {} Відповідь {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
 
-        if message.find('ShiftAlreadyOpened') != -1:
-            error_rro_pos = message.find('наразі відкрито особою')
-            if error_rro_pos > 0:
-                error_rro = message[error_rro_pos - 11:error_rro_pos - 1]
-
-                errr_key_pos = message.find("ідентифікатор ключа суб'єкта")
-                if error_rro_pos > 0:
-                    error_key = message[errr_key_pos + 29:errr_key_pos + 93]
-
-                    if error_rro == self.rro_fn and error_key == self.key.public_key:
-                        data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-                        print(data)
-                        if data:
-                            self.last_fiscal_error_txt = ''
-                            self.last_fiscal_error_code = 0
-                            return True
-
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-
-        if message.find('ZRepAlreadyRegistered') != -1:
-            data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            print(data)
-            if data:
-                self.last_fiscal_error_txt = ''
-                self.last_fiscal_error_code = 0
-                return True
-
-            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-
-        if message.find('Сторнуватись може лише останній документ') != -1:
-            print("Помилка надсилання даних на фіскальний сервер: {}".format(message))
-            messages = message.split('\r\n')
-            if len(messages) > 1:
-                message = messages[1]
-
-            raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+        if answer.status_code != 200:
+            self.last_fiscal_error_code = answer.status_code
+            self.last_fiscal_error_txt = str(message)
 
         if answer.status_code == 204:
-            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
             raise Exception('{}'.format(
                 "Помилка 204. На фіскальному сервері немає об'єктів для роботи. Будь ласка, перевірте в"
                 " Електронному кабінеті ДПС (Програмне РРО - Касири) наявність ідетифікатора вашого сертифіката."
@@ -309,11 +287,50 @@ class SendData2(object):
                 " потрібен час для синхронізації даних між серверами ДПС."))
 
         if answer.status_code == 500:
-            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
+            print('{} {} Помилка надсилання даних на фіскальний сервер:  {}'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                    self.rro_fn, message))
             return False
 
         if answer.status_code >= 400:
-            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, message))
+            print('{} {} Помилка надсилання даних на фіскальний сервер:  {}'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                    self.rro_fn, message))
+
+            if message.find('ShiftAlreadyOpened') != -1:
+                error_rro_pos = message.find('наразі відкрито особою')
+                if error_rro_pos > 0:
+                    error_rro = message[error_rro_pos - 11:error_rro_pos - 1]
+
+                    errr_key_pos = message.find("ідентифікатор ключа суб'єкта")
+                    if error_rro_pos > 0:
+                        error_key = message[errr_key_pos + 29:errr_key_pos + 93]
+
+                        if error_rro == self.rro_fn and error_key == self.key.public_key:
+                            data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
+                            # print(data)
+                            if data:
+                                self.last_fiscal_error_txt = ''
+                                self.last_fiscal_error_code = 0
+                                return True
+
+                raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+
+            if message.find('ZRepAlreadyRegistered') != -1:
+                data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
+                # print(data)
+                if data:
+                    self.last_fiscal_error_txt = ''
+                    self.last_fiscal_error_code = 0
+                    return True
+
+                raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+
+            if message.find('Сторнуватись може лише останній документ') != -1:
+                messages = message.split('\r\n')
+                if len(messages) > 1:
+                    message = messages[1]
+
+                raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
+
             if message.find('CryptographyError') != -1:
                 # Переходимо до офлайну
                 return False
@@ -340,7 +357,6 @@ class SendData2(object):
                 return 9
 
             if message.find('Код помилки') != -1:
-                print("{} Помилка надсилання даних на фіскальний сервер: {}".format(self.rro_fn, message))
                 raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
             else:
                 # Переходимо до офлайну
@@ -352,7 +368,7 @@ class SendData2(object):
             raise Exception('{}'.format(answer.text))
             # return False
         else:
-            print(answer.status_code)
+            # print(answer.status_code)
             # print(answer.content)
             if command == "cmd":
                 if return_cmd_data:
@@ -361,14 +377,18 @@ class SendData2(object):
                         try:
                             (last_data, meta) = self.signer.unwrap(self.key.box_id, answer.content)
                         except Exception as e:
-                            print('CryproError post_data 3 try 1 {}'.format(e))
+                            print('{} {} Помилка CryproError post_data 3 try 1:  {}'.format(
+                                datetime.now(tz.gettz(TIMEZONE)),
+                                self.rro_fn, e))
                             box_id = self.signer.update_bid(self.db, self.key)
                             (last_data, meta) = self.signer.unwrap(box_id, answer.content)
                             self.key.box_id = box_id
                             self.db.session.commit()
 
                     except Exception as e:
-                        print('CryproError post_data 3 try 2 {}'.format(e))
+                        print('{} {} Помилка CryproError post_data 3 try 2:  {}'.format(
+                            datetime.now(tz.gettz(TIMEZONE)),
+                            self.rro_fn, e))
                         raise Exception('{}'.format(
                             'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
@@ -387,32 +407,30 @@ class SendData2(object):
                         raise Exception(
                             '{}'.format(answer.text))
             elif command == "pck":
-                # b'{"OfflineSessionId":313952,"OfflineSeed":663141346126013}'
-                # {"OfflineSessionId": 313952, "OfflineSeed": 663141346126013}
-                # print(answer.content)
                 return answer.content.decode()
             else:
-                # print(answer)
-                # <?xml version="1.0" encoding="windows-1251"?><TICKET xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ticket01.xsd"><UID>3776D39A-DBDF-11EA-B329-85D33DD3DD1F</UID><ORDERDATE>11082020</ORDERDATE><ORDERTIME>173026</ORDERTIME><ORDERNUM>284</ORDERNUM><ORDERTAXNUM>7724</ORDERTAXNUM><OFFLINESESSIONID>30</OFFLINESESSIONID><OFFLINESEED>484608834707533</OFFLINESEED><ERRORCODE>0</ERRORCODE><VER>1</VER></TICKET>
-                # last_data = Sign.unsign_data(self.signer, answer.content)
-                # (last_data, meta) = self.signer.unwrap(self.box_id, answer.content)
                 try:
                     try:
                         (last_data, meta) = self.signer.unwrap(self.key.box_id, answer.content)
                     except Exception as e:
-                        print('CryproError post_data 4 try 1 {}'.format(e))
+                        print('{} {} Помилка CryproError post_data 4 try 1:  {}'.format(
+                            datetime.now(tz.gettz(TIMEZONE)),
+                            self.rro_fn, e))
+
                         box_id = self.signer.update_bid(self.db, self.key)
                         (last_data, meta) = self.signer.unwrap(box_id, answer.content)
                         self.key.box_id = box_id
                         self.db.session.commit()
 
                 except Exception as e:
-                    print('CryproError post_data 4 try 2 {}'.format(e))
+                    print('{} {} Помилка CryproError post_data 3 try 2:  {}'.format(
+                        datetime.now(tz.gettz(TIMEZONE)),
+                        self.rro_fn, e))
+
                     raise Exception('{}'.format(
                         'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-                # print(last_data)
-                # print(last_data.decode('windows-1251'))
+                print('{} {} Відповідь {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, last_data.decode('windows-1251')))
                 error_code = etree.fromstring(last_data).xpath('//ERRORCODE/text()')
                 error_text = etree.fromstring(last_data).xpath('//ERRORTEXT/text()')
                 self.last_fiscal_ticket = last_data
@@ -439,8 +457,11 @@ class SendData2(object):
                         if len(offline_seed) > 0:
                             self.department.prro_offline_seed = offline_seed[0]
 
-                        print("Документ з локальним номером {} та фіскальним номером {} успішно відображено".format(ordernum,
-                                                                                                               ordertaxnum))
+                        print(
+                            "{} {} Документ з локальним номером {} та фіскальним номером {} успішно відображено".format(
+                                datetime.now(tz.gettz(TIMEZONE)),
+                                self.rro_fn, ordernum, ordertaxnum))
+
                         if ordernum == self.department.next_local_number:
                             self.last_ordernum = ordernum
                             self.last_ordertaxnum = ordertaxnum
@@ -455,10 +476,15 @@ class SendData2(object):
 
                             return True
                         else:
-                            print("Якась проблема з нумерацією, локальний номер у пам'яті {}, серверний локальний "
-                                  "номер {}, серверний фіскальний номер {}")
+                            print(
+                                "{} {} якась проблема з нумерацією, локальний номер у пам'яті {}, серверний локальний "
+                                "номер {}, серверний фіскальний номер {}".format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                 self.rro_fn,
+                                                                                 self.department.next_local_number,
+                                                                                 ordernum, ordertaxnum))
                     else:
-                        raise Exception("Помилка, код {}: {}".format(error_code, error_text))
+                        raise Exception("{} {} Помилка, код {}: {}".format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                           self.rro_fn, error_code, error_text))
 
                 return False
 
@@ -547,31 +573,31 @@ class SendData2(object):
         return data
 
         # if data:
-            # if 'ShiftState' in data:
-                # self.shift_state = data['ShiftState']
-                # self.department.next_local_number = data['NextLocalNum']
-                # self.offline_supported = data['OfflineSupported']
-                # self.chief_cashier = data['ChiefCashier']
-                # if 'ShiftId' in data:
-                #     self.fiscal_shift_id = data["ShiftId"]
-            # if 'TaxObject' in data:
-            #     tax_object = data['TaxObject']
+        # if 'ShiftState' in data:
+        # self.shift_state = data['ShiftState']
+        # self.department.next_local_number = data['NextLocalNum']
+        # self.offline_supported = data['OfflineSupported']
+        # self.chief_cashier = data['ChiefCashier']
+        # if 'ShiftId' in data:
+        #     self.fiscal_shift_id = data["ShiftId"]
+        # if 'TaxObject' in data:
+        #     tax_object = data['TaxObject']
 
-                # registrars = tax_object['TransactionsRegistrars']
-                # if isinstance(registrars, list):
-                #     for registrar in registrars:
-                #         if self.rro_fn == str(registrar['NumFiscal']):
-                #             self.department.address = tax_object['Address']
-                #             self.department.org_name = tax_object['OrgName']
-                #             self.department.name = tax_object['Name']
-                #             self.rro_department_name = registrar['Name']
-                #             self.department.tin = tax_object['Tin']
-                #             self.department.ipn = tax_object['Ipn']
-                #
-                #             self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
-                #
-                #             self.department.zn = registrar['NumLocal']
-                # print("Требуемый РРО есть в базе налоговой")
+        # registrars = tax_object['TransactionsRegistrars']
+        # if isinstance(registrars, list):
+        #     for registrar in registrars:
+        #         if self.rro_fn == str(registrar['NumFiscal']):
+        #             self.department.address = tax_object['Address']
+        #             self.department.org_name = tax_object['OrgName']
+        #             self.department.name = tax_object['Name']
+        #             self.rro_department_name = registrar['Name']
+        #             self.department.tin = tax_object['Tin']
+        #             self.department.ipn = tax_object['Ipn']
+        #
+        #             self.entity = tax_object['Entity']  # Ідентифікатор запису ГО - непонятное поле
+        #
+        #             self.department.zn = registrar['NumLocal']
+        # print("Требуемый РРО есть в базе налоговой")
         #     return data
         # else:
         #     return False
@@ -643,7 +669,8 @@ class SendData2(object):
             "RegistrarNumFiscal": self.rro_fn,  # Фіскальний номер ПРРО
             "NumFiscal": check_id,  # Фіскальний номер чека
             "Type": type,  # Тип даних запита документа
-            "AcquireCabinetUrl": True,  # Ознака запиту посилання на сторінку візуалізації чека в Електронному кабінеті платника податків (false/true)
+            "AcquireCabinetUrl": True,
+            # Ознака запиту посилання на сторінку візуалізації чека в Електронному кабінеті платника податків (false/true)
         }
         json_string = self.post_data("cmd", data, True)
         # print(json_string)
@@ -2218,7 +2245,7 @@ class SendData2(object):
         else:
             offline_tax_number = None
 
-        CHECK = self.get_check_xml(101, testing=testing, offline=offline,
+        CHECK = self.get_check_xml(101, dt=dt, testing=testing, offline=offline,
                                    prev_hash=prev_hash, offline_tax_number=offline_tax_number)
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(xml.decode('windows-1251'))
@@ -2250,10 +2277,10 @@ class SendData2(object):
                 return ret
 
             self.last_xml = xml
-            print("Смена закрыта")
+            # print("Смена закрыта")
             self.shift_state = 0
 
-        else:
-            print("Ошибка закрытия смены")
+        # else:
+        #     print("Ошибка закрытия смены")
 
         return ret

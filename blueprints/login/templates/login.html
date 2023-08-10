@@ -8,12 +8,7 @@
 
     <div class="login-box">
         <div class="login-box-body">
-            <!--         <form method="post" action="">-->
-
             <form autocomplete="off" role="form" class='form-horizontal' id='login-form' method="POST">
-                <!--            <div class='form-group'>-->
-                <!--                {{ render_field(loginForm.usr) }}-->
-                <!--                {{ render_field(loginForm.pwd) }}-->
                 <div class="form-group has-feedback">
                     {{ loginForm.usr(placeholder="Логін", class="form-control") }}
                     <span class="glyphicon glyphicon-user form-control-feedback"></span>
@@ -23,7 +18,6 @@
                     {{ loginForm.pwd(placeholder="Пароль", class="form-control", type="password") }}
                     <span class="glyphicon glyphicon-lock form-control-feedback"></span>
                 </div>
-                <!--            </div>-->
                 <div class="col-sm-12">
                     <div id='loginstatus' class='text-center'>
                     </div>
@@ -31,26 +25,6 @@
                 <div class='form-group'>
                     <div class="col-sm-12">
                         {{ loginForm.enter(class_="md-btn md-btn-primary md-btn-block md-btn-large")|safe }}
-                    </div>
-                </div>
-            </form>
-
-            <form autocomplete="off" role="form" class='form-horizontal' id='change-form' method="POST"
-                  style="display: none;">
-                <h4 id='changeMsg' class='text-center text-strong'></h4>
-                <div class='form-group'>
-                    {{ changeForm.new_pwd(placeholder="Новий пароль", class="form-control", type="password") }}
-                    {{ changeForm.pwd_repeat(placeholder="Повторіть новий пароль", class="form-control", type="password") }}
-                    <!--                {{ render_field(changeForm.new_pwd) }}-->
-                    <!--                {{ render_field(changeForm.pwd_repeat) }}-->
-                </div>
-                <div class="col-sm-12">
-                    <div id='changepasswordstatus' class='text-center'>
-                    </div>
-                </div>
-                <div class='form-group'>
-                    <div class="col-sm-12">
-                        {{ changeForm.change(class_="btn btn-lg btn-default")|safe }}
                     </div>
                 </div>
             </form>
@@ -70,28 +44,6 @@
 
     <script src="{{ url_for('static', filename='js/moment.js') }}"></script>
     <script src="{{ url_for('static', filename='js/moment-ua.js') }}"></script>
-
-    <script>
-        var visitorId = ''
-
-        function initFingerprintJS() {
-            FingerprintJS.load().then(fp => {
-                // The FingerprintJS agent is ready.
-                // Get a visitor identifier when you'd like to.
-                fp.get().then(result => {
-                    // This is the visitor identifier:
-                    visitorId = result.visitorId;
-                });
-            });
-        }
-    </script>
-
-    <script
-            async
-            src="/static/js/fp.min.js"
-            onload="initFingerprintJS()"
-    ></script>
-
     <script src="{{ url_for('static', filename='js/lib.js') }}"></script>
 
     <script>
@@ -117,36 +69,17 @@
             }
         }
 
-        function check_login() {
-            event.preventDefault()
-            $.ajax({
-                type: "GET",
-                url: "/login/check_login",
-                data: {'usr': 'adminio', chn: true},
-                success: function (x) {
-                    console.log(x)
-                }
-            });
-        }
-
         function login() {
             ajax_data = deSerialize($("#login-form").serialize())
-            // console.log(ajax_data)
-            ajax_data.visitor = visitorId
             ajax_data.csrf_token = $('meta[name=csrf-token]').attr('content')
 
             function onSuccess(data) {
-                if (data.status == 'success') {
+                if (data.status === 'success') {
                     if ($.urlParam('next')) {
                         window.location.href = decodeURIComponent($.urlParam('next'));
                     } else {
                         window.location.href = ''
                     }
-                } else if (data.status == 'first_login') {
-                    $('#login-form').hide()
-                    $('#change-form').show()
-                    $('#changeMsg').html(data.msg)
-                    $('#new_pwd').focus()
                 } else {
                     $('#loginstatus').html('<h1>Невдалося увійти: ' + data.status + '</h1>')
                 }
@@ -160,42 +93,6 @@
             });
         }
 
-        function changePwd(event) {
-            event.preventDefault()
-            ajax_data = deSerialize($("#change-form").serialize())
-            ajax_data.csrf_token = $('meta[name=csrf-token]').attr('content')
-            ajax_data.usr = $('#login-form #usr').val()
-            ajax_data.pwd = $('#login-form #pwd').val()
-
-            function onSuccess(data) {
-                if (data.status == 'success') {
-                    if ($.urlParam('next')) {
-                        window.location.href = decodeURIComponent($.urlParam('next'));
-                    } else {
-                        window.location.href = ''
-                    }
-                } else {
-                    // alert('Невдалося змінити пароль: '+data.status)
-                    $('.alert-warning').remove()
-                    $('.alert-danger').removeClass('alert-danger')
-                    $.each(data.errors, function (key, value) {
-                        markError($('#change-form input[name=' + key + ']'), msg = value)
-                    })
-                }
-            }
-
-            $.ajax({
-                type: "POST",
-                url: "{{ url_for('login.change_password') }}",
-                data: ajax_data,
-                success: onSuccess,
-                fail: function () {
-                    //alert('Невдалося змінити пароль: '+data.status)
-                    $('#changepasswordstatus').html('<h1>Невдалося змінити пароль: ' + data.status + '</h1>')
-                }
-            })
-        }
-
         function fullLogin(event) {
             event.preventDefault()
             return $.ajax({
@@ -203,28 +100,16 @@
                 url: "/login/check_login",
                 data: {'usr': $("#usr").val(), chn: true},
                 success: function (x) {
-                    if (x.status == 'True' || x.status == 'False') {
-                        login()
-                    } else {
-                        //$('#loginstatus').html('<h1>Невдалося увійти: На даному домені немає Вашого логіна, можливо ви зайшли в программу вперше. Зараз Вас буде перенаправлено на домен Вашої фінансової компанії (сторінка буде виглядати так само як і зараз), де вам треба буде повторно ввести Ваш логін і пароль для початку роботи.</h1>')
-                        alert('На даному домені немає Вашого логіна, можливо ви зайшли в программу вперше. Зараз Вас буде перенаправлено на домен Вашої фінансової компанії (сторінка буде виглядати так само як і зараз), де вам треба буде повторно ввести Ваш логін і пароль для початку роботи.')
-                        window.location = x.status
-                    }
+                    login()
                 }
             });
         }
 
         $(document).ready(function () {
             $('#enter').on("click", fullLogin)
-            $('#change').on("click", changePwd)
             $('#login-form').keydown(function () {
-                if (event.keyCode == 13) {
+                if (event.keyCode === 13) {
                     fullLogin(event)
-                }
-            })
-            $('#change-form').keydown(function () {
-                if (event.keyCode == 13) {
-                    changePwd(event)
                 }
             })
             $('#usr').focus()
