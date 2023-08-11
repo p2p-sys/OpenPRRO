@@ -2,10 +2,12 @@ import base64
 import json
 from datetime import datetime
 
+from dateutil import tz
 from lxml import etree
 from lxml.builder import ElementMaker
 import requests
 
+from config import TIMEZONE
 from models import db
 from utils.Sign import Sign
 
@@ -543,11 +545,20 @@ class TaxForms(object):
 
     def tax_send(self, form_xml, email, filename):
 
-        # openssl x509 -inform der -in STS_2021_1.cer -out certificate1.pem
-        # openssl x509 -inform der -in STS_2021_2.cer -out certificate2.pem
-        key247221_pem = './utils/certificate2.pem'
-        with open(key247221_pem, "r") as file:
-            key247221_pem_cert = file.read()
+        # https://tax.gov.ua/elektronna-zvitnist/platnikam-podatkiv-pro/edina-adresa/
+        # openssl x509 -inform der -in STS_2023_1.cer -out STS_2023_1.pem
+        # openssl x509 -inform der -in STS_2023_2.cer -out STS_2023_2.pem
+        # openssl x509 -inform der -in EK_S_NEW_2023_1.cer -out EK_S_NEW_2023_1.pem
+        # openssl x509 -inform der -in EK_S_NEW_2023_2.cer -out EK_S_NEW_2023_2.pem
+
+        date_new_cert = datetime.strptime("2023-08-14", "%Y-%m-%d")
+        if datetime.now(tz.gettz(TIMEZONE)) < date_new_cert:
+            cert_name = './utils/certs/2021/certificate2.pem'
+        else:
+            cert_name = './utils/certs/2023/STS_2023_2.pem'
+
+        with open(cert_name, "r") as file:
+            cert = file.read()
 
         headers = {
             'PRG_TYPE': 'OpenPRRO',
@@ -561,7 +572,7 @@ class TaxForms(object):
 
         encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml,
                                                      role=self.key_role_tax_form, tax=True,
-                                                     cert=key247221_pem_cert,
+                                                     cert=cert,
                                                      headers=headers, tsp="all", ocsp=False)
 
         signed_form_xml_base64 = base64.b64encode(encrypted_form_xml)
@@ -583,10 +594,14 @@ class TaxForms(object):
 
     def tax_send2(self, form_xml, email, filename):
 
-        cert = './utils/certificate_ek_2.pem'
-        with open(cert, "r") as file:
+        date_new_cert = datetime.strptime("2023-08-14", "%Y-%m-%d")
+        if datetime.now(tz.gettz(TIMEZONE)) < date_new_cert:
+            cert_name = './utils/certs/2021/certificate_ek_2.pem'
+        else:
+            cert_name = './utils/certs/2023/EK_S_NEW_2023_2.pem'
+
+        with open(cert_name, "r") as file:
             cert = file.read()
-            # key247221_pem_cert = base64.b64encode(key247221_pem_cert).decode()
 
         '''
          node index.js --sign --crypt EK_C_NEW.cer --key test-feb-3/privat_key.jks:Makas5299006   --input test-feb-3/02222672521631F1391103100000000110220220222.xml --upload_url https://cabinet.tax.gov.ua/cabinet/public/api/exchange/report --tax --tsp=signature  --filename "02272672521631F1391802100000001811220220227.XML"
@@ -765,7 +780,7 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        dt = datetime.now()
+        dt = datetime.now(tz.gettz(TIMEZONE))
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%m")
         doc_year = dt.strftime("%Y")
@@ -1014,7 +1029,7 @@ class TaxForms(object):
 
         TAX_RAYON = str(C_STI_MAIN)[-2:]
 
-        dt = datetime.now()
+        dt = datetime.now(tz.gettz(TIMEZONE))
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%-m")
         doc_year = dt.strftime("%Y")
@@ -1332,7 +1347,7 @@ class TaxForms(object):
             KOD_PDV = pdv_value["KOD_PDV"]
             break
 
-        dt = datetime.now()
+        dt = datetime.now(tz.gettz(TIMEZONE))
         doc_date = dt.strftime("%d%m%Y")  # ddmmyyyy
         doc_mounth = dt.strftime("%-m")
         doc_year = dt.strftime("%Y")

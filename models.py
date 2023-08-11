@@ -1118,7 +1118,7 @@ class Departments(Base):
                         '''
 
                         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-                        print(xml)
+                        # print(xml)
 
                         try:
                             signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
@@ -2639,7 +2639,7 @@ class Departments(Base):
                                 raise Exception('{}'.format(
                                     "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
-            offline_status = True
+            # offline_status = True
 
             if offline_status:
                 self.prro_to_offline(operation_time)
