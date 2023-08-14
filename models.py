@@ -675,10 +675,11 @@ class Departments(Base):
             # print(registrar_state)
 
             if shift:
-                testing = registrar_state['Testing']
-                if shift.testing != testing:
-                    messages.append('Исправляем testing с {} на {}'.format(shift.testing, testing))
-                    shift.testing = testing
+                if 'Testing' in registrar_state:
+                    testing = registrar_state['Testing']
+                    if shift.testing != testing:
+                        messages.append('Исправляем testing с {} на {}'.format(shift.testing, testing))
+                        shift.testing = testing
 
             if registrar_state['ShiftState'] == 0:
 
@@ -704,6 +705,11 @@ class Departments(Base):
 
                             messages.append('Зміна відкрита у базі, але не відкрита за податковою, виправлено')
 
+                            if 'Testing' in registrar_state:
+                                testing = registrar_state['Testing']
+                            else:
+                                testing = False
+
                             shift = Shifts(
                                 department_id=self.id,
                                 operation_type=0,
@@ -714,7 +720,7 @@ class Departments(Base):
                                 tax_id=registrar_state['OpenShiftFiscalNum'],
                                 fiscal_shift_id=registrar_state['ShiftId'],
                                 offline=False,
-                                testing=registrar_state['Testing'],
+                                testing=testing,
                                 cashier=""
                             )
 
@@ -770,7 +776,7 @@ class Departments(Base):
         db.session.commit()
 
         if len(messages) < 4:
-            if registrar_state['Testing']:
+            if registrar_state and 'Testing' in registrar_state and registrar_state['Testing']:
                 messages.append('ПРРО працює у тестовому режимі, всі ОК')
             else:
                 messages.append('ПРРО працює в штатному режимі, всі ОК')
