@@ -187,6 +187,8 @@ class SendData2(object):
 
         self.last_fiscal_error_code = 0
         self.last_fiscal_error_txt = ''
+        self.fiscal_time = None
+        self.server_time = None
 
         if TESTING_OFFLINE:
             url = 'http://127.0.0.1:9999/'.format(FS_URL)
@@ -199,8 +201,6 @@ class SendData2(object):
         if command == "cmd":
             data = json.dumps(data).encode('utf8')
             print('{} {} JSON запит {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, data))
-
-        self.server_time = None
 
         # проверим актуальность ключа криптографии
         print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
@@ -217,8 +217,10 @@ class SendData2(object):
         except Exception as e:
             print('{} {} CryproError post_data 2 {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             self.last_fiscal_error_txt = str(e)
-            raise Exception('{}'.format(
-                'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
+            # Переходимо до офлайну
+            return False
+            # raise Exception('{}'.format(
+            #     'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
         print('{} {} Перестав підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         request_body = zlib.compress(signed_data)
@@ -469,10 +471,14 @@ class SendData2(object):
                             self.last_taxordertime = taxordertime[0]
                             # self.department.next_local_number += 1
 
-                            self.fiscal_time = datetime.strptime(
-                                '{} {}'.format(self.last_taxorderdate, self.last_taxordertime),
-                                '%d%m%Y %H%M%S')
                             self.server_time = datetime.now(tz.gettz(TIMEZONE))
+
+                            if self.last_taxorderdate and self.last_taxordertime:
+                                self.fiscal_time = datetime.strptime(
+                                    '{} {}'.format(self.last_taxorderdate, self.last_taxordertime),
+                                    '%d%m%Y %H%M%S')
+                            else:
+                                self.fiscal_time = self.server_time
 
                             return True
                         else:
@@ -1002,7 +1008,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -1044,7 +1051,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         try:
             signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
@@ -1077,7 +1085,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -1132,7 +1141,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -1187,7 +1197,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -1242,7 +1253,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -1629,7 +1641,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:
@@ -2218,7 +2231,8 @@ class SendData2(object):
                 xmlschema = etree.XMLSchema(xmlschema_doc)
                 xmlschema.assertValid(ZREP)
             except etree.DocumentInvalid as e:
-                raise Exception('Помилка XML (pretest): {}'.format(e))
+                print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+                return 9
 
             print("Отправляем Z отчет")
             ret = self.post_data("doc", xml)
@@ -2255,7 +2269,8 @@ class SendData2(object):
             xmlschema = etree.XMLSchema(xmlschema_doc)
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
-            raise Exception('Помилка XML (pretest): {}'.format(e))
+            print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            return 9
 
         if offline:
             try:

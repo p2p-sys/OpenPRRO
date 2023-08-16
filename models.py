@@ -151,11 +151,13 @@ def get_department(data):
 
         if department:
             if key != department.prro_key:
-                print("{} {} Отримано новий ключ, був {} став {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key, key))
+                print("{} {} Отримано новий ключ, був {} став {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                         department.rro_id, department.prro_key, key))
                 department.prro_key_id = key.id
                 db.session.commit()
             else:
-                print("{} {} Ключ не змінювався, дані поточного ключа {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key))
+                print("{} {} Ключ не змінювався, дані поточного ключа {}".format(
+                    datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key))
 
     else:
         key = department.get_prro_key()
@@ -520,6 +522,8 @@ class Departments(Base):
 
     def prro_fix(self):
 
+        print('{} {} Почали тестування та виправлення'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+
         messages = []
 
         to_online_messages, to_online_status = self.prro_to_online()
@@ -547,7 +551,7 @@ class Departments(Base):
             self.next_local_number = int(registrar_state['NextLocalNum'])
 
         zn = int(registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
-        if self.zn != zn:
+        if int(self.zn) != zn:
             messages.append('Виправляємо заводський номер с {} на {}'.format(self.zn, zn))
             self.zn = zn
 
@@ -594,6 +598,9 @@ class Departments(Base):
             if 'OfflineNextLocalNum' in registrar_state:
                 if int(registrar_state['OfflineNextLocalNum']) > 1:
 
+                    print('{} {} Закриваємо відкриті офлайн сесії'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                          self.rro_id))
+
                     data = close_offline_session(self.rro_id)
                     if data:
 
@@ -609,13 +616,17 @@ class Departments(Base):
                         self.next_offline_local_number = 1
 
                         db.session.commit()
-                        # print('{} успішно закрили оффлайн сесію'.format(self.rro_id))
+                        print('{} {} Успішно закрили оффлайн сесію'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                           self.rro_id))
 
                         messages.append('Успішно закрили оффлайн сесію')
 
                     else:
                         messages.append(
                             'Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
+                        print('{} {} Офлайн сесія відкрита, але не вдалося її коректно закрити'.format(
+                            datetime.datetime.now(tz.gettz(TIMEZONE)),
+                            self.rro_id))
                         return messages, False
 
             if 'OfflineNextLocalNum' in registrar_state:
@@ -652,6 +663,8 @@ class Departments(Base):
                 session.server_time = datetime.datetime.now(tz.gettz(TIMEZONE))
                 db.session.commit()
                 messages.append('{} успішно видалили оффлайн сесію'.format(department.rro_id))
+                print('{} {} Успішно видалили оффлайн сесію'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                                                   self.rro_id))
 
         # else:
         self.offline_status = False
@@ -672,7 +685,6 @@ class Departments(Base):
         if self.tin or self.ipn:
             shift, shift_opened, shift_messages, offline = self.prro_open_shift(False)
             messages += shift_messages
-            # print(registrar_state)
 
             if shift:
                 if 'Testing' in registrar_state:
@@ -700,10 +712,17 @@ class Departments(Base):
                                 db.session.commit()
                                 messages.append(
                                     'Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну')
+                                print('{} {} Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну'.format(
+                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                    self.rro_id))
                         except:
                             operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 
                             messages.append('Зміна відкрита у базі, але не відкрита за податковою, виправлено')
+                            print(
+                                '{} {} Зміна відкрита у базі, але не відкрита за податковою, виправлено'.format(
+                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                    self.rro_id))
 
                             if 'Testing' in registrar_state:
                                 testing = registrar_state['Testing']
@@ -936,13 +955,13 @@ class Departments(Base):
 
         if self.offline_session_duration > 36 * 60 \
                 or (self.last_offline_session_start
-                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36*60)):
+                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36 * 60)):
             raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «36 годин»'
                             ' протягом офлайн сесії'.format(message))
 
         if self.offline_session_monthly_duration > 168 * 60 \
                 or (self.last_offline_session_start
-                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168*60)):
+                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168 * 60)):
             raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «168 годин»'
                             ' протягом календарного місяця'.format(message))
 
@@ -1442,6 +1461,7 @@ class Departments(Base):
                 if ret == 9:
                     messages, status = self.prro_fix()
                     if status:
+                        shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
                         ret = self.sender.post_advances(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
                         if not ret:
                             if self.offline:
@@ -1468,8 +1488,10 @@ class Departments(Base):
                 self.offline_prev_hash = xml_hash
 
             else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
+                if self.sender.fiscal_time:
+                    fiscal_time = self.sender.fiscal_time
+                else:
+                    fiscal_time = operation_time
 
                 # if self.sender.last_xml:
                 #     xml = base64.b64encode(self.sender.last_xml).decode()
@@ -1629,6 +1651,7 @@ class Departments(Base):
                 if ret == 9:
                     messages, status = self.prro_fix()
                     if status:
+                        shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
                         ret = self.sender.post_podkrep(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
 
                         if not ret:
@@ -1656,14 +1679,11 @@ class Departments(Base):
                 self.offline_prev_hash = xml_hash
 
             else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
+                if self.sender.fiscal_time:
+                    fiscal_time = self.sender.fiscal_time
+                else:
+                    fiscal_time = operation_time
 
-                # if self.sender.last_xml:
-                #     xml = base64.b64encode(self.sender.last_xml).decode()
-                # else:
-                #     xml = None
-                #
                 if self.sender.last_fiscal_ticket:
                     fiscal_ticket = base64.b64encode(
                         self.sender.last_fiscal_ticket).decode()
@@ -1820,6 +1840,7 @@ class Departments(Base):
                 if ret == 9:
                     messages, status = self.prro_fix()
                     if status:
+                        shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
                         ret = self.sender.post_inkass(summa, operation_time, testing=shift.testing, doc_uid=doc_uid)
                         if not ret:
                             if self.offline:
@@ -1845,14 +1866,10 @@ class Departments(Base):
                 self.offline_prev_hash = xml_hash
 
             else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
-                #
-                # if self.sender.last_xml:
-                #     xml = base64.b64encode(self.sender.last_xml).decode()
-                # else:
-                #     xml = None
-                #
+                if self.sender.fiscal_time:
+                    fiscal_time = self.sender.fiscal_time
+                else:
+                    fiscal_time = operation_time
 
                 if self.sender.last_fiscal_ticket:
                     fiscal_ticket = base64.b64encode(
@@ -2020,6 +2037,7 @@ class Departments(Base):
                 if ret == 9:
                     messages, status = self.prro_fix()
                     if status:
+                        shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
                         ret = self.sender.post_storno(tax_id, operation_time, testing=shift.testing)
                         if not ret:
                             if self.offline:
@@ -2048,14 +2066,10 @@ class Departments(Base):
                 storno_tax_id = offline_tax_id
 
             else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
-
-                # if self.sender.last_xml:
-                #     xml = base64.b64encode(self.sender.last_xml).decode()
-                # else:
-                #     xml = None
-                #
+                if self.sender.fiscal_time:
+                    fiscal_time = self.sender.fiscal_time
+                else:
+                    fiscal_time = operation_time
 
                 if self.sender.last_fiscal_ticket:
                     fiscal_ticket = base64.b64encode(
@@ -2238,6 +2252,8 @@ class Departments(Base):
                     if ret == 9:
                         messages, status = self.prro_fix()
                         if status:
+                            shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key,
+                                                                                          testing=testing)
                             ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time,
                                                         totals=totals,
                                                         sales_ret=sales_ret, orderretnum=orderretnum,
@@ -2275,14 +2291,10 @@ class Departments(Base):
                     self.offline_prev_hash = xml_hash
 
                 else:
-                    fiscal_time = datetime.datetime.strptime(
-                        '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
-
-                    # if self.sender.last_xml:
-                    #     xml = base64.b64encode(self.sender.last_xml).decode()
-                    # else:
-                    #     xml = None
-                    #
+                    if self.sender.fiscal_time:
+                        fiscal_time = self.sender.fiscal_time
+                    else:
+                        fiscal_time = operation_time
 
                     if self.sender.last_fiscal_ticket:
                         fiscal_ticket = base64.b64encode(
@@ -2663,8 +2675,10 @@ class Departments(Base):
                 tax_id = None
 
             else:
-                fiscal_time = datetime.datetime.strptime(
-                    '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
+                if self.sender.fiscal_time:
+                    fiscal_time = self.sender.fiscal_time
+                else:
+                    fiscal_time = operation_time
 
                 signed_xml = None
 
@@ -2852,21 +2866,26 @@ class Departments(Base):
                 server_time = self.sender.server_time
 
                 if offline:
-                    self.prro_to_offline(operation_time)
-                    fiscal_time = operation_time
-                    fiscal_ticket = None
-                    server_time = None
+                    raise Exception('{}'.format(
+                        "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
-                    xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_z(operation_time, x_data,
-                                                                                   testing=shift.testing,
-                                                                                   offline=True,
-                                                                                   prev_hash=self.offline_prev_hash)
-
-                    self.offline_prev_hash = xml_hash
+                    # self.prro_to_offline(operation_time)
+                    # fiscal_time = operation_time
+                    # fiscal_ticket = None
+                    # server_time = None
+                    #
+                    # xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_z(operation_time, x_data,
+                    #                                                                testing=shift.testing,
+                    #                                                                offline=True,
+                    #                                                                prev_hash=self.offline_prev_hash)
+                    #
+                    # self.offline_prev_hash = xml_hash
 
                 else:
-                    fiscal_time = datetime.datetime.strptime(
-                        '{} {}'.format(self.sender.last_taxorderdate, self.sender.last_taxordertime), '%d%m%Y %H%M%S')
+                    if self.sender.fiscal_time:
+                        fiscal_time = self.sender.fiscal_time
+                    else:
+                        fiscal_time = operation_time
 
                     signed_xml = None
 
@@ -3780,6 +3799,7 @@ class ZReports(Base):
 
     def __str__(self):
         return self.z_number
+
 
 # ===================================
 #       INDEXES & CONSTRAINS
