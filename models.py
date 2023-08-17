@@ -550,8 +550,8 @@ class Departments(Base):
                 registrar_state['NextLocalNum']))
             self.next_local_number = int(registrar_state['NextLocalNum'])
 
-        zn = int(registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal'])
-        if int(self.zn) != zn:
+        zn = registrar_state['TaxObject']['TransactionsRegistrars'][0]['NumLocal']
+        if '{}'.format(self.zn) != '{}'.format(zn):
             messages.append('Виправляємо заводський номер с {} на {}'.format(self.zn, zn))
             self.zn = zn
 
