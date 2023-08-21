@@ -953,17 +953,19 @@ class Departments(Base):
             raise Exception('{} Для переходу в режим офлайн немає всіх даних. '
                             'Дочекайтесь відновлення зв\'язку з податковою'.format(message))
 
-        if self.offline_session_duration > 36 * 60 \
-                or (self.last_offline_session_start
-                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36 * 60)):
-            raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «36 годин»'
-                            ' протягом офлайн сесії'.format(message))
+        if self.offline_session_duration:
+            if self.offline_session_duration > 36 * 60 \
+                    or (self.last_offline_session_start
+                        and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36 * 60)):
+                raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «36 годин»'
+                                ' протягом офлайн сесії'.format(message))
 
-        if self.offline_session_monthly_duration > 168 * 60 \
-                or (self.last_offline_session_start
-                    and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168 * 60)):
-            raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «168 годин»'
-                            ' протягом календарного місяця'.format(message))
+        if self.offline_session_monthly_duration:
+            if self.offline_session_monthly_duration > 168 * 60 \
+                    or (self.last_offline_session_start
+                        and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168 * 60)):
+                raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «168 годин»'
+                                ' протягом календарного місяця'.format(message))
 
     def prro_to_offline(self, operation_time):
 
