@@ -123,7 +123,7 @@ def fix_all():
             print(department.rro_id, e)
 
 @fucli.command('departments_offline_on')
-def offline_on():
+def departments_offline_on():
     departments = Departments.query \
         .filter(Departments.rro_id != None) \
         .filter(Departments.prro_key != None) \
@@ -134,7 +134,7 @@ def offline_on():
         db.session.commit()
 
 @fucli.command('departments_offline_off')
-def offline_off():
+def departments_offline_off():
     departments = Departments.query \
         .filter(Departments.rro_id != None) \
         .filter(Departments.prro_key != None) \
