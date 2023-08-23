@@ -551,11 +551,7 @@ class TaxForms(object):
         # openssl x509 -inform der -in EK_S_NEW_2023_1.cer -out EK_S_NEW_2023_1.pem
         # openssl x509 -inform der -in EK_S_NEW_2023_2.cer -out EK_S_NEW_2023_2.pem
 
-        date_new_cert = datetime.strptime("2023-08-14", "%Y-%m-%d")
-        if datetime.now(tz.gettz(TIMEZONE)) < date_new_cert:
-            cert_name = './utils/certs/2021/certificate2.pem'
-        else:
-            cert_name = './utils/certs/2023/STS_2023_2.pem'
+        cert_name = './utils/certs/2023/STS_2023_2.pem'
 
         with open(cert_name, "r") as file:
             cert = file.read()
@@ -594,11 +590,7 @@ class TaxForms(object):
 
     def tax_send2(self, form_xml, email, filename):
 
-        date_new_cert = datetime.strptime("2023-08-14", "%Y-%m-%d")
-        if datetime.now(tz.gettz(TIMEZONE)) < date_new_cert:
-            cert_name = './utils/certs/2021/certificate_ek_2.pem'
-        else:
-            cert_name = './utils/certs/2023/EK_S_NEW_2023_2.pem'
+        cert_name = './utils/certs/2023/EK_S_NEW_2023_2.pem'
 
         with open(cert_name, "r") as file:
             cert = file.read()
