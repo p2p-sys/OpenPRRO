@@ -45,7 +45,7 @@ FS_URL = 'http://fs.tax.gov.ua:8609/fs/'
 
 # Адреси для автоматичного завантаження сертифікатів
 CMP_URLS = [
-    'http://acskidd.gov.ua/services/cmp/',
+    'http://ca.tax.gov.ua/services/cmp/',
     'http://uakey.com.ua/services/cmp/',
     'http://masterkey.ua/services/cmp/',
     'http://ca.informjust.ua/services/cmp/',
