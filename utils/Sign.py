@@ -1,10 +1,8 @@
-import time
-import sys
+import hmac
+import json
 import os
 import socket
-import hmac
 from struct import pack, unpack_from
-import json
 
 from config import REMOTE_SIGNER_SERVER_KEY, REMOTE_SIGNER_SERVER
 

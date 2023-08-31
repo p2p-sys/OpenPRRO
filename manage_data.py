@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
-import time
 
 import click
 from flask_sqlalchemy import SQLAlchemy
 
-from config import TELEGRAM_BOT, TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_CHAT
 from manage import create_app
 
 app = create_app()
 db = SQLAlchemy(app)
 
 from models import *
-
-import telegram
 
 db.app = app
 db.init_app(app)
@@ -64,7 +60,6 @@ def close_shifts():
 
 @fucli.command('delete_offline_sessions')
 def delete_offline_sessions():
-
     offline_sessions = OfflineChecks.query \
         .filter(OfflineChecks.server_time == None) \
         .order_by(OfflineChecks.server_time) \
@@ -79,7 +74,6 @@ def delete_offline_sessions():
 
 @fucli.command('to_online')
 def to_online():
-
     departments = Departments.query \
         .filter(Departments.rro_id != None) \
         .filter(Departments.prro_key != None) \
@@ -89,14 +83,15 @@ def to_online():
         .all()
 
     print("{} Загальна кількість в офлайні {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                     len(departments)))
+                                                      len(departments)))
 
     for department in departments:
         print("{} {} Починаємо виводити з офлайн, ключ {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                         department.rro_id, department.prro_key))
+                                                                  department.rro_id, department.prro_key))
         messages, status = department.prro_to_online()
-        print("{} {} Закінчили виводити з офлайн, отримано повідомлення {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                         department.rro_id, messages))
+        print("{} {} Закінчили виводити з офлайн, отримано повідомлення {}".format(
+            datetime.datetime.now(tz.gettz(TIMEZONE)),
+            department.rro_id, messages))
 
     if len(departments) > 0:
         print("{} Всі {} РРО оброблені".format(datetime.datetime.now(tz.gettz(TIMEZONE)), len(departments)))
@@ -122,6 +117,7 @@ def fix_all():
         except Exception as e:
             print(department.rro_id, e)
 
+
 @fucli.command('departments_offline_on')
 def departments_offline_on():
     departments = Departments.query \
@@ -133,6 +129,7 @@ def departments_offline_on():
         department.offline = True
         db.session.commit()
 
+
 @fucli.command('departments_offline_off')
 def departments_offline_off():
     departments = Departments.query \
@@ -143,6 +140,7 @@ def departments_offline_off():
     for department in departments:
         department.offline = False
         db.session.commit()
+
 
 @fucli.command('departments_set_signer_type')
 def departments_set_signer_type():
@@ -158,9 +156,9 @@ def departments_set_signer_type():
         except Exception as e:
             print(department.rro_id, e)
 
+
 @fucli.command('set_key_info')
 def set_key_info():
-
     department_keys = DepartmentKeys.query \
         .filter(DepartmentKeys.acsk == None) \
         .all()
@@ -172,6 +170,7 @@ def set_key_info():
                 db.session.commit()
         except Exception as e:
             print(key.id, e)
+
 
 if __name__ == '__main__':
     fucli()

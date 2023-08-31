@@ -1,6 +1,5 @@
-from wtforms import BooleanField, StringField, HiddenField, SubmitField
-from wtforms.validators import DataRequired, ValidationError
 from flask_wtf import FlaskForm
+from wtforms import BooleanField, StringField, HiddenField, SubmitField
 
 
 class LoginForm(FlaskForm):
@@ -19,4 +18,3 @@ class CheckUserForm(FlaskForm):
 
     usr = StringField('Логін:', [], render_kw={'readonly': False})
     chn = BooleanField('If check neigh:', [], render_kw={'readonly': False}, default=False)
-

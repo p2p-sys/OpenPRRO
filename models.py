@@ -1,22 +1,16 @@
 import base64
 import datetime
 import json
-from hashlib import sha256
 import logging
 
 from dateutil import tz
-from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask_login import current_user
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, ForeignKey, String, union_all, literal_column, or_, Index
-
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.sqltypes import Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Time, \
     LargeBinary, JSON, TEXT
-
-from sqlalchemy.orm import relationship, backref
-
-from flask_sqlalchemy import SQLAlchemy
-
-from flask_login import current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from config import TIMEZONE, LOGFILE, CMP_URLS
 from utils.SendData2 import SendData2
@@ -520,7 +514,7 @@ class Departments(Base):
         key = self.prro_key
         return key
 
-    def prro_fix(self):
+    def prro_fix(self, delete_offline_session=False):
 
         print('{} {} Почали тестування та виправлення'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
@@ -659,12 +653,19 @@ class Departments(Base):
                 .all()
 
             for session in offline_sessions:
-                department = Departments.query.get(session.department_id)
-                session.server_time = datetime.datetime.now(tz.gettz(TIMEZONE))
-                db.session.commit()
-                messages.append('{} успішно видалили оффлайн сесію'.format(department.rro_id))
-                print('{} {} Успішно видалили оффлайн сесію'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                   self.rro_id))
+                if delete_offline_session:
+                    session.server_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                    db.session.commit()
+                    messages.append(
+                        '{} Успішно видалили оффлайн сесію вiд {}'.format(self.rro_id, session.operation_time))
+                    print('{} {} Успішно видалили оффлайн сесію вiд {}'.format(self.rro_id, datetime.datetime.now(
+                        tz.gettz(TIMEZONE)), session.operation_time))
+                else:
+                    messages.append(
+                        '{} Залишилася незакрита офлайн-сесія вiд {}'.format(self.rro_id, session.operation_time))
+                    print('{} {} Залишилася незакрита офлайн-сесія вiд {}'.format(
+                        datetime.datetime.now(tz.gettz(TIMEZONE)),
+                        self.rro_id, session.operation_time))
 
         # else:
         self.offline_status = False
@@ -712,9 +713,10 @@ class Departments(Base):
                                 db.session.commit()
                                 messages.append(
                                     'Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну')
-                                print('{} {} Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну'.format(
-                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                    self.rro_id))
+                                print(
+                                    '{} {} Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну'.format(
+                                        datetime.datetime.now(tz.gettz(TIMEZONE)),
+                                        self.rro_id))
                         except:
                             operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
 

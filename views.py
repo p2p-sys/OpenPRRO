@@ -1,10 +1,9 @@
 import os
 
 from flask import send_from_directory
+from flask import url_for, redirect, current_app
 from flask_classy import FlaskView, route
 from flask_login import login_required
-
-from flask import url_for, redirect, current_app
 
 
 class IndexView(FlaskView):

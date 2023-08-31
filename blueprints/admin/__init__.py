@@ -1,22 +1,18 @@
 import os
 
-from flask_admin import Admin, BaseView, expose
-from flask_wtf import FlaskForm
-
 from flask import redirect, url_for, request, flash
-
-from flask_admin.contrib.sqla import ModelView
+from flask_admin import Admin, BaseView, expose
 from flask_admin.actions import action
 from flask_admin.babel import lazy_gettext
+from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla import tools as sqla_tools
+from flask_wtf import FlaskForm
 from sqlalchemy import func
+from wtforms import validators, PasswordField, StringField, ValidationError, FileField
 
 from models import *
 from utils.taxforms import TaxForms
-
 from .translations import TRANSLATIONS
-
-from wtforms import validators, PasswordField, StringField, ValidationError, FileField
 
 
 class Filters():
@@ -314,6 +310,34 @@ class DepartmentsAdmin(Filters, ModelView):
         else:
             flash('У вас немає доступу для даної операції!', 'error')
 
+    @action('tax_receive_all', lazy_gettext('Отримати повідомлення податкового кабінету'),
+            lazy_gettext('Ви впевнені, що хочете отримати повідомлення податкового кабінету?'))
+    def tax_receive_all(self, ids):
+        if not current_user.is_anonymous and current_user.is_permissions(10):
+
+            query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
+
+            for department in query.all():
+                try:
+                    department = Departments.query.get(department.id)
+
+                    if department.taxform_key_id:
+                        company_key = department.taxform_key
+                        sender = TaxForms(company_key=company_key)
+                        messages = sender.tax_receive_all(False)
+                        if messages:
+                            print(messages)
+                            flash('{}: повідомлення {}'.format(department.id, messages))
+                        else:
+                            flash('{}: повідомлень немає'.format(department.id))
+                    else:
+                        flash('{}: Не вказано ключа для підпису податкових форм!'.format(department.id), 'error')
+                except Exception as e:
+                    flash('{} помилка: {}'.format(department.rro_id, e), 'error')
+
+        else:
+            flash('У вас немає доступу для даної операції!', 'error')
+
     @action('tax_send_5PRRO',
             lazy_gettext(
                 'Відправити форму про надання інформації щодо кваліфікованого сертифіката відкритого ключа 5-ПРРО'),
@@ -331,14 +355,13 @@ class DepartmentsAdmin(Filters, ModelView):
                     if department.taxform_key_id:
                         company_key = department.taxform_key
                         sender = TaxForms(company_key=company_key)
-                        status = sender.send_5PRRO(department)
+                        status = sender.send_5PRRO(company_key.public_key)
                         if status:
-                            flash('{}: форма отправлена!'.format(department.full_name))
+                            flash('{}: Форму відправлено!'.format(department.id))
+                    else:
+                        flash('{}: Не вказано ключа для підпису податкових форм!'.format(department.id), 'error')
                 except Exception as e:
-                    flash('{} помилка: {}'.format(department.full_name, e), 'error')
-
-                else:
-                    flash('Не вказано ключа для підпису податкових форм!', 'error')
+                    flash('{} помилка: {}'.format(department.id, e), 'error')
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
@@ -473,13 +496,14 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
 
                 try:
-                    messages, status = department.prro_fix()
+                    messages, status = department.prro_fix(delete_offline_session=True)
 
                     if not status:
                         flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, messages),
                               'error')
                     else:
-                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, messages))
+                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id,
+                                                                          messages))
 
                 except Exception as msg:
                     flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
@@ -503,7 +527,8 @@ class DepartmentsAdmin(Filters, ModelView):
                         flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, messages),
                               'error')
                     else:
-                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id, messages))
+                        flash('{} номер ПРРО {}. Повідомлення: {}'.format(department.full_name, department.rro_id,
+                                                                          messages))
 
                 except Exception as msg:
                     flash('{} номер ПРРО {}. Помилка: {}'.format(department.full_name, department.rro_id, msg), 'error')
@@ -976,28 +1001,6 @@ class DepartmentKeysAdmin(Filters, ModelView):
     can_delete = True
     can_edit = True
 
-    @action('tax_receive_all', lazy_gettext('Отримати повідомлення податкового кабінету'),
-            lazy_gettext('Ви впевнені, що хочете отримати повідомлення податкового кабінету?'))
-    def tax_receive_all(self, ids):
-        if not current_user.is_anonymous and current_user.is_permissions(10):
-
-            query = sqla_tools.get_query_for_ids(self.get_query(), self.model, ids)
-
-            for company_key in query.all():
-                try:
-                    sender = TaxForms(company_key=company_key)
-                    messages = sender.tax_receive_all(False)
-                    if messages:
-                        print(messages)
-                        flash('{}: повідомлення {}'.format(company_key.id, messages))
-                    else:
-                        flash('{}: повідомлень немає'.format(company_key.id))
-                except Exception as e:
-                    flash('{} помилка {}'.format(company_key.id, e), 'error')
-
-        else:
-            flash('У вас немає доступу для даної операції!', 'error')
-
     @action('get_key_info', lazy_gettext('Оновити дані ключів'),
             lazy_gettext('Ви впевнені, що хочете оновити дані ключів?'))
     def get_key_info(self, ids):
@@ -1217,7 +1220,7 @@ def connect_admin_panel(app, db):
     index_view = IndexAdmin(session=db.session, name='Аналітика', url='/admin', endpoint='admin',
                             menu_icon_type='fa', menu_icon_value='fa-area-chart')
 
-    admin = Admin(app, 'OpenPRRO', base_template='my_master.html', template_mode='bootstrap3',
+    admin = Admin(app, 'OpenPRRO', base_template='admin/master.html', template_mode='bootstrap3',
                   category_icon_classes={
                       'Доступи': 'fa fa-users',
                       'пРРО': 'fa fa-lock',

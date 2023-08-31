@@ -1,21 +1,18 @@
 import base64
+import json
 import struct
+import uuid
+import zlib
+from datetime import datetime
 from hashlib import sha256
 
+import dateutil.parser
 import requests
-import json
-from datetime import datetime
-
 from dateutil import tz
 from lxml import etree
 
-import uuid
-import zlib
-
 from config import TIMEZONE, FS_URL, TESTING_OFFLINE
 from utils.Sign import Sign
-
-import dateutil.parser
 
 
 class SendData2(object):
@@ -432,7 +429,8 @@ class SendData2(object):
                     raise Exception('{}'.format(
                         'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-                print('{} {} Відповідь {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, last_data.decode('windows-1251')))
+                print('{} {} Відповідь {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                  last_data.decode('windows-1251')))
                 error_code = etree.fromstring(last_data).xpath('//ERRORCODE/text()')
                 error_text = etree.fromstring(last_data).xpath('//ERRORTEXT/text()')
                 self.last_fiscal_ticket = last_data

@@ -1,12 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, current_app
-
-from flask_login import login_user, logout_user, login_required
-
-from models import Users, db
-from flask_login import LoginManager
-from blueprints.login.forms import LoginForm, CheckUserForm
 import datetime
 import time
+
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, current_app
+from flask_login import LoginManager
+from flask_login import login_user, logout_user, login_required
+
+from blueprints.login.forms import LoginForm, CheckUserForm
+from models import Users, db
 
 login = Blueprint('login', __name__, template_folder='templates', static_folder='static')
 login_manager = LoginManager()

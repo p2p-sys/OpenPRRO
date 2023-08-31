@@ -2,10 +2,10 @@ import base64
 import json
 from datetime import datetime
 
+import requests
 from dateutil import tz
 from lxml import etree
 from lxml.builder import ElementMaker
-import requests
 
 from config import TIMEZONE
 from models import db

@@ -1,9 +1,10 @@
+import base64
 import datetime
-import json
 import uuid
 
+import dateutil.parser
 from dateutil import tz
-from flask import request, session, jsonify
+from flask import request, jsonify
 from flask_classy import route, FlaskView
 from lxml import etree
 
@@ -11,11 +12,6 @@ from config import TIMEZONE
 from manage import csrf
 from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender, get_department, get_sender_by_key, \
     get_logger
-
-import base64
-
-import dateutil.parser
-
 from utils.taxforms import TaxForms
 
 logger = get_logger(__name__)
@@ -607,7 +603,8 @@ class ApiView(FlaskView):
             else:
                 balance = cost
 
-            shift, shift_opened, messages, offline = department.prro_open_shift(True, testing=testing, cashier_name=cashier)
+            shift, shift_opened, messages, offline = department.prro_open_shift(True, testing=testing,
+                                                                                cashier_name=cashier)
 
             if shift_opened:
                 messages.append('Стан зміни: відкрита')
@@ -630,7 +627,8 @@ class ApiView(FlaskView):
                     balance, key=key,
                     testing=testing)
                 advance_tax_id = '{}'.format(advance_tax_id)
-                messages.append('Відправлено чек службового внесення (аванс), отримано фіскальний номер {}'.format(advance_tax_id))
+                messages.append(
+                    'Відправлено чек службового внесення (аванс), отримано фіскальний номер {}'.format(advance_tax_id))
 
             answer = jsonify(status='success', advance_tax_id='{}'.format(advance_tax_id), advance_qr=advance_qr,
                              messages=messages,
@@ -2272,7 +2270,8 @@ class ApiView(FlaskView):
                 tax_json = sender.xml2json(root)
 
             if z_visual_data:
-                answer = jsonify(status='success', z_visual_data=z_visual_data, tax_json=tax_json, xml=xml, error_code=0)
+                answer = jsonify(status='success', z_visual_data=z_visual_data, tax_json=tax_json, xml=xml,
+                                 error_code=0)
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
             else:
