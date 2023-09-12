@@ -1007,7 +1007,7 @@ class SendData2(object):
             xmlschema.assertValid(CHECK)
         except etree.DocumentInvalid as e:
             print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
-            return 9
+            raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
             try:
