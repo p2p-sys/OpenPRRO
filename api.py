@@ -1101,6 +1101,11 @@ class ApiView(FlaskView):
             else:
                 shift_tax_id = check["shift"].tax_id
 
+            if department.tin:
+                merchant_tax_id = department.tin
+            else:
+                merchant_tax_id = department.ipn
+
             answer = jsonify(status='success',
                              tax_id='{}'.format(check["tax_id"]),
                              local_id=check["local_id"],
@@ -1116,7 +1121,11 @@ class ApiView(FlaskView):
                              offline=bool(check["offline"]),
                              fiscal_ticket=check["fiscal_ticket"],
                              testing=check["testing"],
-                             uid=check['uid']
+                             uid=check['uid'],
+                             org_name=department.org_name,
+                             merchant_tax_id=merchant_tax_id,
+                             registrar_id=int(department.rro_id),
+                             merchant_address=department.address
                              )
 
             logger.info(f'Відповідь: {answer.json}')
@@ -1200,6 +1209,11 @@ class ApiView(FlaskView):
             else:
                 shift_tax_id = check["shift"].tax_id
 
+            if department.tin:
+                merchant_tax_id = department.tin
+            else:
+                merchant_tax_id = department.ipn
+
             answer = jsonify(status='success',
                              tax_id='{}'.format(check["tax_id"]),
                              local_id=check["local_id"],
@@ -1215,7 +1229,11 @@ class ApiView(FlaskView):
                              offline=bool(check["offline"]),
                              fiscal_ticket=check["fiscal_ticket"],
                              testing=check["testing"],
-                             uid=check['uid']
+                             uid=check['uid'],
+                             org_name=department.org_name,
+                             merchant_tax_id=merchant_tax_id,
+                             registrar_id=int(department.rro_id),
+                             merchant_address=department.address
                              )
 
             logger.info(f'Відповідь: {answer.json}')
