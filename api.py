@@ -55,7 +55,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/key', methods=['GET', 'POST'],
@@ -71,7 +71,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -79,14 +79,14 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             key = DepartmentKeys.query.get(key_id)
             if not key:
                 msg = 'Ключ з ідентифікатором {} не існує'.format(key_id)
                 answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             k = {
@@ -111,7 +111,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/rro', methods=['GET', 'POST'],
@@ -143,7 +143,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/add_department', methods=['POST', 'GET'],
@@ -158,7 +158,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'department_id' in data:
@@ -184,19 +184,19 @@ class ApiView(FlaskView):
                 except:
                     msg = 'Невірний номер РРО {}, значення має бути числовим'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=-1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 if len(str(rro_id)) != 10:
                     msg = 'Невірний номер РРО {}, довжина номера має бути 10 знаків'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=-1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 if int(rro_id) < 4000000001:
                     msg = 'Невірний номер РРО {}, номер повинен починатися з цифри 4'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=-1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 department = Departments.query.filter(Departments.rro_id == rro_id).first()
@@ -207,7 +207,7 @@ class ApiView(FlaskView):
                     msg = 'Підрозділ з rro {} вже існує!'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=3, department_id=department.id,
                                      signer_type=department.signer_type)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 rro_id = None
@@ -218,7 +218,7 @@ class ApiView(FlaskView):
                 if not key_id:
                     msg = 'Ключ main_key_id з ідентифікатором {} не існує'.format(taxform_key_id)
                     answer = jsonify(status='error', message=msg, error_code=-1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 taxform_key_id = None
@@ -229,7 +229,7 @@ class ApiView(FlaskView):
                 if not key_id:
                     msg = 'Ключ prro_key_id з ідентифікатором {} не існує'.format(prro_key_id)
                     answer = jsonify(status='error', message=msg, error_code=-1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 prro_key_id = None
@@ -255,7 +255,7 @@ class ApiView(FlaskView):
                     db.session.commit()
                 else:
                     answer = jsonify(status='error', message=f'Підрозділ з department_id {department_id} вже існує!')
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 department = Departments(
@@ -287,7 +287,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e))
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/departments', methods=['GET', 'POST'],
@@ -318,7 +318,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/department', methods=['GET', 'POST'],
@@ -333,7 +333,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'department_id' in data:
@@ -341,14 +341,14 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: department_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department = Departments.query.get(department_id)
             if not department:
                 msg = 'Об\'єкт з ідентифікатором {} не існує'.format(department_id)
                 answer = jsonify(status='error', message=msg, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             d = {
@@ -367,7 +367,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/set_rro', methods=['POST', 'GET'],
@@ -382,7 +382,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'department_id' in data:
@@ -390,7 +390,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: department_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'rro_id' in data:
@@ -398,7 +398,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: rro_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department = Departments.query.get(department_id)
@@ -411,12 +411,12 @@ class ApiView(FlaskView):
             else:
                 msg = 'Підрозділ з department_id {} не існує!'.format(department_id)
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e))
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/fix', methods=['POST', 'GET'],
@@ -431,7 +431,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -448,7 +448,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/set_department_keys', methods=['POST', 'GET'],
@@ -463,7 +463,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'department_id' in data:
@@ -471,7 +471,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: department_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'main_key_id' in data:
@@ -479,7 +479,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: main_key_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'prro_key_id' in data:
@@ -487,7 +487,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: prro_key_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department = Departments.query.get(department_id)
@@ -504,12 +504,12 @@ class ApiView(FlaskView):
             else:
                 msg = 'Підрозділ з department_id {} не існує!'.format(department_id)
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e))
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/set_shift_auto_close', methods=['POST', 'GET'],
@@ -525,7 +525,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -557,7 +557,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/open_shift', methods=['POST', 'GET'],
@@ -573,7 +573,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -645,7 +645,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/shift_status', methods=['POST', 'GET'],
@@ -660,7 +660,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'rro_id' in data:
@@ -678,7 +678,7 @@ class ApiView(FlaskView):
                         if not key:
                             msg = 'Ключ з key_id {} не існує!'.format(key_id)
                             answer = jsonify(status='error', message=msg, error_code=1)
-                            logger.error(f'Відповідь: {answer.json}')
+                            logger.error(f'Відповідь: {answer.json}', exc_info=True)
                             return answer
 
                 department = Departments.query.filter(Departments.rro_id == rro_id).first()
@@ -686,7 +686,7 @@ class ApiView(FlaskView):
                 if not department:
                     msg = 'Підрозділ з РРО {} не існує!'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 else:
@@ -694,7 +694,7 @@ class ApiView(FlaskView):
                     if not key and not department.prro_key:
                         msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
                         answer = jsonify(status='error', message=msg, error_code=1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
                     from utils.SendData2 import SendData2
@@ -705,7 +705,7 @@ class ApiView(FlaskView):
                     if not registrar_state:
                         answer = jsonify(status='error', message='Виникла помилка запиту даних - відсутній зв\'язок з '
                                                                  'сервером податкової', error_code=-1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
                     last_shift = Shifts.query \
@@ -764,7 +764,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/advance', methods=['POST', 'GET'],
@@ -779,7 +779,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -789,7 +789,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: sum'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'testing' in data:
@@ -818,7 +818,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/podkrep', methods=['POST', 'GET'],
@@ -833,7 +833,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -843,7 +843,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: sum'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'testing' in data:
@@ -892,7 +892,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/inkass', methods=['POST', 'GET'],
@@ -907,7 +907,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -917,7 +917,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: sum!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'testing' in data:
@@ -966,7 +966,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/storno', methods=['POST', 'GET'],
@@ -981,7 +981,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -991,7 +991,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: tax_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'testing' in data:
@@ -1022,7 +1022,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/real', methods=['POST', 'GET'],
@@ -1040,7 +1040,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -1133,7 +1133,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/return', methods=['POST', 'GET'],
@@ -1148,7 +1148,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -1241,7 +1241,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/totals', methods=['POST', 'GET'],
@@ -1267,7 +1267,7 @@ class ApiView(FlaskView):
         except Exception as e:
             msg = str(e)
             answer = jsonify(status='error', message=msg, error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/xrep', methods=['POST', 'GET'],
@@ -1286,7 +1286,7 @@ class ApiView(FlaskView):
                 if 'ShiftState' in x_data:
                     if x_data['ShiftState'] == 0:
                         answer = jsonify(status='error', totals=x_data, error_code=-1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
                 operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
@@ -1411,13 +1411,13 @@ class ApiView(FlaskView):
 
             else:
                 answer = jsonify(status='error', totals=None, error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             msg = str(e)
             answer = jsonify(status='error', message=msg, error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/close_shift', methods=['POST', 'GET'],
@@ -1435,7 +1435,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department, key = get_department(data)
@@ -1474,7 +1474,7 @@ class ApiView(FlaskView):
 
             else:
                 answer = jsonify(status='error', message='Помилка закриття Z звіту', error_code=-1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
@@ -1485,7 +1485,7 @@ class ApiView(FlaskView):
                 error_code = -1
 
             answer = jsonify(status='error', message=msg, error_code=error_code)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/set_local_id', methods=['POST', 'GET'],
@@ -1500,7 +1500,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             rro_id = data['rro_id']
@@ -1510,7 +1510,7 @@ class ApiView(FlaskView):
             if not department:
                 msg = 'Підрозділ із РРО {} не існує!'.format(rro_id)
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             else:
@@ -1530,7 +1530,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/add_key', methods=['POST', 'GET'],
@@ -1545,7 +1545,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             key_data = None
@@ -1584,7 +1584,7 @@ class ApiView(FlaskView):
                 if not 'password' in data:
                     msg = 'Не вказано пароль ключа'
                     answer = jsonify(status='error', message=msg, error_code=3)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 department_key = DepartmentKeys.query \
@@ -1593,7 +1593,7 @@ class ApiView(FlaskView):
                 if not department_key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 department_key.key_password = key_password
@@ -1670,7 +1670,7 @@ class ApiView(FlaskView):
         except Exception as e:
             e = 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/delete_key', methods=['POST', 'GET'],
@@ -1685,7 +1685,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -1718,18 +1718,18 @@ class ApiView(FlaskView):
                 else:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/sign', methods=['POST', 'GET'],
@@ -1744,7 +1744,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -1753,12 +1753,12 @@ class ApiView(FlaskView):
                 if not department_key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: key_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'unsigned_data' in data:
@@ -1767,7 +1767,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: unsigned_data!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'tsp' in data:
@@ -1776,7 +1776,7 @@ class ApiView(FlaskView):
                 if tsp not in tsp_dict:
                     msg = 'Необов\'язковий параметр tsp має бути зі списку значень: signature, content, all!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 tsp = False
@@ -1787,7 +1787,7 @@ class ApiView(FlaskView):
                 if ocsp not in ocsp_dict:
                     msg = 'Необов\'язковий параметр ocsp має бути зі списку значень: true, false!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 ocsp = False
@@ -1813,7 +1813,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/encrypt', methods=['POST', 'GET'],
@@ -1828,7 +1828,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -1837,12 +1837,12 @@ class ApiView(FlaskView):
                 if not department_key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: key_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'unsigned_data' in data:
@@ -1851,7 +1851,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: unsigned_data!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'tsp' in data:
@@ -1860,7 +1860,7 @@ class ApiView(FlaskView):
                 if tsp not in tsp_dict:
                     msg = 'Необов\'язковий параметр tsp має бути зі списку значень: signature, content, all!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 tsp = False
@@ -1871,7 +1871,7 @@ class ApiView(FlaskView):
                 if ocsp not in ocsp_dict:
                     msg = 'Необов\'язковий параметр ocsp має бути зі списку значень: true, false!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 ocsp = False
@@ -1897,7 +1897,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/unwrap', methods=['POST', 'GET'],
@@ -1912,7 +1912,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -1921,12 +1921,12 @@ class ApiView(FlaskView):
                 if not department_key:
                     msg = 'Не найден ключ с кодом {}!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: key_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'signed_data' in data:
@@ -1935,7 +1935,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: unsigned_data!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'tsp' in data:
@@ -1944,7 +1944,7 @@ class ApiView(FlaskView):
                 if tsp not in tsp_dict:
                     msg = 'Необов\'язковий параметр tsp має бути зі списку значень: signature, content, all!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 tsp = False
@@ -1955,7 +1955,7 @@ class ApiView(FlaskView):
                 if ocsp not in ocsp_dict:
                     msg = 'Необов\'язковий параметр ocsp має бути зі списку значень: true, false!'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 ocsp = False
@@ -1980,7 +1980,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/server_state', methods=['POST', 'GET'],
@@ -2003,7 +2003,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/objects', methods=['POST', 'GET'],
@@ -2028,7 +2028,7 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 from utils.SendData2 import SendData2
@@ -2048,7 +2048,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/operations', methods=['POST', 'GET'],
@@ -2064,7 +2064,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             sender, department = get_sender(request)
@@ -2078,12 +2078,12 @@ class ApiView(FlaskView):
                     except Exception as e:
                         msg = 'Обов\'язковий параметр from має невірний формат {}'.format(e)
                         answer = jsonify(status='error', message=msg, error_code=1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: from!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'to' in data:
@@ -2095,12 +2095,12 @@ class ApiView(FlaskView):
                     except Exception as e:
                         msg = 'Обов\'язковий параметр to має невірний формат {}'.format(e)
                         answer = jsonify(status='error', message=msg, error_code=1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
             else:
                 msg = 'Не вказано обов\'язковий параметр: to!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             shifts = sender.GetShifts(datetime_from, datetime_to)
@@ -2123,7 +2123,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/operators', methods=['POST', 'GET'],
@@ -2149,7 +2149,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/check', methods=['POST', 'GET'],
@@ -2165,7 +2165,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'rro_id' in data:
@@ -2173,7 +2173,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: rro_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'tax_id' in data:
@@ -2181,7 +2181,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: tax_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             department = Departments.query.filter(Departments.rro_id == rro_id).first()
@@ -2189,7 +2189,7 @@ class ApiView(FlaskView):
             if not department:
                 msg = 'Підрозділ з РРО {} не існує!'.format(rro_id)
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             else:
@@ -2246,7 +2246,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/zrep', methods=['POST', 'GET'],
@@ -2262,7 +2262,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             sender, department = get_sender(request)
@@ -2272,7 +2272,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано обов\'язковий параметр: tax_id!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             z_visual_data = sender.GetZReportEx(department.rro_id, tax_id, 3)
@@ -2294,7 +2294,7 @@ class ApiView(FlaskView):
                 return answer
             else:
                 answer = jsonify(status='error', error_code=-1, message="Немає Z звітів для tax_id {}".format(tax_id))
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
@@ -2312,7 +2312,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'rro_id' in data:
@@ -2323,7 +2323,7 @@ class ApiView(FlaskView):
                 if not department:
                     msg = 'Підрозділ з РРО {} не існує!'.format(rro_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 else:
@@ -2340,7 +2340,7 @@ class ApiView(FlaskView):
                     else:
                         e = 'Немає Z звітів для department_id {}'.format(department.id)
                         answer = jsonify(status='error', message=str(e), error_code=-1)
-                        logger.error(f'Відповідь: {answer.json}')
+                        logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
             elif 'rro_ids' in data:
@@ -2371,7 +2371,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/tax_info', methods=['POST', 'GET'],
@@ -2387,7 +2387,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -2398,7 +2398,7 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
                 '''
@@ -2443,12 +2443,12 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано жодного з обов\'язкових параметрів: key_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/taxform_5prro', methods=['POST', 'GET'],
@@ -2463,7 +2463,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -2474,13 +2474,13 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
             else:
                 msg = 'Не вказано ключа для підпису податкових форм!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'public_key' in data:
@@ -2503,11 +2503,11 @@ class ApiView(FlaskView):
             else:
                 msg = 'Помилка надсилання форми 5-ПРРО'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/taxform_1prro', methods=['POST', 'GET'],
@@ -2522,7 +2522,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             # sender, department = get_sender(request)
@@ -2535,13 +2535,13 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
             else:
                 msg = 'Не вказано ключа для підпису податкових форм!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             # назва ГО
@@ -2580,17 +2580,17 @@ class ApiView(FlaskView):
                 else:
                     msg = 'Помилка надсилання форми 1-ПРРО'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 msg = 'Не вказано ідентифікатор об’єкта оподаткування dpi_id'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/taxform_20opp', methods=['POST', 'GET'],
@@ -2605,7 +2605,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -2616,13 +2616,13 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
             else:
                 msg = 'Не вказано ключа для підпису податкових форм!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             # ідентифікатор об’єкта оподаткування
@@ -2643,17 +2643,17 @@ class ApiView(FlaskView):
                 else:
                     msg = 'Помилка надсилання форми 20-ОПП'
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
                 msg = 'Не вказано масив даних values'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/taxform_messages', methods=['POST', 'GET'],
@@ -2668,7 +2668,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key_id' in data:
@@ -2679,13 +2679,13 @@ class ApiView(FlaskView):
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
-                    logger.error(f'Відповідь: {answer.json}')
+                    logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
             else:
                 msg = 'Не вказано ключа для підпису податкових форм!'
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'delete' in data:
@@ -2701,7 +2701,7 @@ class ApiView(FlaskView):
 
         except Exception as e:
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
     @route('/key_roles', methods=['POST', 'GET'],
@@ -2716,7 +2716,7 @@ class ApiView(FlaskView):
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
                       'application/json '
                 answer = jsonify(status='error', message=msg, error_code=1)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'key' in data:
@@ -2726,7 +2726,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано ключ'
                 answer = jsonify(status='error', message=msg, error_code=2)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             if 'password' in data:
@@ -2734,7 +2734,7 @@ class ApiView(FlaskView):
             else:
                 msg = 'Не вказано пароль ключа'
                 answer = jsonify(status='error', message=msg, error_code=3)
-                logger.error(f'Відповідь: {answer.json}')
+                logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
             from utils.Sign import Sign
@@ -2750,5 +2750,5 @@ class ApiView(FlaskView):
         except Exception as e:
             e = 'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль'
             answer = jsonify(status='error', message=str(e), error_code=-1)
-            logger.error(f'Відповідь: {answer.json}')
+            logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
