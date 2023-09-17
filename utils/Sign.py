@@ -78,7 +78,7 @@ class Connection:
         self.ohmac.update(header)
         self.ohmac.update(buf)
         # print(header)
-        print(buf)
+        # print(buf)
         self.socket.send(header)
         self.socket.send(buf)
         self.socket.send(self.reset_ohmac())
