@@ -78,7 +78,7 @@ class Connection:
         self.ohmac.update(header)
         self.ohmac.update(buf)
         # print(header)
-        # print(buf)
+        print(buf)
         self.socket.send(header)
         self.socket.send(buf)
         self.socket.send(self.reset_ohmac())
@@ -91,7 +91,7 @@ class Connection:
         # print(type_name, response_body)
         if type_name != 'printstr':
             raise ProtocolError('Unexpected data response, expect json')
-        data = json.loads(response_body.decode('utf-8'))
+        data = json.loads(response_body.decode('utf8'))
         # data = json.dumps(data, indent=4, sort_keys=True)
         # data = json.dump(item, writeJSON, ensure_ascii=False).encode('utf-8')
         # print(response_body.decode())
@@ -153,7 +153,7 @@ class Connection:
     def read_data(self):
         type_name, response_body = self.read_type()
         if type_name == 'printstr':
-            data = json.loads(response_body.decode('utf-8'))
+            data = json.loads(response_body.decode('utf8'))
             if data['op'] == 'ERROR':
                 raise OperationError(data['code'])
             else:
@@ -213,13 +213,13 @@ class Sign(object):
         elif mode == 'ip6':
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             (host, port) = path.rsplit(':') if (':' in path and not path.startswith('[')) else (None, path)
-            s.connect((host or '::', int(port) if port else 3111))
+            s.connect((host or '::', int(port) if port else 3100))
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(60.0)
+            s.settimeout(30.0)
             (host, port) = path.rsplit(':') if (':' in path) else (None, path)
             try:
-                s.connect((host or '127.0.0.1', int(port) if port else 3111))
+                s.connect((host or '127.0.0.1', int(port) if port else 3100))
             except Exception as e:
                 raise ProtocolError('Connect to cryptoserver error: {}'.format(e))
 

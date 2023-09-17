@@ -1,0 +1,13 @@
+[Unit]
+    Description=Signer agent for port %I
+
+[Service]
+    User=signer-agent
+    Restart=always
+    TimeoutStopSec=3
+    WorkingDirectory=/home/signer-agent/agent
+    ExecStart=/usr/bin/node index.js --agent  --tcp --bind 127.0.0.1:%I --connect_key 4d505eacff74a1637ed6ce85ea38284b739083b87855d0dcd77d24c42774cb90 --only_known --ca_path CACertificates.p7b --keep_alive 3600
+
+[Install]
+    WantedBy=multi-user.target
+

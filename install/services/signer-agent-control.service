@@ -1,0 +1,12 @@
+[Unit]
+    Description=Signer agent proxy
+
+[Service]
+    User=signer-agent
+    Restart=always
+    TimeoutStopSec=3
+    WorkingDirectory=/home/signer-agent/agent
+    ExecStart=/usr/bin/node index.js --proxy 127.0.0.1 --tcp --bind :3100 --ports 3101:3124 --connect_key 4d505eacff74a1637ed6ce85ea38284b739083b87855d0dcd77d24c42774cb90
+
+[Install]
+    WantedBy=multi-user.target
