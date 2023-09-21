@@ -339,7 +339,6 @@ class Sign(object):
         box_id = self.cn.init_box()
         for key in keys:
             self.cn.add_key(box_id, key)
-            # break
 
         return box_id
 
@@ -420,14 +419,16 @@ class Sign(object):
         return self.cn.pipe(box_id, unsigned_data,
                             [{"op": "encrypt", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
 
-    def tax_encrypt(self, box_id, unsigned_data, role="director", tax=True, cert=None, headers=None, tsp=False,
+    def tax_encrypt(self, box_id, unsigned_data, role=None, tax=True, cert=None, headers=None, tsp=False,
                     ocsp=False):
-        # print('role={}'.format(role))
-        return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp},
-                                                    {"op": "encrypt", "role": role, "forCert": cert, "addCert": True,
-                                                     "tax": tax},
-                                                    {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}],
-                            headers)  # , "role": "stamp"  , "tsp": "signature"
+        try:
+            return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp},
+                                                        {"op": "encrypt", "role": role, "forCert": cert, "addCert": True,
+                                                         "tax": tax},
+                                                        {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}],
+                                headers)
+        except Exception as e:
+            raise Exception('Помилка бібліотеки криптографії під час шифрування документа: {}'.format(e))
 
     def unwrap(self, box_id, signed_data, tsp=None, ocsp=None):
         try:

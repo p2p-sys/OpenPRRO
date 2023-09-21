@@ -27,6 +27,8 @@ class SendData2(object):
         if not self.key:
             raise Exception('Не задано ключ криптографії')
 
+        self.key_role = department.get_prro_key_role()
+            
         self.department = department
 
         self.signer = Sign()
@@ -203,11 +205,11 @@ class SendData2(object):
         print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         try:
             try:
-                signed_data = self.signer.sign(self.key.box_id, data, role=self.key.key_role)
+                signed_data = self.signer.sign(self.key.box_id, data, role=self.key_role)
             except Exception as e:
                 print(e)
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, data, role=self.key.key_role)
+                signed_data = self.signer.sign(box_id, data, role=self.key_role)
                 self.key.box_id = box_id
                 self.db.session.commit()
 
@@ -1011,11 +1013,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -1053,11 +1055,11 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         try:
-            signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+            signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                            tsp=False, ocsp=False)
         except Exception as e:
             box_id = self.signer.update_bid(self.db, self.key)
-            signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+            signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                            tsp=False, ocsp=False)
             self.key.box_id = box_id
             self.db.session.commit()
@@ -1088,11 +1090,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -1144,11 +1146,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -1200,11 +1202,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -1256,11 +1258,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -1644,11 +1646,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()
@@ -2272,11 +2274,11 @@ class SendData2(object):
 
         if offline:
             try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
             except Exception as e:
                 box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key.key_role, tax=False,
+                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
                                                tsp=False, ocsp=False)
                 self.key.box_id = box_id
                 self.db.session.commit()

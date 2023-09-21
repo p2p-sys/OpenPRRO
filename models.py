@@ -207,11 +207,11 @@ def close_offline_session(rro_id):
     xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
 
     try:
-        signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
+        signed_data = signer.sign(department_key.box_id, xml, role=department.get_prro_key_role())
     except Exception as e:
         print(e)
         box_id = signer.update_bid(department_key.db, department_key)
-        signed_data = signer.sign(box_id, xml, role=department_key.key_role)
+        signed_data = signer.sign(box_id, xml, role=department.get_prro_key_role())
         department_key.box_id = box_id
         db.session.commit()
 
@@ -511,8 +511,24 @@ class Departments(Base):
         return False
 
     def get_prro_key(self):
-        key = self.prro_key
-        return key
+        return self.prro_key
+
+    def get_taxform_key(self):
+        return self.taxform_key
+
+    def get_prro_key_role(self):
+        key = self.get_prro_key()
+        if 'ПРИВАТБАНК' in key.acsk:
+            return key.key_role
+        else:
+            return None
+
+    def get_taxform_key_role(self):
+        key = self.get_taxform_key()
+        if 'ПРИВАТБАНК' in key.acsk:
+            return key.key_role_tax_form
+        else:
+            return None
 
     def prro_fix(self, delete_offline_session=False):
 
@@ -1150,12 +1166,12 @@ class Departments(Base):
                         # print(xml)
 
                         try:
-                            signed_data = signer.sign(department_key.box_id, xml, role=department_key.key_role)
+                            signed_data = signer.sign(department_key.box_id, xml, role=self.get_prro_key_role())
                         except Exception as e:
                             print('{] {} Помилка {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
                             list_msgs.append('Помилка {}'.format(e))
                             box_id = signer.update_bid(department_key.db, department_key)
-                            signed_data = signer.sign(box_id, xml, role=department_key.key_role)
+                            signed_data = signer.sign(box_id, xml, role=self.get_prro_key_role())
                             department_key.box_id = box_id
                             db.session.commit()
 
@@ -3086,6 +3102,7 @@ class DepartmentKeys(Base):
                 box_id = signer.add_key(self.key_data, self.key_password)
 
             unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
+            print(unpacked_keys)
 
         else:
             try:
@@ -3126,7 +3143,7 @@ class DepartmentKeys(Base):
                 box_id = signer.update_bid(db, self)
 
             infos = signer.info(box_id)
-            # print(infos)
+            print(infos)
             self.box_id = box_id
             self.key_data_txt = infos
 
@@ -3140,6 +3157,11 @@ class DepartmentKeys(Base):
             for info in infos:
                 if info:
                     key_content.append(info)
+                    if "extension" in info:
+                        if "ipn" in info["extension"]:
+                            if not info["extension"]["ipn"]:
+                                continue
+
                     if 'usage' in info:
                         if 'sign' in info['usage']:
                             if info['usage']['sign']:
@@ -3170,8 +3192,6 @@ class DepartmentKeys(Base):
 
                                     if "commonName" in info["subject"]:
                                         self.ceo_fio = info["subject"]["commonName"]
-                                        # if "Печатка" in self.ceo_fio:
-                                        #     self.key_role = "stamp"
 
                                     else:
                                         self.ceo_fio = ''
