@@ -28,7 +28,7 @@ class SendData2(object):
             raise Exception('Не задано ключ криптографії')
 
         self.key_role = department.get_prro_key_role()
-            
+
         self.department = department
 
         self.signer = Sign()
@@ -201,27 +201,16 @@ class SendData2(object):
             data = json.dumps(data).encode('utf8')
             print('{} {} JSON запит {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, data))
 
-        # проверим актуальность ключа криптографии
+        # todo: Перевіримо актуальність ключа криптографії
         print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         try:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, data, role=self.key_role)
-            except Exception as e:
-                print(e)
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, data, role=self.key_role)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(data)
 
         except Exception as e:
-            print('{} {} CryproError post_data 2 {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             self.last_fiscal_error_txt = str(e)
             # Переходимо до офлайну
             return False
-            # raise Exception('{}'.format(
-            #     'Помилка ключа криптографії, можливо надані невірні сертифікати або пароль, або минув термін ключа'))
 
-        print('{} {} Перестав підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
         request_body = zlib.compress(signed_data)
 
         try:
@@ -989,8 +978,9 @@ class SendData2(object):
 
         return CHECK
 
+    """ Службовий чек відкриття зміни (форма №3-ПРРО) """
+
     def open_shift(self, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
-        """ Службовий чек відкриття зміни (форма №3-ПРРО) """
 
         if offline:
             offline_tax_number = self.calculate_offline_tax_number(dt, prev_hash=prev_hash)
@@ -1001,7 +991,10 @@ class SendData2(object):
                                    prev_hash=prev_hash, offline_tax_number=offline_tax_number)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print(
+            '{} {} Вміст чека "Службовий чек відкриття зміни (форма №3-ПРРО)": \r\n'.format(
+                datetime.now(tz.gettz(TIMEZONE)),
+                self.rro_fn, xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1012,15 +1005,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return base64.b64encode(xml).decode(), signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -1035,8 +1020,9 @@ class SendData2(object):
 
         return False
 
+    """ Службовий чек переходу в режим офлайн """
+
     def to_offline(self, dt, testing=False, revoke=True):
-        """ Службовий чек (форма №3-ПРРО) """
 
         offline_tax_number = self.calculate_offline_tax_number(dt)
 
@@ -1044,7 +1030,10 @@ class SendData2(object):
                                    revoke=revoke, testing=False)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print(
+            '{} {} Вміст чека "Службовий чек переходу в режим офлайн": \r\n'.format(
+                datetime.now(tz.gettz(TIMEZONE)),
+                self.rro_fn, xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1054,17 +1043,34 @@ class SendData2(object):
             print('{} {} Помилка XML (pretest): {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
-        try:
-            signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                           tsp=False, ocsp=False)
-        except Exception as e:
-            box_id = self.signer.update_bid(self.db, self.key)
-            signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                           tsp=False, ocsp=False)
-            self.key.box_id = box_id
-            self.db.session.commit()
+        signed_data = self.sign(xml)
 
         return xml, signed_data, offline_tax_number
+
+    def sign(self, unsigned_data):
+        print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
+        try:
+            try:
+                signed_data = self.signer.sign(self.key.box_id, unsigned_data, role=self.key_role, tax=False, tsp=False,
+                                               ocsp=False)
+            except Exception as e:
+                print(
+                    '{} {} Помилка бібліотеки криптографії {}, пробуємо ще раз'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                       self.rro_fn, e))
+                box_id = self.signer.update_bid(self.db, self.key)
+                print('{} {} Успішно оновили ідентифікатор сесії для підпису'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                     self.rro_fn))
+                signed_data = self.signer.sign(box_id, unsigned_data, role=self.key_role, tax=False,
+                                               tsp=False, ocsp=False)
+                self.key.box_id = box_id
+                self.db.session.commit()
+        except Exception as e:
+            print('{} {} Помилка бібліотеки криптографії {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
+            raise Exception('Помилка бібліотеки криптографії: {}'.format(e))
+
+        print('{} {} Перестав підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn))
+
+        return signed_data
 
     def post_storno(self, tax_id, dt, testing=False, offline=False, prev_hash=None, doc_uid=None):
         """ Службовий чек сторно """
@@ -1078,7 +1084,8 @@ class SendData2(object):
                                    prev_hash=prev_hash, offline_tax_number=offline_tax_number)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                    xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1089,15 +1096,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -1134,7 +1133,8 @@ class SendData2(object):
         SUM.text = "{:.2f}".format(summa)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                    xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1145,15 +1145,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -1190,7 +1182,8 @@ class SendData2(object):
         SUM.text = "{:.2f}".format(summa)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                    xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1201,15 +1194,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -1246,7 +1231,8 @@ class SendData2(object):
         SUM.text = "{:.2f}".format(summa)
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                    xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1257,15 +1243,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -1282,9 +1260,10 @@ class SendData2(object):
 
         return False
 
+    """ Чек продажу """
+
     def post_sale(self, summa, discount, reals, taxes, pays, dt, totals=None, sales_ret=False, orderretnum=None,
                   testing=False, offline=False, prev_hash=None, doc_uid=None):
-        """ Службовий чек (форма №3-ПРРО) """
 
         op = 0
         if sales_ret:
@@ -1634,7 +1613,10 @@ class SendData2(object):
                             EXCISELABEL.text = '{}'.format(labels_item['EXCISELABEL'])
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print(
+            '{} {} Вміст XML чека: \r\n{}'.format(
+                datetime.now(tz.gettz(TIMEZONE)),
+                self.rro_fn, xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -1645,15 +1627,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 
@@ -2224,7 +2198,8 @@ class SendData2(object):
 
             # print("Вернулся массив подитогов без X отчета")
             xml = etree.tostring(ZREP, pretty_print=True, encoding='windows-1251')
-            print(xml.decode('windows-1251'))
+            print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                        xml.decode('windows-1251')))
 
             try:
                 xmlschema_doc = etree.parse(self.xsd_path_z)
@@ -2262,7 +2237,8 @@ class SendData2(object):
         CHECK = self.get_check_xml(101, dt=dt, testing=testing, offline=offline,
                                    prev_hash=prev_hash, offline_tax_number=offline_tax_number)
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-        print(xml.decode('windows-1251'))
+        print('{} {} Вміст XML чека: \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn,
+                                                    xml.decode('windows-1251')))
 
         try:
             xmlschema_doc = etree.parse(self.xsd_path)
@@ -2273,15 +2249,7 @@ class SendData2(object):
             raise Exception('Помилка перевірки структури даних: {}'.format(e))
 
         if offline:
-            try:
-                signed_data = self.signer.sign(self.key.box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-            except Exception as e:
-                box_id = self.signer.update_bid(self.db, self.key)
-                signed_data = self.signer.sign(box_id, xml, role=self.key_role, tax=False,
-                                               tsp=False, ocsp=False)
-                self.key.box_id = box_id
-                self.db.session.commit()
+            signed_data = self.sign(xml)
 
             return xml, signed_data, offline_tax_number, sha256(xml).hexdigest()
 

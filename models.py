@@ -1,5 +1,4 @@
 import base64
-import datetime
 import json
 import logging
 
@@ -8,12 +7,14 @@ from flask_login import current_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, ForeignKey, String, union_all, literal_column, or_, Index
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.sqltypes import Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Time, \
-    LargeBinary, JSON, TEXT
+from sqlalchemy.sql.sqltypes import Boolean, Numeric, Integer, SmallInteger, Text, DateTime, Time, LargeBinary, JSON, \
+    TEXT
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from config import TIMEZONE, LOGFILE, CMP_URLS
 from utils.SendData2 import SendData2
+
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -24,18 +25,18 @@ Base.as_dict = lambda self: {c.name: getattr(self, c.name) for c in self.__table
 
 
 def get_logger(name):
-    # получение Користувачского логгера и установка уровня логирования
+    # Отримання логера користувача та встановлення рівня логування
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
-    # настройка обработчика и форматировщика
+    # Налаштування обробника та форматувальника
     # file_handler = logging.handlers.TimedRotatingFileHandler('{}'.format(LOGFILE), when='midnight', delay=True)
-    file_handler = logging.FileHandler('{}-{}'.format(LOGFILE, datetime.date.today()), delay=True)
+    file_handler = logging.FileHandler('{}-{}'.format(LOGFILE, datetime.today()), delay=True)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # добавление форматировщика к обработчику
+    # Додавання форматувальника до оброблювача
     file_handler.setFormatter(formatter)
-    # добавление обработчика к логгеру
+    # Додавання оброблювача до логгера
     logger.addHandler(file_handler)
 
     return logger
@@ -63,9 +64,7 @@ def get_sender(req):
 
     elif 'rro_id' in data:
         rro_id = data['rro_id']
-        department = Departments.query \
-            .filter(Departments.rro_id == rro_id) \
-            .first()
+        department = Departments.query.filter(Departments.rro_id == rro_id).first()
         if department:
             rro_id = department.rro_id
             key = department.prro_key
@@ -136,22 +135,20 @@ def get_department(data):
 
     if 'key_id' in data:
         key_id = data['key_id']
-        key = DepartmentKeys.query \
-            .filter(DepartmentKeys.id == key_id) \
-            .first()
+        key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
         if not key:
             msg = 'Ключ з key_id {} не існує!'.format(key_id)
             raise Exception(msg)
 
         if department:
             if key != department.prro_key:
-                print("{} {} Отримано новий ключ, був {} став {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+                print("{} {} Отримано новий ключ, був {} став {}".format(datetime.now(tz.gettz(TIMEZONE)),
                                                                          department.rro_id, department.prro_key, key))
                 department.prro_key_id = key.id
                 db.session.commit()
             else:
-                print("{} {} Ключ не змінювався, дані поточного ключа {}".format(
-                    datetime.datetime.now(tz.gettz(TIMEZONE)), department.rro_id, department.prro_key))
+                print("{} {} Ключ не змінювався, дані поточного ключа {}".format(datetime.now(tz.gettz(TIMEZONE)),
+                    department.rro_id, department.prro_key))
 
     else:
         key = department.get_prro_key()
@@ -182,7 +179,7 @@ def close_offline_session(rro_id):
 
     print(registrar_state)
 
-    offline_dt = datetime.datetime.now(tz.gettz(TIMEZONE))
+    offline_dt = datetime.now(tz.gettz(TIMEZONE))
 
     # sender.local_number = int(registrar_state['NextLocalNum'])
     # sender.offline_local_number = int(registrar_state['OfflineNextLocalNum'])
@@ -206,14 +203,22 @@ def close_offline_session(rro_id):
 
     xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
 
+    print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), department.rro_fn))
     try:
-        signed_data = signer.sign(department_key.box_id, xml, role=department.get_prro_key_role())
+        try:
+            signed_data = signer.sign(department_key.box_id, xml, role=department.get_prro_key_role())
+        except Exception as e:
+            print('{} {} Помилка бібліотеки криптографії {}, пробуємо ще раз'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                     department.rro_fn, e))
+            box_id = signer.update_bid(department_key.db, department_key)
+            print('{} {} Успішно оновили ідентифікатор сесії для підпису'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                 department.rro_fn))
+            signed_data = signer.sign(box_id, xml, role=department.get_prro_key_role())
+            department_key.box_id = box_id
+            db.session.commit()
     except Exception as e:
-        print(e)
-        box_id = signer.update_bid(department_key.db, department_key)
-        signed_data = signer.sign(box_id, xml, role=department.get_prro_key_role())
-        department_key.box_id = box_id
-        db.session.commit()
+        print('{} {} Помилка бібліотеки криптографії {}'.format(datetime.now(tz.gettz(TIMEZONE)), department.rro_fn, e))
+        return False
 
     signed_docs.append(signed_data)
 
@@ -236,8 +241,7 @@ def close_offline_session(rro_id):
                 lenb = len(signed_doc).to_bytes(4, byteorder="little", signed=True)
                 # print(len(signed_doc))
                 data = data + lenb + signed_doc
-                cnt += 1
-                # print(cnt)
+                cnt += 1  # print(cnt)
 
         print('{} пакет {} розмір пакету {}'.format(department.rro_id, packet, len(data)))
         packet += 1
@@ -258,8 +262,7 @@ class Users(Base):
 
     id = Column('id', Integer, primary_key=True, comment='Iдентифікатор')
 
-    created = Column('created', DateTime, default=datetime.datetime.now,
-                     comment='Время когда Користувач был зарегистрирован')
+    created = Column('created', DateTime, default=datetime.now, comment='Время когда Користувач был зарегистрирован')
 
     last_login = Column('last_login', DateTime,
                         comment='Время когда Користувач заходил последний раз, используется для принудительной смены пароля')
@@ -301,13 +304,9 @@ class Users(Base):
     def is_permissions(self, value):
         q = False
         if not current_user.is_anonymous and current_user.role:
-            q = Permission.query \
-                .join(RolePermission, Permission.id == RolePermission.permission_id) \
-                .join(Roles, Roles.id == RolePermission.role_id) \
-                .filter(Roles.id == self.role_id) \
-                .filter(Permission.id == value) \
-                .limit(1) \
-                .first()
+            q = Permission.query.join(RolePermission, Permission.id == RolePermission.permission_id).join(Roles,
+                                                                                                          Roles.id == RolePermission.role_id).filter(
+                Roles.id == self.role_id).filter(Permission.id == value).limit(1).first()
 
         return True if q else False
 
@@ -324,16 +323,9 @@ class Roles(Base):
 
     name = Column('name', String(64), comment='Название роли')
 
-    users = relationship(
-        "Users",
-        backref=backref('role', order_by='Roles.id')
-    )
+    users = relationship("Users", backref=backref('role', order_by='Roles.id'))
 
-    permissions = relationship(
-        'Permission',
-        secondary='role_permission',
-        backref='roles'
-    )
+    permissions = relationship('Permission', secondary='role_permission', backref='roles')
 
     def __str__(self):
         return self.name
@@ -366,6 +358,38 @@ class RolePermission(Base):
         return '| {} | {} |'.format(self.role_id, self.permission_id)
 
 
+def set_server_time(operation):
+    server_time = datetime.now(tz.gettz(TIMEZONE))
+
+    if operation.type == 0:
+        offline_check = OfflineChecks.query.get(operation.id)
+        offline_check.server_time = server_time
+
+    elif operation.type == 1 or operation.type == 10:
+        open_shift = Shifts.query.get(operation.id)
+        open_shift.server_time = server_time
+
+    elif operation.type == 2:
+        advance = Advances.query.get(operation.id)
+        advance.server_time = server_time
+
+    elif operation.type == 3:
+        inkasses_operation = Incasses.query.get(operation.id)
+        inkasses_operation.server_time = server_time
+
+    elif operation.type == 4:
+        podkreps_operation = Podkreps.query.get(operation.id)
+        podkreps_operation.server_time = server_time
+
+    elif operation.type == 5:
+        sales_operation = Sales.query.get(operation.id)
+        sales_operation.server_time = server_time
+
+    elif operation.type == 9:
+        z_report = ZReports.query.get(operation.id)
+        z_report.server_time = server_time
+
+
 class Departments(Base):
     ''' Таблица содержащая информацию о текущих подразделениях компании '''
     __tablename__ = 'departments'
@@ -373,8 +397,7 @@ class Departments(Base):
 
     id = Column('id', Integer, primary_key=True, comment='Iдентифікатор')
 
-    full_name = Column('full_name', Text(),
-                       comment='Полное наименование отделения')
+    full_name = Column('full_name', Text(), comment='Полное наименование отделения')
 
     address = Column('address', String(300), comment='Адрес отделения')
 
@@ -382,10 +405,10 @@ class Departments(Base):
                     nullable=True)
 
     taxform_key_id = Column('taxform_key_id', Integer, ForeignKey('department_keys.id'),
-                            comment='Ключи для подписи налоговых форм', nullable=True)
+                            comment='Ключ для підпису податкових форм', nullable=True)
 
     prro_key_id = Column('prro_key_id', ForeignKey('department_keys.id'),
-                         comment='Основной ключ для подписи чеков ПРРО', nullable=True)
+                         comment='Основний ключ для підпису чеків ПРРО', nullable=True)
 
     taxform_key = relationship("DepartmentKeys", foreign_keys=[taxform_key_id], backref="taxform_key_departments")
 
@@ -415,8 +438,8 @@ class Departments(Base):
                                comment='Секретне число для обчислення фіскального номера офлайн документа',
                                nullable=True)
 
-    next_local_number = Column('next_local_number', Integer,
-                               comment='Наступний локальний номер документа', nullable=True)
+    next_local_number = Column('next_local_number', Integer, comment='Наступний локальний номер документа',
+                               nullable=True)
 
     next_offline_local_number = Column('next_offline_local_number', Integer,
                                        comment='Наступний локальний оффлайн номер документа', nullable=True)
@@ -429,8 +452,8 @@ class Departments(Base):
 
     tin = Column('tin', String(10), comment='ЄДРПОУ/ДРФО/№ паспорта продавця (10 символів)', nullable=True)
 
-    ipn = Column('ipn', String(12),
-                 comment='Податковий номер або Індивідуальний номер платника ПДВ (12 символів)', nullable=True)
+    ipn = Column('ipn', String(12), comment='Податковий номер або Індивідуальний номер платника ПДВ (12 символів)',
+                 nullable=True)
 
     entity = Column('entity', Integer, comment='Ідентифікатор запису ГО', nullable=True)
 
@@ -455,8 +478,7 @@ class Departments(Base):
     offline_session_monthly_duration = Column('offline_session_monthly_duration', Integer,
                                               comment='Тривалість оффлайн сесії з початку місяця', nullable=True)
 
-    last_offline_session_start = Column('last_offline_session_start', DateTime,
-                                        comment='Час початку оффлайн сесії',
+    last_offline_session_start = Column('last_offline_session_start', DateTime, comment='Час початку оффлайн сесії',
                                         default=None, nullable=True)
 
     offline_prev_hash = Column('offline_prev_hash', String(64), comment='Геш попереднього офлайн документа',
@@ -465,11 +487,8 @@ class Departments(Base):
     telegram_offline_error_sended = Column('telegram_offline_error_sended', Boolean, nullable=True,
                                            comment='Ознака відправки помилки по телеграм боту')
 
-    offline_checks = relationship(
-        "OfflineChecks",
-        backref=backref('department', order_by='OfflineChecks.id'),
-        foreign_keys='OfflineChecks.department_id'
-    )
+    offline_checks = relationship("OfflineChecks", backref=backref('department', order_by='OfflineChecks.id'),
+        foreign_keys='OfflineChecks.department_id')
 
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.full_name)
@@ -532,7 +551,7 @@ class Departments(Base):
 
     def prro_fix(self, delete_offline_session=False):
 
-        print('{} {} Почали тестування та виправлення'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+        print('{} {} Почали тестування та виправлення'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
         messages = []
 
@@ -555,8 +574,7 @@ class Departments(Base):
             return messages, False
 
         if self.next_local_number != int(registrar_state['NextLocalNum']):
-            messages.append('Виправлено значення next_local_number з {} на {}'.format(
-                self.next_local_number,
+            messages.append('Виправлено значення next_local_number з {} на {}'.format(self.next_local_number,
                 registrar_state['NextLocalNum']))
             self.next_local_number = int(registrar_state['NextLocalNum'])
 
@@ -608,8 +626,8 @@ class Departments(Base):
             if 'OfflineNextLocalNum' in registrar_state:
                 if int(registrar_state['OfflineNextLocalNum']) > 1:
 
-                    print('{} {} Закриваємо відкриті офлайн сесії'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                          self.rro_id))
+                    print(
+                        '{} {} Закриваємо відкриті офлайн сесії'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
                     data = close_offline_session(self.rro_id)
                     if data:
@@ -626,8 +644,8 @@ class Departments(Base):
                         self.next_offline_local_number = 1
 
                         db.session.commit()
-                        print('{} {} Успішно закрили оффлайн сесію'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                           self.rro_id))
+                        print(
+                            '{} {} Успішно закрили оффлайн сесію'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
                         messages.append('Успішно закрили оффлайн сесію')
 
@@ -635,15 +653,13 @@ class Departments(Base):
                         messages.append(
                             'Офлайн сесія відкрита, але не вдалося її коректно закрити. Зверніться до техпідтримки')
                         print('{} {} Офлайн сесія відкрита, але не вдалося її коректно закрити'.format(
-                            datetime.datetime.now(tz.gettz(TIMEZONE)),
-                            self.rro_id))
+                            datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
                         return messages, False
 
             if 'OfflineNextLocalNum' in registrar_state:
                 if self.next_offline_local_number != int(registrar_state['OfflineNextLocalNum']):
                     messages.append('Виправлено значення next_offline_local_number з {} на {}'.format(
-                        self.next_offline_local_number,
-                        registrar_state['OfflineNextLocalNum']))
+                        self.next_offline_local_number, registrar_state['OfflineNextLocalNum']))
                     self.next_offline_local_number = int(registrar_state['OfflineNextLocalNum'])
 
             if 'OfflineSessionId' in registrar_state:
@@ -662,25 +678,22 @@ class Departments(Base):
 
             self.offline_status = False
 
-            offline_sessions = OfflineChecks.query \
-                .filter(OfflineChecks.server_time == None) \
-                .filter(OfflineChecks.department_id == self.id) \
-                .order_by(OfflineChecks.server_time) \
-                .all()
+            offline_sessions = OfflineChecks.query.filter(OfflineChecks.server_time == None).filter(
+                OfflineChecks.department_id == self.id).order_by(OfflineChecks.server_time).all()
 
             for session in offline_sessions:
                 if delete_offline_session:
-                    session.server_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                    session.server_time = datetime.now(tz.gettz(TIMEZONE))
                     db.session.commit()
                     messages.append(
                         '{} Успішно видалили оффлайн сесію вiд {}'.format(self.rro_id, session.operation_time))
-                    print('{} {} Успішно видалили оффлайн сесію вiд {}'.format(self.rro_id, datetime.datetime.now(
-                        tz.gettz(TIMEZONE)), session.operation_time))
+                    print('{} {} Успішно видалили оффлайн сесію вiд {}'.format(self.rro_id,
+                                                                               datetime.now(tz.gettz(TIMEZONE)),
+                                                                               session.operation_time))
                 else:
                     messages.append(
                         '{} Залишилася незакрита офлайн-сесія вiд {}'.format(self.rro_id, session.operation_time))
-                    print('{} {} Залишилася незакрита офлайн-сесія вiд {}'.format(
-                        datetime.datetime.now(tz.gettz(TIMEZONE)),
+                    print('{} {} Залишилася незакрита офлайн-сесія вiд {}'.format(datetime.now(tz.gettz(TIMEZONE)),
                         self.rro_id, session.operation_time))
 
         # else:
@@ -718,10 +731,8 @@ class Departments(Base):
                         # last_shift.operation_type = 0
 
                         try:
-                            last_shift = Shifts.query \
-                                .order_by(Shifts.operation_time.desc()) \
-                                .filter(Shifts.department_id == self.id) \
-                                .first()
+                            last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                                Shifts.department_id == self.id).first()
 
                             if last_shift:
                                 Shifts.query.filter_by(id=last_shift.id).delete()
@@ -731,35 +742,23 @@ class Departments(Base):
                                     'Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну')
                                 print(
                                     '{} {} Зміна відкрита в базі, але не відкрита за податковою, видалили неправильну зміну'.format(
-                                        datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                        self.rro_id))
+                                        datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
                         except:
-                            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                            operation_time = datetime.now(tz.gettz(TIMEZONE))
 
                             messages.append('Зміна відкрита у базі, але не відкрита за податковою, виправлено')
-                            print(
-                                '{} {} Зміна відкрита у базі, але не відкрита за податковою, виправлено'.format(
-                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                    self.rro_id))
+                            print('{} {} Зміна відкрита у базі, але не відкрита за податковою, виправлено'.format(
+                                datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
                             if 'Testing' in registrar_state:
                                 testing = registrar_state['Testing']
                             else:
                                 testing = False
 
-                            shift = Shifts(
-                                department_id=self.id,
-                                operation_type=0,
-                                operation_time=operation_time,
-                                fiscal_time=operation_time,
-                                server_time=operation_time,
-                                pid=registrar_state['FirstLocalNum'],
-                                tax_id=registrar_state['OpenShiftFiscalNum'],
-                                fiscal_shift_id=registrar_state['ShiftId'],
-                                offline=False,
-                                testing=testing,
-                                cashier=""
-                            )
+                            shift = Shifts(department_id=self.id, operation_type=0, operation_time=operation_time,
+                                fiscal_time=operation_time, server_time=operation_time,
+                                pid=registrar_state['FirstLocalNum'], tax_id=registrar_state['OpenShiftFiscalNum'],
+                                fiscal_shift_id=registrar_state['ShiftId'], offline=False, testing=testing, cashier="")
 
                             db.session.add(shift)
                             db.session.commit()
@@ -773,7 +772,7 @@ class Departments(Base):
                 if not shift or shift.operation_type == 0:
                     messages.append('Зміна відкрита у податковій, але не відкрита у БД, виправлено')
 
-                    operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                    operation_time = datetime.now(tz.gettz(TIMEZONE))
 
                     open_shift_fiscal_num = registrar_state['OpenShiftFiscalNum']
 
@@ -786,20 +785,10 @@ class Departments(Base):
                         offline_tax_id = None
                         offline = False
 
-                    shift = Shifts(
-                        department_id=self.id,
-                        operation_type=1,
-                        operation_time=operation_time,
-                        fiscal_time=operation_time,
-                        server_time=operation_time,
-                        pid=registrar_state['FirstLocalNum'],
-                        tax_id=tax_id,
-                        offline_tax_id=offline_tax_id,
-                        fiscal_shift_id=registrar_state['ShiftId'],
-                        offline=offline,
-                        testing=registrar_state['Testing'],
-                        cashier=""
-                    )
+                    shift = Shifts(department_id=self.id, operation_type=1, operation_time=operation_time,
+                        fiscal_time=operation_time, server_time=operation_time, pid=registrar_state['FirstLocalNum'],
+                        tax_id=tax_id, offline_tax_id=offline_tax_id, fiscal_shift_id=registrar_state['ShiftId'],
+                        offline=offline, testing=registrar_state['Testing'], cashier="")
 
                     db.session.add(shift)
                     db.session.commit()
@@ -818,101 +807,74 @@ class Departments(Base):
             else:
                 messages.append('ПРРО працює в штатному режимі, всі ОК')
 
-        print('{} {} Результат тестування {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, messages))
+        print('{} {} Результат тестування {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, messages))
 
         return messages, True
 
     @staticmethod
-    def get_offine_operations(offline_session):
+    def get_offine_operations(offline_session_id):
 
-        offline_checks = db.session.query(literal_column('0').label('type'),
-                                          OfflineChecks.id.label('id'),
+        # offline_session_id
+        offline_checks = db.session.query(literal_column('0').label('type'), OfflineChecks.id.label('id'),
                                           OfflineChecks.pid.label('pid'),
-                                          OfflineChecks.operation_time.label(
-                                              'operation_time'),
-                                          OfflineChecks.offline_tax_id.label(
-                                              'offline_tax_id'),
-                                          OfflineChecks.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(OfflineChecks.id == offline_session.id) \
-            .filter(OfflineChecks.operation_type == 1) \
-            .filter(OfflineChecks.operation_time >= offline_session.operation_time) \
-            .filter(OfflineChecks.fiscal_time != None) \
-            .filter(OfflineChecks.server_time == None)
+                                          OfflineChecks.offline_pid.label('offline_pid'),
+                                          OfflineChecks.operation_time.label('operation_time'),
+                                          OfflineChecks.offline_tax_id.label('offline_tax_id'),
+                                          OfflineChecks.offline_fiscal_xml_signed.label(
+                                              'offline_fiscal_xml_signed')).filter(
+            OfflineChecks.offline_session_id == offline_session_id).filter(OfflineChecks.operation_type == 1).filter(
+            OfflineChecks.fiscal_time != None).filter(OfflineChecks.server_time == None)
 
-        open_shifts = db.session.query(literal_column('1').label('type'),
-                                       Shifts.id.label('id'),
-                                       Shifts.pid.label('pid'),
-                                       Shifts.operation_time.label(
-                                           'operation_time'),
-                                       Shifts.offline_tax_id.label(
-                                           'offline_tax_id'),
-                                       Shifts.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Shifts.offline_session_id == offline_session.offline_session_id) \
-            .filter(Shifts.operation_type == 1) \
-            .filter(Shifts.operation_time >= offline_session.operation_time) \
-            .filter(Shifts.fiscal_time != None) \
-            .filter(Shifts.server_time == None)
+        open_shifts = db.session.query(literal_column('1').label('type'), Shifts.id.label('id'),
+                                       Shifts.pid.label('pid'), Shifts.offline_pid.label('offline_pid'),
+                                       Shifts.operation_time.label('operation_time'),
+                                       Shifts.offline_tax_id.label('offline_tax_id'),
+                                       Shifts.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')).filter(
+            Shifts.offline_session_id == offline_session_id).filter(Shifts.operation_type == 1).filter(
+            Shifts.fiscal_time != None).filter(Shifts.server_time == None)
 
-        advances = db.session.query(literal_column('2').label('type'),
-                                    Advances.id.label('id'),
-                                    Advances.pid.label('pid'),
-                                    Advances.operation_time.label(
-                                        'operation_time'),
-                                    Advances.offline_tax_id.label(
-                                        'offline_tax_id'),
-                                    Advances.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Advances.offline_session_id == offline_session.offline_session_id) \
-            .filter(Advances.operation_time >= offline_session.operation_time) \
-            .filter(Advances.fiscal_time != None) \
-            .filter(Advances.server_time == None)
+        advances = db.session.query(literal_column('2').label('type'), Advances.id.label('id'),
+                                    Advances.pid.label('pid'), Advances.offline_pid.label('offline_pid'),
+                                    Advances.operation_time.label('operation_time'),
+                                    Advances.offline_tax_id.label('offline_tax_id'),
+                                    Advances.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')).filter(
+            Advances.offline_session_id == offline_session_id).filter(Advances.fiscal_time != None).filter(
+            Advances.server_time == None)
 
-        inkasses_operations = db.session.query(literal_column('3').label('type'),
-                                               Incasses.id.label('id'),
-                                               Incasses.pid.label('pid'),
-                                               Incasses.operation_time.label(
-                                                   'operation_time'),
-                                               Incasses.offline_tax_id.label(
-                                                   'offline_tax_id'),
-                                               Incasses.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Incasses.offline_session_id == offline_session.offline_session_id) \
-            .filter(Incasses.operation_time >= offline_session.operation_time) \
-            .filter(Incasses.fiscal_time != None) \
-            .filter(Incasses.server_time == None)
+        inkasses_operations = db.session.query(literal_column('3').label('type'), Incasses.id.label('id'),
+                                               Incasses.pid.label('pid'), Incasses.offline_pid.label('offline_pid'),
+                                               Incasses.operation_time.label('operation_time'),
+                                               Incasses.offline_tax_id.label('offline_tax_id'),
+                                               Incasses.offline_fiscal_xml_signed.label(
+                                                   'offline_fiscal_xml_signed')).filter(
+            Incasses.offline_session_id == offline_session_id).filter(Incasses.fiscal_time != None).filter(
+            Incasses.server_time == None)
 
-        podkreps_operations = db.session.query(literal_column('4').label('type'),
-                                               Podkreps.id.label('id'),
-                                               Podkreps.pid.label('pid'),
-                                               Podkreps.operation_time.label(
-                                                   'operation_time'),
-                                               Podkreps.offline_tax_id.label(
-                                                   'offline_tax_id'),
-                                               Podkreps.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Podkreps.offline_session_id == offline_session.offline_session_id) \
-            .filter(Podkreps.operation_time >= offline_session.operation_time) \
-            .filter(Podkreps.fiscal_time != None) \
-            .filter(Podkreps.server_time == None)
+        podkreps_operations = db.session.query(literal_column('4').label('type'), Podkreps.id.label('id'),
+                                               Podkreps.pid.label('pid'), Podkreps.offline_pid.label('offline_pid'),
+                                               Podkreps.operation_time.label('operation_time'),
+                                               Podkreps.offline_tax_id.label('offline_tax_id'),
+                                               Podkreps.offline_fiscal_xml_signed.label(
+                                                   'offline_fiscal_xml_signed')).filter(
+            Podkreps.offline_session_id == offline_session_id).filter(Podkreps.fiscal_time != None).filter(
+            Podkreps.server_time == None)
 
-        sales_operations = db.session.query(literal_column('5').label('type'),
-                                            Sales.id.label('id'),
-                                            Sales.pid.label('pid'),
+        sales_operations = db.session.query(literal_column('5').label('type'), Sales.id.label('id'),
+                                            Sales.pid.label('pid'), Sales.offline_pid.label('offline_pid'),
                                             Sales.operation_time.label('operation_time'),
                                             Sales.offline_tax_id.label('offline_tax_id'),
-                                            Sales.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Sales.offline_session_id == offline_session.offline_session_id) \
-            .filter(Sales.operation_time >= offline_session.operation_time) \
-            .filter(Sales.fiscal_time != None) \
-            .filter(Sales.server_time == None)
+                                            Sales.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')).filter(
+            Sales.offline_session_id == offline_session_id).filter(Sales.fiscal_time != None).filter(
+            Sales.server_time == None)
 
-        storno_operations = db.session.query(literal_column('6').label('type'),
-                                             Stornos.id.label('id'),
-                                             Stornos.pid.label('pid'),
+        storno_operations = db.session.query(literal_column('6').label('type'), Stornos.id.label('id'),
+                                             Stornos.pid.label('pid'), Stornos.offline_pid.label('offline_pid'),
                                              Stornos.operation_time.label('operation_time'),
                                              Stornos.offline_tax_id.label('offline_tax_id'),
-                                             Stornos.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Stornos.offline_session_id == offline_session.offline_session_id) \
-            .filter(Stornos.operation_time >= offline_session.operation_time) \
-            .filter(Stornos.fiscal_time != None) \
-            .filter(Stornos.server_time == None)
+                                             Stornos.offline_fiscal_xml_signed.label(
+                                                 'offline_fiscal_xml_signed')).filter(
+            Stornos.offline_session_id == offline_session_id).filter(Stornos.fiscal_time != None).filter(
+            Stornos.server_time == None)
 
         # Зарезервовано:
         #   валютні операції 7
@@ -920,41 +882,27 @@ class Departments(Base):
         # Зарезервовано:
         #   кредити 8
 
-        z_reports = db.session.query(literal_column('9').label('type'),
-                                     ZReports.pid.label('id'),
-                                     ZReports.pid.label('pid'),
-                                     ZReports.operation_time.label(
-                                         'operation_time'),
-                                     ZReports.offline_tax_id.label(
-                                         'offline_tax_id'),
-                                     ZReports.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(ZReports.offline_session_id == offline_session.offline_session_id) \
-            .filter(ZReports.operation_time >= offline_session.operation_time) \
-            .filter(ZReports.fiscal_time != None) \
-            .filter(ZReports.server_time == None)
+        z_reports = db.session.query(literal_column('9').label('type'), ZReports.pid.label('id'),
+                                     ZReports.pid.label('pid'), ZReports.offline_pid.label('offline_pid'),
+                                     ZReports.operation_time.label('operation_time'),
+                                     ZReports.offline_tax_id.label('offline_tax_id'),
+                                     ZReports.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')).filter(
+            ZReports.offline_session_id == offline_session_id).filter(ZReports.fiscal_time != None).filter(
+            ZReports.server_time == None)
 
-        close_shifts = db.session.query(literal_column('10').label('type'),
-                                        Shifts.id.label('id'),
-                                        Shifts.pid.label('pid'),
-                                        Shifts.operation_time.label(
-                                            'operation_time'),
-                                        Shifts.offline_tax_id.label(
-                                            'offline_tax_id'),
-                                        Shifts.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')) \
-            .filter(Shifts.offline_session_id == offline_session.offline_session_id) \
-            .filter(Shifts.operation_type == 0) \
-            .filter(Shifts.operation_time >= offline_session.operation_time) \
-            .filter(Shifts.fiscal_time != None) \
-            .filter(Shifts.server_time == None)
+        close_shifts = db.session.query(literal_column('10').label('type'), Shifts.id.label('id'),
+                                        Shifts.pid.label('pid'), Shifts.offline_pid.label('offline_pid'),
+                                        Shifts.operation_time.label('operation_time'),
+                                        Shifts.offline_tax_id.label('offline_tax_id'),
+                                        Shifts.offline_fiscal_xml_signed.label('offline_fiscal_xml_signed')).filter(
+            Shifts.offline_session_id == offline_session_id).filter(Shifts.operation_type == 0).filter(
+            Shifts.fiscal_time != None).filter(Shifts.server_time == None)
 
         sub = union_all(offline_checks, open_shifts, advances, inkasses_operations, podkreps_operations,
-                        sales_operations, storno_operations, z_reports, close_shifts).alias(
-            'sub')
+                        sales_operations, storno_operations, z_reports, close_shifts).alias('sub')
 
-        operations = db.session.query(sub.c.type, sub.c.id, sub.c.pid, sub.c.operation_time, sub.c.offline_tax_id,
-                                      sub.c.offline_fiscal_xml_signed) \
-            .order_by(sub.c.pid) \
-            .all()
+        operations = db.session.query(sub.c.type, sub.c.id, sub.c.pid, sub.c.offline_pid, sub.c.operation_time,
+                                      sub.c.offline_tax_id, sub.c.offline_fiscal_xml_signed).order_by(sub.c.pid).all()
 
         return operations
 
@@ -972,16 +920,14 @@ class Departments(Base):
                             'Дочекайтесь відновлення зв\'язку з податковою'.format(message))
 
         if self.offline_session_duration:
-            if self.offline_session_duration > 36 * 60 \
-                    or (self.last_offline_session_start
-                        and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36 * 60)):
+            if self.offline_session_duration > 36 * 60 or (self.last_offline_session_start and (
+                    operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=36 * 60)):
                 raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «36 годин»'
                                 ' протягом офлайн сесії'.format(message))
 
         if self.offline_session_monthly_duration:
-            if self.offline_session_monthly_duration > 168 * 60 \
-                    or (self.last_offline_session_start
-                        and (operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168 * 60)):
+            if self.offline_session_monthly_duration > 168 * 60 or (self.last_offline_session_start and (
+                    operation_time - self.last_offline_session_start) > datetime.timedelta(minutes=168 * 60)):
                 raise Exception('{} Перевищення допустимого терміну роботи в офлайн режимі «168 годин»'
                                 ' протягом календарного місяця'.format(message))
 
@@ -997,22 +943,12 @@ class Departments(Base):
             # Для офлайну потрібно додати номер, т.к. ми не знаємо пройшов чек чи ні
             self.next_local_number += 1
 
-            xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False,
-                                                                     revoke=False)
-            off = OfflineChecks(
-                operation_type=1,
-                department_id=self.id,
-                user_id=None,
-                operation_time=operation_time,
-                shift_id=None,
-                fiscal_time=operation_time,
-                server_time=None,
-                pid=self.next_local_number,
-                testing=False,
-                offline_fiscal_xml_signed=signed_xml,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=self.prro_offline_session_id
-            )
+            xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False, revoke=False)
+            off = OfflineChecks(operation_type=1, department_id=self.id, user_id=None, operation_time=operation_time,
+                shift_id=None, fiscal_time=operation_time, server_time=None, pid=self.next_local_number,
+                offline_pid=self.next_offline_local_number, testing=False, offline_fiscal_xml_signed=signed_xml,
+                offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id,
+                last_fiscal_error_txt=self.sender.last_fiscal_error_txt[:128])
             db.session.add(off)
 
             self.offline_prev_hash = None
@@ -1034,261 +970,229 @@ class Departments(Base):
 
         to_online_status = False
 
+        if not self.offline_status:
+            return ['ПРРО знаходиться в режимі онлайн'], False
+
         signer = Sign()
 
-        offline_sessions = OfflineChecks.query \
-            .filter(OfflineChecks.server_time == None) \
-            .filter(OfflineChecks.department_id == self.id) \
-            .order_by(OfflineChecks.server_time) \
-            .all()
+        signed_docs = []
 
-        if len(offline_sessions) == 0:
-            return ['Немає нових офлайн сесій'], False
+        print('{} {} Почали обробку'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
 
-        for session in offline_sessions:
+        try:
+            # Необхідно визначити останній чек відправився чи ні
+            sender = SendData2(db, self.prro_key, self, self.rro_id, "")
 
-            signed_docs = []
+            registrar_state = sender.TransactionsRegistrarState()
 
-            print('{} {} Почали обробку'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
-            # continue
+            if not registrar_state:
+                if len(sender.last_fiscal_error_txt) > 0:
+                    list_msgs.append('Помилка {}'.format(sender.last_fiscal_error_txt))
+                return list_msgs, to_online_status
 
-            # last_shift = Shifts.query \
-            #     .order_by(Shifts.operation_time.desc()) \
-            #     .filter(Shifts.department_id == department.id) \
-            #     .first()
+            if registrar_state:
+                if 'ShiftState' in registrar_state:
+                    tax_next_local_num = registrar_state['NextLocalNum']
 
-            # if last_shift:
-            # if not last_shift.offline:
-            # session.server_time = datetime.datetime.now()
-            # db.session.commit()
-            # print('{} успешно удалили оффлайн сессию'.format(department.rro_id))
-            # continue
+                    tax_next_offline_local_num = int(registrar_state['OfflineNextLocalNum'])
 
-            try:
-                # Необхідно визначити останній чек відправився чи ні
-                sender = SendData2(db, self.prro_key, self, self.rro_id, "")
+                    shift, shift_opened, messages, offline = self.prro_open_shift(False)
 
-                registrar_state = sender.TransactionsRegistrarState()
+                    department_key = self.prro_key
 
-                if not registrar_state:
-                    if len(sender.last_fiscal_error_txt) > 0:
-                        list_msgs.append('Помилка {}'.format(sender.last_fiscal_error_txt))
-                    continue
+                    operations = self.get_offine_operations(self.prro_offline_session_id)
 
-                if registrar_state:
-                    if 'ShiftState' in registrar_state:
-                        tax_next_local_num = registrar_state['NextLocalNum']
+                    print('{} {} Кількість офлайн операцій {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
+                                                                      len(operations)))
 
-                        shift, shift_opened, messages, offline = self.prro_open_shift(False)
+                    for operation in operations:
+                        if not operation.offline_pid:
+                            offline_pid = int(operation.offline_tax_id.split('.')[1])
+                        else:
+                            offline_pid = operation.offline_pid
 
-                        department_key = self.prro_key
+                        if offline_pid < tax_next_offline_local_num:
+                            set_server_time(operation)
+                            continue
 
-                        operations = self.get_offine_operations(session)
-
-                        print('{} {} Кількість офлайн операцій {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                          self.rro_id, len(operations)))
-
-                        for operation in operations:
-                            print('{} {} operation.type = {} operation.pid = {} operation.offline_tax_id = {}'.format(
-                                datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                self.rro_id,
-                                operation.type, operation.pid, operation.offline_tax_id))
-                            if operation.type == 0:
-                                print('{} {} Початок оффлайн сесії у {}'.format(
-                                    datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                    self.rro_id,
+                        print(
+                            '{} {} operation.type = {}; operation.pid = {}; offline_pid = {}; operation.offline_tax_id = {}'.format(
+                                datetime.now(tz.gettz(TIMEZONE)), self.rro_id, operation.type, operation.pid,
+                                offline_pid, operation.offline_tax_id))
+                        if operation.type == 0:
+                            print(
+                                '{} {} Початок оффлайн сесії у {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
                                     operation.operation_time))
 
-                            if registrar_state['ShiftState'] == 1 and 1 < operation.type < 10:
-                                if operation.type == 0 and tax_next_local_num == operation.pid:
-                                    # якщо номери не збіглися, потрібно видалити останній чек
-                                    # переформуємо чек відкриття сесії офлайн
-                                    offline_check = OfflineChecks.query.get(operation.id)
-                                    operation_time = offline_check.operation_time
-                                    testing = offline_check.testing
-                                    # offline_check.pid = NextLocalNum
-                                    sender.local_number = offline_check.pid
-                                    sender.offline_session_id = registrar_state['OfflineSessionId']
-                                    sender.offline_seed = registrar_state['OfflineSeed']
-                                    sender.offline_local_number = 1
+                        if registrar_state['ShiftState'] == 1 and 1 < operation.type < 10:
+                            if operation.type == 0 and tax_next_local_num == operation.pid:
+                                # якщо номери не збіглися, потрібно видалити останній чек
+                                # переформуємо чек відкриття сесії офлайн
+                                offline_check = OfflineChecks.query.get(operation.id)
+                                operation_time = offline_check.operation_time
+                                testing = offline_check.testing
+                                # offline_check.pid = NextLocalNum
+                                sender.local_number = offline_check.pid
+                                sender.offline_session_id = registrar_state['OfflineSessionId']
+                                sender.offline_seed = registrar_state['OfflineSeed']
+                                sender.offline_local_number = 1
 
-                                    # якщо перший чек, не можна скасовувати відкриття зміни, інакше буде помилка
-                                    '''
-                                    Код помилки: 10 PackageValidationError
-                                    Помилка обробки документа за № 0 в пакеті, дислокація 4:
-                                    Останній документ поточної зміни (фіскальний номер 197242641) має тип 'OpenShift' і не може бути відкликаний
-                                    '''
-                                    # if NumLocal == 1:
-                                    #     revoke = False
-                                    # else:
-                                    #     revoke = True
+                                # якщо перший чек, не можна скасовувати відкриття зміни, інакше буде помилка
+                                '''
+                                Код помилки: 10 PackageValidationError
+                                Помилка обробки документа за № 0 в пакеті, дислокація 4:
+                                Останній документ поточної зміни (фіскальний номер 197242641) має тип 'OpenShift' і не може бути відкликаний
+                                '''
+                                # if NumLocal == 1:
+                                #     revoke = False
+                                # else:
+                                #     revoke = True
 
-                                    revoke = True
+                                revoke = True
 
-                                    xml, signed_xml, offline_tax_id = sender.to_offline(operation_time,
-                                                                                        testing=testing, revoke=revoke)
+                                xml, signed_xml, offline_tax_id = sender.to_offline(operation_time, testing=testing,
+                                                                                    revoke=revoke)
 
-                                    offline_check.offline_fiscal_xml_signed = signed_xml
-                                    print('Переформували чек відкриття сесії офлайн')
-                                    if operation.pid >= tax_next_local_num:
-                                        # print(operation.pid, operation.operation_time)
-                                        signed_docs.append(signed_xml)
-                                else:
-                                    # print(operation.pid, operation.operation_time, tax_next_local_num)
-                                    signed_docs.append(operation.offline_fiscal_xml_signed)
-
+                                offline_check.offline_fiscal_xml_signed = signed_xml
+                                print('Переформували чек відкриття сесії офлайн')
+                                if operation.pid >= tax_next_local_num:
+                                    # print(operation.pid, operation.operation_time)
+                                    signed_docs.append(signed_xml)
                             else:
                                 # print(operation.pid, operation.operation_time, tax_next_local_num)
-                                # if operation.pid >= NextLocalNum:
                                 signed_docs.append(operation.offline_fiscal_xml_signed)
 
-                        offline_dt = datetime.datetime.now(tz.gettz(TIMEZONE))
+                        else:
+                            # print(operation.pid, operation.operation_time, tax_next_local_num)
+                            # if operation.pid >= NextLocalNum:
+                            signed_docs.append(operation.offline_fiscal_xml_signed)
 
-                        self.sender.local_number = self.next_local_number
-                        self.sender.offline_local_number = self.next_offline_local_number
-                        self.sender.offline_seed = self.prro_offline_seed
-                        self.sender.offline_session_id = self.prro_offline_session_id
+                    db.session.commit()
 
-                        offline_tax_number = self.sender.calculate_offline_tax_number(offline_dt,
-                                                                                      prev_hash=shift.prev_hash)
+                    offline_dt = datetime.now(tz.gettz(TIMEZONE))
 
-                        """ Коніц офлайн сесії """
-                        CHECK = self.sender.get_check_xml(103, offline=True, dt=offline_dt,
-                                                          prev_hash=shift.prev_hash,
-                                                          offline_tax_number=offline_tax_number)
+                    self.sender.local_number = self.next_local_number
+                    self.sender.offline_local_number = self.next_offline_local_number
+                    self.sender.offline_seed = self.prro_offline_seed
+                    self.sender.offline_session_id = self.prro_offline_session_id
 
-                        '''
-                        <!--Ознака відкликання останнього онлайн документа через дублювання офлайн документом-->
-                        <REVOKELASTONLINEDOC>true</REVOKELASTONLINEDOC>
-                        '''
+                    print('{} {} Сформуємо чек "Коніц офлайн сесії"'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                            self.rro_id))
 
-                        xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
-                        # print(xml)
+                    offline_tax_number = self.sender.calculate_offline_tax_number(offline_dt, prev_hash=shift.prev_hash)
 
-                        try:
-                            signed_data = signer.sign(department_key.box_id, xml, role=self.get_prro_key_role())
-                        except Exception as e:
-                            print('{] {} Помилка {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
-                            list_msgs.append('Помилка {}'.format(e))
-                            box_id = signer.update_bid(department_key.db, department_key)
-                            signed_data = signer.sign(box_id, xml, role=self.get_prro_key_role())
-                            department_key.box_id = box_id
+                    """ Коніц офлайн сесії """
+                    CHECK = self.sender.get_check_xml(103, offline=True, dt=offline_dt, prev_hash=shift.prev_hash,
+                                                      offline_tax_number=offline_tax_number)
+
+                    '''
+                    <!--Ознака відкликання останнього онлайн документа через дублювання офлайн документом-->
+                    <REVOKELASTONLINEDOC>true</REVOKELASTONLINEDOC>
+                    '''
+
+                    xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
+                    print('{} {} Вміст чека "Коніц офлайн сесії": \r\n{}'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                 self.rro_id,
+                                                                                 xml.decode('windows-1251')))
+
+                    try:
+                        signed_data = signer.sign(department_key.box_id, xml, role=self.get_prro_key_role())
+                    except Exception as e:
+                        print('{] {} Помилка {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
+                        list_msgs.append('Помилка {}'.format(e))
+                        box_id = signer.update_bid(department_key.db, department_key)
+                        signed_data = signer.sign(box_id, xml, role=self.get_prro_key_role())
+                        department_key.box_id = box_id
+                        db.session.commit()
+
+                    signed_docs.append(signed_data)
+
+                    lngth = len(signed_docs)
+
+                    print('{} {} Усього чеків {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, lngth))
+
+                    cnt = 0
+                    packet = 0
+
+                    while True:
+
+                        if cnt == lngth:
+                            break
+
+                        data = b''
+                        cnt_in_packet = 0
+
+                        # Обмеження: Розмір пакету даних, що надсилається, не може перевищувати 200 Kb.
+                        #            Максимальна кількість документів в пакеті обмежена (100).
+                        while cnt < lngth and len(data) < 200 * 1024 and cnt_in_packet < 100:
+                            signed_doc = signed_docs[cnt]
+                            # print(signed_doc)
+                            lenb = len(signed_doc).to_bytes(4, byteorder="little", signed=True)
+
+                            data = data + lenb + signed_doc
+                            cnt += 1
+                            cnt_in_packet += 1
+
+                        print('{} {} Пакет {} розмір пакету {} чеков {}'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                                self.rro_id, packet, len(data),
+                                                                                cnt_in_packet))
+
+                        packet += 1
+
+                        ret = self.sender.post_data('pck', data, return_cmd_data=False)
+                        print('{} {} Відповідь сервера {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, ret))
+                        if len(sender.last_fiscal_error_txt) > 0:
+                            list_msgs.append('Відповідь сервера {}'.format(sender.last_fiscal_error_txt))
+
+                        if ret:
+                            if ret == 'OK':
+                                continue
+
+                            try:
+                                data = json.loads(ret)
+                            except:
+                                break
+
+                            shift.offline = False
+
+                            print('{} {} Успішно закрили офлайн сесію в податковій'.format(
+                                datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+                            list_msgs.append('Успішно закрили офлайн сесію в податковій')
+
+                            self.prro_offline_session_id = data['OfflineSessionId']
+                            self.prro_offline_seed = data['OfflineSeed']
+
+                            self.offline_status = False
+                            self.offline_prev_hash = None
+
+                            self.prro_set_next_number()
+
                             db.session.commit()
 
-                        signed_docs.append(signed_data)
+                            for operation in operations:
+                                set_server_time(operation)
 
-                        print('{} {} Усього чеків {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
-                                                             len(signed_docs)))
+                            db.session.commit()
 
-                        cnt = 0
-                        packet = 0
+                            print('{} {} Успішно відзначили в офлайн документах ознаку надсилання'.format(
+                                datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
+                            list_msgs.append('Успішно відзначили в офлайн документах ознаку надсилання')
 
-                        # for signed_doc in signed_docs:
-                        #
-                        lngth = len(signed_docs)
-                        # print(signed_docs)
-                        for s in range(0, lngth, 100):
+                            msg, status = self.prro_fix()
+                            if status:
+                                list_msgs += msg
 
-                            data = b''
-                            for t in range(20):
+                            to_online_status = True
 
-                                if cnt < lngth:
-                                    signed_doc = signed_docs[cnt]
-                                    # print(signed_doc)
-                                    lenb = len(signed_doc).to_bytes(4, byteorder="little", signed=True)
-                                    # print(len(signed_doc))
-                                    data = data + lenb + signed_doc
-                                    cnt += 1
-                                    # print(cnt)
-
-                            print('{} {} Пакет {} розмір пакету {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                           self.rro_id, packet, len(data)))
-                            packet += 1
-
-                            command = 'pck'
-                            ret = self.sender.post_data(command, data, return_cmd_data=False)
-                            print('{} {} Відповідь сервера {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                      self.rro_id, ret))
-                            if len(sender.last_fiscal_error_txt) > 0:
-                                list_msgs.append('Відповідь сервера {}'.format(sender.last_fiscal_error_txt))
-
-                            if ret:
-                                if ret == 'OK':
-                                    continue
-
-                                try:
-                                    data = json.loads(ret)
-                                except:
-                                    break
-
-                                shift.offline = False
-
-                                server_time = datetime.datetime.now()
-
-                                for operation in operations:
-                                    # print(operation.type, operation.pid)
-                                    signed_docs.append(operation.offline_fiscal_xml_signed)
-
-                                    if operation.type == 0:
-                                        offline_check = OfflineChecks.query.get(operation.id)
-                                        offline_check.server_time = server_time
-
-                                    elif operation.type == 1 or operation.type == 10:
-                                        open_shift = Shifts.query.get(operation.id)
-                                        open_shift.server_time = server_time
-
-                                    elif operation.type == 2:
-                                        advance = Advances.query.get(operation.id)
-                                        advance.server_time = server_time
-
-                                    elif operation.type == 3:
-                                        inkasses_operation = Incasses.query.get(operation.id)
-                                        inkasses_operation.server_time = server_time
-
-                                    elif operation.type == 4:
-                                        podkreps_operation = Podkreps.query.get(operation.id)
-                                        podkreps_operation.server_time = server_time
-
-                                    elif operation.type == 5:
-                                        sales_operation = Sales.query.get(operation.id)
-                                        sales_operation.server_time = server_time
-
-                                    elif operation.type == 9:
-                                        z_report = ZReports.query.get(operation.id)
-                                        z_report.server_time = server_time
-
-                                self.prro_offline_session_id = data['OfflineSessionId']
-                                self.prro_offline_seed = data['OfflineSeed']
-
-                                self.offline_status = False
-                                self.offline_prev_hash = None
-
-                                db.session.commit()
-
-                                self.prro_set_next_number()
-
-                                print('{} {} Успішно закрили оффлайн сесію'.format(
-                                    datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id))
-                                list_msgs.append('Успішно закрили оффлайн сесію')
-
-                                msg, status = self.prro_fix()
-                                if status:
-                                    print(msg)
-                                    list_msgs += msg
-
-                                to_online_status = True
-
-            except Exception as e:
-                print('{} {} {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
-                list_msgs.append('Помилка {}'.format(e))
-
-            # print(list_msgs)
+        except Exception as e:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
+            list_msgs.append('Помилка {}'.format(e))
 
         return list_msgs, to_online_status
 
     def prro_open_shift(self, open_shift=True, shift_id=None, key=None, testing=False, cashier_name=None):
 
-        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+        operation_time = datetime.now(tz.gettz(TIMEZONE))
         server_time = None
 
         # shift_opened = False
@@ -1299,10 +1203,8 @@ class Departments(Base):
         if shift_id:
             last_shift = Shifts.query.get(shift_id)
         else:
-            last_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .first()
+            last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                Shifts.department_id == self.id).first()
 
         if last_shift:
 
@@ -1324,8 +1226,8 @@ class Departments(Base):
                 self.shift_state = 0
                 db.session.commit()
                 # raise Exception('{}'.format("Зміни у системі відсутні"))
-                return None, False, ['Зміни у системі відсутні, наступний локальний номер {}'.format(
-                    self.next_local_number)], None
+                return None, False, [
+                    'Зміни у системі відсутні, наступний локальний номер {}'.format(self.next_local_number)], None
 
         if not self.offline_status:
             registrar_state = self.sender.TransactionsRegistrarState()
@@ -1336,10 +1238,8 @@ class Departments(Base):
             self.prro_to_offline(operation_time)
         else:
             print('{} {} Відповідь від податкової є'.format(operation_time, self.rro_id))
-            last_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .first()
+            last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                Shifts.department_id == self.id).first()
 
             if last_shift:
                 print('{} {} Зміна є, статус {}'.format(operation_time, self.rro_id, last_shift.operation_type))
@@ -1372,8 +1272,7 @@ class Departments(Base):
             fiscal_ticket = None
             server_time = None
 
-            xml, signed_xml, offline_tax_id, xml_hash = self.sender.open_shift(operation_time,
-                                                                               testing=testing,
+            xml, signed_xml, offline_tax_id, xml_hash = self.sender.open_shift(operation_time, testing=testing,
                                                                                offline=True,
                                                                                prev_hash=self.offline_prev_hash)
 
@@ -1388,8 +1287,7 @@ class Departments(Base):
                 xml = None
 
             if self.sender.last_fiscal_ticket:
-                fiscal_ticket = base64.b64encode(
-                    self.sender.last_fiscal_ticket).decode()
+                fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
             else:
                 fiscal_ticket = None
 
@@ -1405,11 +1303,8 @@ class Departments(Base):
         try:
             user_id = current_user.id
         except:
-            prev_shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.department_id == self.id) \
-                .filter(Shifts.operation_type == 1) \
-                .first()
+            prev_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                Shifts.department_id == self.id).filter(Shifts.operation_type == 1).first()
             if prev_shift:
                 user_id = prev_shift.user_id
             else:
@@ -1417,25 +1312,11 @@ class Departments(Base):
                 #     "Зміну не вдалося відкрити, не вдалося визначити користувача, зв'яжіться з тех.підтримкою ФК")
                 user_id = None
 
-        shift = Shifts(
-            department_id=self.id,
-            user_id=user_id,
-            operation_type=operation_type,
-            operation_time=operation_time,
-            fiscal_time=fiscal_time,
-            server_time=server_time,
-            pid=self.next_local_number,
-            tax_id=tax_id,
-            xml=xml,
-            offline_fiscal_xml_signed=signed_xml,
-            fiscal_ticket=fiscal_ticket,
-            fiscal_shift_id=None,
-            offline=self.offline_status,
-            testing=testing,
-            cashier=cashier_name,
-            offline_tax_id=offline_tax_id,
-            offline_session_id=self.prro_offline_session_id
-        )
+        shift = Shifts(department_id=self.id, user_id=user_id, operation_type=operation_type,
+            operation_time=operation_time, fiscal_time=fiscal_time, server_time=server_time, pid=self.next_local_number,
+            offline_pid=self.next_offline_local_number, tax_id=tax_id, xml=xml, offline_fiscal_xml_signed=signed_xml,
+            fiscal_ticket=fiscal_ticket, fiscal_shift_id=None, offline=self.offline_status, testing=testing,
+            cashier=cashier_name, offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id)
 
         db.session.add(shift)
         self.shift_state = 1
@@ -1463,7 +1344,7 @@ class Departments(Base):
         shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+            operation_time = datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline_status = self.offline_status
@@ -1499,8 +1380,7 @@ class Departments(Base):
                 server_time = None
                 prev_hash = self.offline_prev_hash
 
-                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_advances(summa,
-                                                                                      operation_time,
+                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_advances(summa, operation_time,
                                                                                       testing=shift.testing,
                                                                                       offline=True,
                                                                                       prev_hash=self.offline_prev_hash)
@@ -1519,8 +1399,7 @@ class Departments(Base):
                 #     xml = None
                 #
                 if self.sender.last_fiscal_ticket:
-                    fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
+                    fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
                 else:
                     fiscal_ticket = None
 
@@ -1532,25 +1411,12 @@ class Departments(Base):
 
             tax_id = self.sender.last_ordertaxnum
 
-            adv = Advances(
-                department_id=self.id,
-                user_id=shift.user_id,
-                operation_time=operation_time,
-                shift_id=shift.id,
-                fiscal_time=fiscal_time,
-                server_time=server_time,
-                sum=summa,
-                pid=self.next_local_number,
-                tax_id=tax_id,
-                fiscal_ticket=fiscal_ticket,
-                testing=shift.testing,
-                offline_fiscal_xml_signed=signed_xml,
-                offline=offline_status,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=self.prro_offline_session_id,
-                doc_uid=doc_uid,
-                prev_hash=prev_hash
-            )
+            adv = Advances(department_id=self.id, user_id=shift.user_id, operation_time=operation_time,
+                shift_id=shift.id, fiscal_time=fiscal_time, server_time=server_time, sum=summa,
+                pid=self.next_local_number, offline_pid=self.next_offline_local_number, tax_id=tax_id,
+                fiscal_ticket=fiscal_ticket, testing=shift.testing, offline_fiscal_xml_signed=signed_xml,
+                offline=offline_status, offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id,
+                doc_uid=doc_uid, prev_hash=prev_hash)
             db.session.add(adv)
 
             db.session.commit()
@@ -1575,8 +1441,7 @@ class Departments(Base):
                 check_visual = '{}\r\n		{}'.format(check_visual, "Службове внесення")
                 check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
                 check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, self.zn)
-                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id,
-                                                                        adv.pid, "офлайн")
+                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, adv.pid, "офлайн")
                 if shift.testing:
                     check_visual = '{}\r\nТЕСТОВИЙ НЕФІСКАЛЬНИЙ ДОКУМЕНТ'.format(check_visual)
                 if shift.cashier:
@@ -1594,8 +1459,7 @@ class Departments(Base):
                     check_visual)
 
                 if prev_hash:
-                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(
-                        check_visual, prev_hash)
+                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(check_visual, prev_hash)
 
                 check_visual = '{}\r\n----------------------------------------------------------------------'.format(
                     check_visual)
@@ -1631,7 +1495,7 @@ class Departments(Base):
                 msg = 'Зберегли чек авансу в режимі онлайн'
 
             messages.append(msg)
-            print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+            print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
             return tax_id, shift, shift_opened, cabinet_url, coded_string, offline
         else:
@@ -1646,14 +1510,13 @@ class Departments(Base):
 
             if shift_opened and balance > 0:
                 tax_id_advance, shift_advance, shift_opened_advance, qr_advance, visual_advance, offline_advance = self.prro_advances(
-                    balance, key=key,
-                    testing=testing)
+                    balance, key=key, testing=testing)
             else:
                 qr_advance = None
                 visual_advance = None
                 tax_id_advance = None
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+            operation_time = datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline_status = self.offline_status
@@ -1690,8 +1553,7 @@ class Departments(Base):
                 server_time = None
                 prev_hash = self.offline_prev_hash
 
-                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_podkrep(summa,
-                                                                                     operation_time,
+                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_podkrep(summa, operation_time,
                                                                                      testing=shift.testing,
                                                                                      offline=True,
                                                                                      prev_hash=self.offline_prev_hash)
@@ -1705,8 +1567,7 @@ class Departments(Base):
                     fiscal_time = operation_time
 
                 if self.sender.last_fiscal_ticket:
-                    fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
+                    fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
                 else:
                     fiscal_ticket = None
 
@@ -1718,25 +1579,12 @@ class Departments(Base):
 
             tax_id = self.sender.last_ordertaxnum
 
-            adv = Podkreps(
-                department_id=self.id,
-                user_id=shift.user_id,
-                operation_time=operation_time,
-                shift_id=shift.id,
-                fiscal_time=fiscal_time,
-                server_time=server_time,
-                sum=summa,
-                pid=self.next_local_number,
-                tax_id=tax_id,
-                fiscal_ticket=fiscal_ticket,
-                testing=shift.testing,
-                offline_fiscal_xml_signed=signed_xml,
-                offline=offline_status,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=self.prro_offline_session_id,
-                doc_uid=doc_uid,
-                prev_hash=prev_hash
-            )
+            adv = Podkreps(department_id=self.id, user_id=shift.user_id, operation_time=operation_time,
+                shift_id=shift.id, fiscal_time=fiscal_time, server_time=server_time, sum=summa,
+                pid=self.next_local_number, offline_pid=self.next_offline_local_number, tax_id=tax_id,
+                fiscal_ticket=fiscal_ticket, testing=shift.testing, offline_fiscal_xml_signed=signed_xml,
+                offline=offline_status, offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id,
+                doc_uid=doc_uid, prev_hash=prev_hash)
             db.session.add(adv)
 
             db.session.commit()
@@ -1761,8 +1609,7 @@ class Departments(Base):
                 check_visual = '{}\r\n		{}'.format(check_visual, "Отримання підкріплення")
                 check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
                 check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, self.zn)
-                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id,
-                                                                        adv.pid, "офлайн")
+                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, adv.pid, "офлайн")
 
                 if shift.testing:
                     check_visual = '{}\r\nТЕСТОВИЙ НЕФІСКАЛЬНИЙ ДОКУМЕНТ'.format(check_visual)
@@ -1782,8 +1629,7 @@ class Departments(Base):
                     check_visual)
 
                 if prev_hash:
-                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(
-                        check_visual, prev_hash)
+                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(check_visual, prev_hash)
 
                     check_visual = '{}\r\n----------------------------------------------------------------------'.format(
                         check_visual)
@@ -1819,7 +1665,7 @@ class Departments(Base):
                 msg = 'Зберегли чек підкріплення в режимі онлайн'
 
             messages.append(msg)
-            print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+            print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
             return tax_id, shift, shift_opened, cabinet_url, coded_string, offline, tax_id_advance, qr_advance, visual_advance
 
@@ -1835,14 +1681,13 @@ class Departments(Base):
 
             if shift_opened and balance > 0:
                 tax_id_advance, shift_advance, shift_opened_advance, qr_advance, visual_advance, offline_advance = self.prro_advances(
-                    balance, key=key,
-                    testing=testing)
+                    balance, key=key, testing=testing)
             else:
                 qr_advance = None
                 visual_advance = None
                 tax_id_advance = None
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+            operation_time = datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline_status = self.offline_status
@@ -1878,10 +1723,8 @@ class Departments(Base):
                 server_time = None
                 prev_hash = self.offline_prev_hash
 
-                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_inkass(summa,
-                                                                                    operation_time,
-                                                                                    testing=shift.testing,
-                                                                                    offline=True,
+                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_inkass(summa, operation_time,
+                                                                                    testing=shift.testing, offline=True,
                                                                                     prev_hash=self.offline_prev_hash)
                 self.offline_prev_hash = xml_hash
 
@@ -1892,8 +1735,7 @@ class Departments(Base):
                     fiscal_time = operation_time
 
                 if self.sender.last_fiscal_ticket:
-                    fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
+                    fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
                 else:
                     fiscal_ticket = None
 
@@ -1905,25 +1747,12 @@ class Departments(Base):
 
             tax_id = self.sender.last_ordertaxnum
 
-            adv = Incasses(
-                department_id=self.id,
-                user_id=shift.user_id,
-                operation_time=operation_time,
-                shift_id=shift.id,
-                fiscal_time=fiscal_time,
-                server_time=server_time,
-                sum=summa,
-                pid=self.next_local_number,
-                tax_id=tax_id,
-                fiscal_ticket=fiscal_ticket,
-                testing=shift.testing,
-                offline_fiscal_xml_signed=signed_xml,
-                offline=offline_status,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=self.prro_offline_session_id,
-                doc_uid=doc_uid,
-                prev_hash=prev_hash
-            )
+            adv = Incasses(department_id=self.id, user_id=shift.user_id, operation_time=operation_time,
+                shift_id=shift.id, fiscal_time=fiscal_time, server_time=server_time, sum=summa,
+                pid=self.next_local_number, offline_pid=self.next_offline_local_number, tax_id=tax_id,
+                fiscal_ticket=fiscal_ticket, testing=shift.testing, offline_fiscal_xml_signed=signed_xml,
+                offline=offline_status, offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id,
+                doc_uid=doc_uid, prev_hash=prev_hash)
             db.session.add(adv)
 
             db.session.commit()
@@ -1966,8 +1795,7 @@ class Departments(Base):
                     check_visual)
 
                 if prev_hash:
-                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(
-                        check_visual, prev_hash)
+                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(check_visual, prev_hash)
 
                 check_visual = '{}\r\n----------------------------------------------------------------------'.format(
                     check_visual)
@@ -2004,7 +1832,7 @@ class Departments(Base):
                 msg = 'Зберегли чек інкасації в режимі онлайн'
 
             messages.append(msg)
-            print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+            print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
             return tax_id, shift, shift_opened, cabinet_url, coded_string, offline, tax_id_advance, qr_advance, visual_advance
         else:
@@ -2017,29 +1845,21 @@ class Departments(Base):
         shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key, testing=testing)
         if shift:
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+            operation_time = datetime.now(tz.gettz(TIMEZONE))
             server_time = None
 
             offline_status = self.offline_status
 
-            check = Sales.query \
-                .filter(or_(Sales.tax_id == tax_id, Sales.offline_tax_id == tax_id)) \
-                .first()
+            check = Sales.query.filter(or_(Sales.tax_id == tax_id, Sales.offline_tax_id == tax_id)).first()
 
             if not check:
-                check = Incasses.query \
-                    .filter(or_(Incasses.tax_id == tax_id, Incasses.offline_tax_id == tax_id)) \
-                    .first()
+                check = Incasses.query.filter(or_(Incasses.tax_id == tax_id, Incasses.offline_tax_id == tax_id)).first()
 
             if not check:
-                check = Podkreps.query \
-                    .filter(or_(Podkreps.tax_id == tax_id, Podkreps.offline_tax_id == tax_id)) \
-                    .first()
+                check = Podkreps.query.filter(or_(Podkreps.tax_id == tax_id, Podkreps.offline_tax_id == tax_id)).first()
 
             if not check:
-                check = Advances.query \
-                    .filter(or_(Advances.tax_id == tax_id, Advances.offline_tax_id == tax_id)) \
-                    .first()
+                check = Advances.query.filter(or_(Advances.tax_id == tax_id, Advances.offline_tax_id == tax_id)).first()
 
             if not check:
                 raise ("Не знайшов чек із фіскальним номером {}".format(tax_id))
@@ -2075,10 +1895,8 @@ class Departments(Base):
                 server_time = None
                 prev_hash = self.offline_prev_hash
 
-                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_storno(tax_id,
-                                                                                    operation_time,
-                                                                                    testing=shift.testing,
-                                                                                    offline=True,
+                xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_storno(tax_id, operation_time,
+                                                                                    testing=shift.testing, offline=True,
                                                                                     prev_hash=self.offline_prev_hash)
 
                 self.offline_prev_hash = xml_hash
@@ -2092,8 +1910,7 @@ class Departments(Base):
                     fiscal_time = operation_time
 
                 if self.sender.last_fiscal_ticket:
-                    fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
+                    fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
                 else:
                     fiscal_ticket = None
 
@@ -2105,25 +1922,12 @@ class Departments(Base):
 
                 storno_tax_id = self.sender.last_ordertaxnum
 
-            adv = Stornos(
-                department_id=self.id,
-                user_id=shift.user_id,
-                operation_time=operation_time,
-                shift_id=shift.id,
-                fiscal_time=fiscal_time,
-                server_time=server_time,
-                original_tax_id=tax_id,
-                pid=self.next_local_number,
-                tax_id=storno_tax_id,
-                fiscal_ticket=fiscal_ticket,
-                testing=shift.testing,
-                offline_fiscal_xml_signed=signed_xml,
-                offline=offline_status,
-                offline_tax_id=offline_tax_id,
-                offline_session_id=self.prro_offline_session_id,
-                doc_uid=doc_uid,
-                prev_hash=prev_hash
-            )
+            adv = Stornos(department_id=self.id, user_id=shift.user_id, operation_time=operation_time,
+                shift_id=shift.id, fiscal_time=fiscal_time, server_time=server_time, original_tax_id=tax_id,
+                pid=self.next_local_number, offline_pid=self.next_offline_local_number, tax_id=storno_tax_id,
+                fiscal_ticket=fiscal_ticket, testing=shift.testing, offline_fiscal_xml_signed=signed_xml,
+                offline=offline_status, offline_tax_id=offline_tax_id, offline_session_id=self.prro_offline_session_id,
+                doc_uid=doc_uid, prev_hash=prev_hash)
             db.session.add(adv)
 
             db.session.commit()
@@ -2151,8 +1955,7 @@ class Departments(Base):
                 check_visual = '{}\r\n		{}'.format(check_visual, "Сторнування попереднього чека")
                 check_visual = '{}\r\n		{}'.format(check_visual, "Касовий чек")
                 check_visual = '{}\r\nПРРО  ФН {}         ВН {}'.format(check_visual, self.rro_id, self.zn)
-                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id,
-                                                                        adv.pid, "офлайн")
+                check_visual = '{}\r\nЧЕК   ФН {}      ВН {} {}'.format(check_visual, offline_tax_id, adv.pid, "офлайн")
                 if shift.testing:
                     check_visual = '{}\r\nТЕСТОВИЙ НЕФІСКАЛЬНИЙ ДОКУМЕНТ'.format(check_visual)
                 if shift.cashier:
@@ -2169,8 +1972,7 @@ class Departments(Base):
                     check_visual)
 
                 if prev_hash:
-                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(
-                        check_visual, prev_hash)
+                    check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(check_visual, prev_hash)
 
                 check_visual = '{}\r\n----------------------------------------------------------------------'.format(
                     check_visual)
@@ -2207,7 +2009,7 @@ class Departments(Base):
                 msg = 'Зберегли чек сторно в режимі онлайн'
 
             messages.append(msg)
-            print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+            print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
             return storno_tax_id, shift, shift_opened, cabinet_url, coded_string, offline
         else:
@@ -2239,14 +2041,13 @@ class Departments(Base):
             if shift:
                 if shift_opened and balance > 0:
                     tax_id_advance, shift_advance, shift_opened_advance, qr_advance, visual_advance, offline_advance = self.prro_advances(
-                        balance, key=key,
-                        testing=testing)
+                        balance, key=key, testing=testing)
                 else:
                     qr_advance = None
                     visual_advance = None
                     tax_id_advance = None
 
-                operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                operation_time = datetime.now(tz.gettz(TIMEZONE))
                 server_time = None
 
                 if reals:
@@ -2275,10 +2076,8 @@ class Departments(Base):
                             shift, shift_opened, messages, offline = self.prro_open_shift(True, key=key,
                                                                                           testing=testing)
                             ret = self.sender.post_sale(summa, discount, reals, taxes, pays, operation_time,
-                                                        totals=totals,
-                                                        sales_ret=sales_ret, orderretnum=orderretnum,
-                                                        testing=shift.testing,
-                                                        doc_uid=doc_uid)
+                                                        totals=totals, sales_ret=sales_ret, orderretnum=orderretnum,
+                                                        testing=shift.testing, doc_uid=doc_uid)
                             if not ret:
                                 if self.offline:
                                     offline_status = True
@@ -2295,12 +2094,8 @@ class Departments(Base):
                     server_time = None
                     prev_hash = self.offline_prev_hash
 
-                    xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_sale(summa,
-                                                                                      discount,
-                                                                                      reals,
-                                                                                      taxes,
-                                                                                      pays,
-                                                                                      operation_time,
+                    xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_sale(summa, discount, reals, taxes,
+                                                                                      pays, operation_time,
                                                                                       totals=totals,
                                                                                       sales_ret=sales_ret,
                                                                                       orderretnum=orderretnum,
@@ -2317,8 +2112,7 @@ class Departments(Base):
                         fiscal_time = operation_time
 
                     if self.sender.last_fiscal_ticket:
-                        fiscal_ticket = base64.b64encode(
-                            self.sender.last_fiscal_ticket).decode()
+                        fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
                     else:
                         fiscal_ticket = None
 
@@ -2330,34 +2124,18 @@ class Departments(Base):
 
                 tax_id = self.sender.last_ordertaxnum
 
-                sale = Sales(
-                    department_id=self.id,
-                    user_id=shift.user_id,
-                    operation_time=operation_time,
-                    shift_id=shift.id,
-                    fiscal_time=fiscal_time,
-                    server_time=server_time,
-                    sum=summa,
-                    discount=discount,
-                    pid=self.next_local_number,
-                    tax_id=tax_id,
-                    fiscal_ticket=fiscal_ticket,
-                    testing=shift.testing,
-                    offline_fiscal_xml_signed=signed_xml,
-                    offline=offline_status,
-                    offline_tax_id=offline_tax_id,
-                    offline_session_id=self.prro_offline_session_id,
-                    doc_uid=doc_uid,
-                    prev_hash=prev_hash
-                )
+                sale = Sales(department_id=self.id, user_id=shift.user_id, operation_time=operation_time,
+                    shift_id=shift.id, fiscal_time=fiscal_time, server_time=server_time, sum=summa, discount=discount,
+                    pid=self.next_local_number, offline_pid=self.next_offline_local_number, tax_id=tax_id,
+                    fiscal_ticket=fiscal_ticket, testing=shift.testing, offline_fiscal_xml_signed=signed_xml,
+                    offline=offline_status, offline_tax_id=offline_tax_id,
+                    offline_session_id=self.prro_offline_session_id, doc_uid=doc_uid, prev_hash=prev_hash)
                 db.session.add(sale)
                 db.session.commit()
 
                 if taxes:
                     for tax in taxes:
-                        sale_tax = SalesTaxes(
-                            sales_id=sale.id,
-                        )
+                        sale_tax = SalesTaxes(sales_id=sale.id, )
                         if 'TYPE' in tax:
                             sale_tax.type = tax['TYPE']
 
@@ -2390,9 +2168,7 @@ class Departments(Base):
 
                 if pays:
                     for pay in pays:
-                        sale_pay = SalesPays(
-                            sales_id=sale.id,
-                        )
+                        sale_pay = SalesPays(sales_id=sale.id, )
 
                         if 'PAYFORMCD' in pay:
                             sale_pay.payformcd = pay['PAYFORMCD']
@@ -2409,9 +2185,7 @@ class Departments(Base):
 
                 if reals:
                     for real in reals:
-                        sale_check = SalesCheck(
-                            sales_id=sale.id,
-                        )
+                        sale_check = SalesCheck(sales_id=sale.id, )
 
                         # <!--Внутрішній код товару (64 символи)-->
                         if 'CODE' in real:
@@ -2457,9 +2231,7 @@ class Departments(Base):
 
         else:
             shift_id = sale.shift_id
-            shift = Shifts.query \
-                .order_by(Shifts.operation_time.desc()) \
-                .filter(Shifts.id == shift_id).first()
+            shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(Shifts.id == shift_id).first()
 
             if not shift:
                 raise Exception("Зміна не відкрита, зв'яжіться з тех.підтримкою")
@@ -2577,25 +2349,22 @@ class Departments(Base):
                     check_visual = '{}----------------------------------------------------------------------\r\n'.format(
                         check_visual)
                     if 'SOURCESUM' in tax:
-                        check_visual = '{}{} {}                {:.2f}% від    {:.2f}: {:.2f}\r\n'.format(
-                            check_visual, tax['NAME'], tax['LETTER'], tax['PRC'], tax['SOURCESUM'], tax['SUM'])
+                        check_visual = '{}{} {}                {:.2f}% від    {:.2f}: {:.2f}\r\n'.format(check_visual,
+                            tax['NAME'], tax['LETTER'], tax['PRC'], tax['SOURCESUM'], tax['SUM'])
                     else:
                         check_visual = '{}{} {}                {:.2f}% від    {:.2f}\r\n'.format(check_visual,
                                                                                                  tax['NAME'],
                                                                                                  tax['LETTER'],
-                                                                                                 tax['PRC'],
-                                                                                                 tax['SUM'])
+                                                                                                 tax['PRC'], tax['SUM'])
             else:
                 check_visual = '{}----------------------------------------------------------------------\r\n'.format(
                     check_visual)
-                check_visual = '{}Без ПДВ\r\n'.format(
-                    check_visual)
+                check_visual = '{}Без ПДВ\r\n'.format(check_visual)
 
             # check_visual = '{}\r\nСУМА:                                            {:.2f}'.format(check_visual, summa)
 
             if sale.prev_hash:
-                check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(
-                    check_visual, sale.prev_hash)
+                check_visual = '{}\r\nКонтрольне число:\r\n{}'.format(check_visual, sale.prev_hash)
 
             check_visual = '{}----------------------------------------------------------------------'.format(
                 check_visual)
@@ -2626,29 +2395,18 @@ class Departments(Base):
             msg = 'Зберегли чек продажу в режимі онлайн'
 
         messages.append(msg)
-        print('{} {} {} '.format(sale.operation_time, self.rro_id, msg))
+        print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
-        ret = {
-            "tax_id": tax_id,
-            "local_id": sale.pid,
-            "shift": shift,
-            "shift_opened": shift_opened,
-            "shift_opened_datetime": shift.operation_time,
-            "qr": cabinet_url,
-            "tax_visual": coded_string,
-            "offline": sale.offline,
-            "tax_id_advance": tax_id_advance,
-            "qr_advance": qr_advance,
-            "tax_visual_advance": visual_advance,
-            "fiscal_ticket": sale.fiscal_ticket,
-            "testing": sale.testing,
-            "uid": sale.doc_uid,
-        }
+        ret = {"tax_id": tax_id, "local_id": sale.pid, "shift": shift, "shift_opened": shift_opened,
+            "shift_opened_datetime": shift.operation_time, "qr": cabinet_url, "tax_visual": coded_string,
+            "offline": sale.offline, "tax_id_advance": tax_id_advance, "qr_advance": qr_advance,
+            "tax_visual_advance": visual_advance, "fiscal_ticket": sale.fiscal_ticket, "testing": sale.testing,
+            "uid": sale.doc_uid, }
         return ret
 
     def prro_close_shift(self, shift):
 
-        operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+        operation_time = datetime.now(tz.gettz(TIMEZONE))
 
         server_time = None
 
@@ -2686,8 +2444,7 @@ class Departments(Base):
                 server_time = None
 
                 xml, signed_xml, offline_tax_id, xml_hash = self.sender.close_shift(dt=operation_time,
-                                                                                    testing=shift.testing,
-                                                                                    offline=True,
+                                                                                    testing=shift.testing, offline=True,
                                                                                     prev_hash=self.offline_prev_hash)
 
                 self.offline_prev_hash = xml_hash
@@ -2714,30 +2471,16 @@ class Departments(Base):
             xml = None
 
         if self.sender.last_fiscal_ticket:
-            fiscal_ticket = base64.b64encode(
-                self.sender.last_fiscal_ticket).decode()
+            fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
         else:
             fiscal_ticket = None
 
-        close_shift = Shifts(
-            department_id=self.id,
-            user_id=shift.user_id,
-            operation_type=0,
-            operation_time=operation_time,
-            fiscal_time=fiscal_time,
-            server_time=server_time,
-            pid=self.next_local_number,
-            tax_id=tax_id,
-            xml=xml,
-            offline_fiscal_xml_signed=signed_xml,
-            fiscal_ticket=fiscal_ticket,
-            fiscal_shift_id=shift.fiscal_shift_id,
-            shift_id=shift.id,
-            testing=shift.testing,
-            offline=offline_status,
-            offline_session_id=self.prro_offline_session_id,
-            offline_tax_id=offline_tax_id
-        )
+        close_shift = Shifts(department_id=self.id, user_id=shift.user_id, operation_type=0,
+            operation_time=operation_time, fiscal_time=fiscal_time, server_time=server_time, pid=self.next_local_number,
+            offline_pid=self.next_offline_local_number, tax_id=tax_id, xml=xml, offline_fiscal_xml_signed=signed_xml,
+            fiscal_ticket=fiscal_ticket, fiscal_shift_id=shift.fiscal_shift_id, shift_id=shift.id,
+            testing=shift.testing, offline=offline_status, offline_session_id=self.prro_offline_session_id,
+            offline_tax_id=offline_tax_id)
 
         if offline_status:
             tax_id = close_shift.offline_tax_id
@@ -2758,7 +2501,7 @@ class Departments(Base):
             msg = 'Зберегли закриття зміни в режимі онлайн'
 
         messages.append(msg)
-        print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+        print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
         self.prro_set_next_number()
 
@@ -2768,10 +2511,7 @@ class Departments(Base):
 
         self.prro_fix()
 
-        last_shift = Shifts.query \
-            .order_by(Shifts.operation_time.desc()) \
-            .filter(Shifts.department_id == self.id) \
-            .first()
+        last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(Shifts.department_id == self.id).first()
 
         if last_shift:
             if last_shift.operation_type == 0:
@@ -2781,7 +2521,7 @@ class Departments(Base):
 
         if shift:
 
-            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+            operation_time = datetime.now(tz.gettz(TIMEZONE))
 
             server_time = None
 
@@ -2811,13 +2551,9 @@ class Departments(Base):
 
             if z_rep_present:
 
-                z_report = ZReports.query \
-                    .order_by(ZReports.operation_time.desc()) \
-                    .filter(ZReports.operation_time != None) \
-                    .filter(ZReports.pid != 0) \
-                    .filter(ZReports.department_id == self.id) \
-                    .filter(ZReports.shift_id == shift.id) \
-                    .first()
+                z_report = ZReports.query.order_by(ZReports.operation_time.desc()).filter(
+                    ZReports.operation_time != None).filter(ZReports.pid != 0).filter(
+                    ZReports.department_id == self.id).filter(ZReports.shift_id == shift.id).first()
 
                 if z_report:
                     self.prro_close_shift(shift)
@@ -2852,12 +2588,9 @@ class Departments(Base):
 
                 server_time = None
 
-                last_z_report = ZReports.query.with_entities(ZReports.z_number) \
-                    .order_by(ZReports.operation_time.desc()) \
-                    .filter(ZReports.operation_time != None) \
-                    .filter(ZReports.pid > 0) \
-                    .filter(ZReports.department_id == self.id) \
-                    .first()
+                last_z_report = ZReports.query.with_entities(ZReports.z_number).order_by(
+                    ZReports.operation_time.desc()).filter(ZReports.operation_time != None).filter(
+                    ZReports.pid > 0).filter(ZReports.department_id == self.id).first()
 
                 if last_z_report:
                     z_number = last_z_report.z_number + 1
@@ -2886,20 +2619,10 @@ class Departments(Base):
                 server_time = self.sender.server_time
 
                 if offline:
-                    raise Exception('{}'.format(
-                        "Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
+                    raise Exception(
+                        '{}'.format("Виникла помилка відправки документів - відсутній зв'язок з сервером податкової"))
 
-                    # self.prro_to_offline(operation_time)
-                    # fiscal_time = operation_time
-                    # fiscal_ticket = None
-                    # server_time = None
-                    #
-                    # xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_z(operation_time, x_data,
-                    #                                                                testing=shift.testing,
-                    #                                                                offline=True,
-                    #                                                                prev_hash=self.offline_prev_hash)
-                    #
-                    # self.offline_prev_hash = xml_hash
+                    # self.prro_to_offline(operation_time)  # fiscal_time = operation_time  # fiscal_ticket = None  # server_time = None  #  # xml, signed_xml, offline_tax_id, xml_hash = self.sender.post_z(operation_time, x_data,  #                                                                testing=shift.testing,  #                                                                offline=True,  #                                                                prev_hash=self.offline_prev_hash)  #  # self.offline_prev_hash = xml_hash
 
                 else:
                     if self.sender.fiscal_time:
@@ -2913,38 +2636,19 @@ class Departments(Base):
 
                 tax_id = self.sender.last_ordertaxnum
 
-                z_report = ZReports(
-                    operation_time=operation_time,
-                    department_id=self.id,
-                    operator_id=shift.user_id,
-                    rro_id=self.rro_id,
-                    tax_id=tax_id,
-                    z_number=z_number,
-                    fn=self.rro_id,
-                    zn=self.zn,
-                    fsn=fsn,
-                    tn=self.tin,
-                    pid=self.next_local_number,
-                    qr=qr,
-                    fiscal_time=fiscal_time,
-                    op_cnt=op_cnt,
-                    sum_reinf=sum_reinf,
-                    sum_collect=sum_collect,
-                    sum_adv=sum_adv,
-                    testing=shift.testing,
-                    shift_id=shift.id,
-                    offline=offline,
-                    server_time=server_time,
-                    offline_session_id=self.prro_offline_session_id
-                )
+                z_report = ZReports(operation_time=operation_time, department_id=self.id, operator_id=shift.user_id,
+                    rro_id=self.rro_id, tax_id=tax_id, z_number=z_number, fn=self.rro_id, zn=self.zn, fsn=fsn,
+                    tn=self.tin, pid=self.next_local_number, offline_pid=self.next_offline_local_number, qr=qr,
+                    fiscal_time=fiscal_time, op_cnt=op_cnt, sum_reinf=sum_reinf, sum_collect=sum_collect,
+                    sum_adv=sum_adv, testing=shift.testing, shift_id=shift.id, offline=offline, server_time=server_time,
+                    offline_session_id=self.prro_offline_session_id)
                 db.session.add(z_report)
 
                 if self.sender.last_xml:
                     z_report.xml = base64.b64encode(self.sender.last_xml).decode()
 
                 if self.sender.last_fiscal_ticket:
-                    z_report.fiscal_ticket = base64.b64encode(
-                        self.sender.last_fiscal_ticket).decode()
+                    z_report.fiscal_ticket = base64.b64encode(self.sender.last_fiscal_ticket).decode()
 
                 db.session.commit()
 
@@ -2955,7 +2659,7 @@ class Departments(Base):
                     msg = 'Зберегли Z звiт в режимі онлайн'
 
                 messages.append(msg)
-                print('{} {} {} '.format(fiscal_time, self.full_name, msg))
+                print('{} {} {} '.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, msg))
 
                 self.prro_set_next_number()
 
@@ -2984,17 +2688,15 @@ class Departments(Base):
             raise Exception('{} Для для подальшої роботи немає всіх даних. '
                             'Дочекайтесь відновлення зв\'язку з податковою')
 
-        print(
-            '{} {} Збільшуємо локальний номер з {} на {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
-                                                                 self.next_local_number, self.next_local_number + 1))
+        print('{} {} Збільшуємо локальний номер з {} на {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id,
+                                                                   self.next_local_number, self.next_local_number + 1))
         self.next_local_number += 1
 
         if self.offline_status:
-            print(
-                '{} {} Збільшуємо локальний номер оффлайн з {} на {}'.format(datetime.datetime.now(tz.gettz(TIMEZONE)),
-                                                                             self.rro_id,
-                                                                             self.next_offline_local_number,
-                                                                             self.next_offline_local_number + 1))
+            print('{} {} Збільшуємо локальний номер оффлайн з {} на {}'.format(datetime.now(tz.gettz(TIMEZONE)),
+                                                                               self.rro_id,
+                                                                               self.next_offline_local_number,
+                                                                               self.next_offline_local_number + 1))
             self.next_offline_local_number += 1
         else:
             self.next_offline_local_number = 1
@@ -3023,7 +2725,7 @@ class DepartmentKeys(Base):
 
     public_key = Column('public_key', String(100), comment='Ідентифікатор відкритого ключа', nullable=True)
 
-    create_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    create_date = db.Column(db.DateTime, default=datetime.now)
 
     key_password = Column('key_password', String(100), comment='Пароль захисту ключа', nullable=True)
 
@@ -3078,7 +2780,7 @@ class DepartmentKeys(Base):
         return '| {} | {} |'.format(self.id, self.name)
 
     def __str__(self):
-        return '{} {} ({}) id {}'.format(self.name, self.ceo_fio, self.key_role, self.id)
+        return '{} {} ({}) {} id {}'.format(self.name, self.ceo_fio, self.key_role, self.acsk, self.id)
 
     def update_key_data(self):
 
@@ -3203,8 +2905,8 @@ class DepartmentKeys(Base):
 
                                     begin_time = int(info["valid"]["from"] / 1000)
                                     end_time = int(info["valid"]["to"] / 1000)
-                                    self.begin_time = datetime.datetime.fromtimestamp(begin_time)
-                                    self.end_time = datetime.datetime.fromtimestamp(end_time)
+                                    self.begin_time = datetime.fromtimestamp(begin_time)
+                                    self.end_time = datetime.fromtimestamp(end_time)
 
                         if 'encrypt' in info['usage']:
                             if info['usage']['encrypt']:
@@ -3237,8 +2939,7 @@ class DepartmentKeys(Base):
                     if role:
                         self.key_role = role
                     else:
-                        return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None
-                        # return False, 'Помилка читання даних ключа, невірно зазначена роль {}'.format(self.key_role), None
+                        return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None  # return False, 'Помилка читання даних ключа, невірно зазначена роль {}'.format(self.key_role), None
 
             if not self.key_role:
                 return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None
@@ -3269,16 +2970,17 @@ class Shifts(Base):
     operation_type = Column('operation_type', SmallInteger,
                             comment='Тип операції: 1 - відкриття зміни, 0 - закриття зміни', nullable=False)
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     fiscal_shift_id = Column('fiscal_shift_id', Integer, comment='Фіскальний номер зміни', nullable=True)
 
@@ -3326,8 +3028,7 @@ class OfflineChecks(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     operation_type = Column('operation_type', SmallInteger,
                             comment='Тип операції: 1 - відкриття офлайн, 0 - закриття офлайн', nullable=False)
@@ -3337,10 +3038,12 @@ class OfflineChecks(Base):
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     xml = Column('xml', TEXT, default=None, comment='Текстовий вміст надісланого чека', nullable=True)
 
@@ -3362,6 +3065,9 @@ class OfflineChecks(Base):
     offline_session_id = Column('offline_session_id', Integer, comment='Ідентифікатор офлайн сесії поточного чеку',
                                 nullable=True)
 
+    last_fiscal_error_txt = Column('last_fiscal_error_txt', String(128), comment='Причина переходу в офлайн',
+                                   nullable=True)
+
 
 class Advances(Base):
     '''Таблица данных о полученных авансах'''
@@ -3374,21 +3080,21 @@ class Advances(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     shift_id = Column("shift_id", Integer, ForeignKey("shifts.id"), comment='Ідентифікатор зміни', nullable=True)
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
-    sum = Column('sum', Numeric(precision=20, scale=2),
-                 comment='Сумма')
+    sum = Column('sum', Numeric(precision=20, scale=2), comment='Сумма')
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3400,8 +3106,7 @@ class Advances(Base):
     fiscal_ticket = Column('fiscal_ticket', TEXT, default=None, comment='Текстовий вміст відповіді податкової',
                            nullable=True)
 
-    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None,
-                         nullable=True)
+    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None, nullable=True)
 
     storno_tax_id = Column('storno_tax_id', Integer, comment='Фіскальний номер онлайн чека сторно', nullable=True)
 
@@ -3435,21 +3140,21 @@ class Podkreps(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     shift_id = Column("shift_id", Integer, ForeignKey("shifts.id"), comment='Ідентифікатор зміни', nullable=True)
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
-    sum = Column('sum', Numeric(precision=20, scale=2),
-                 comment='Сумма')
+    sum = Column('sum', Numeric(precision=20, scale=2), comment='Сумма')
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3461,8 +3166,7 @@ class Podkreps(Base):
     fiscal_ticket = Column('fiscal_ticket', TEXT, default=None, comment='Текстовий вміст відповіді податкової',
                            nullable=True)
 
-    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None,
-                         nullable=True)
+    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None, nullable=True)
 
     storno_tax_id = Column('storno_tax_id', Integer, comment='Фіскальний номер онлайн чека сторно', nullable=True)
 
@@ -3496,21 +3200,21 @@ class Incasses(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     shift_id = Column("shift_id", Integer, ForeignKey("shifts.id"), comment='Ідентифікатор зміни', nullable=True)
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
-    sum = Column('sum', Numeric(precision=20, scale=2),
-                 comment='Сумма')
+    sum = Column('sum', Numeric(precision=20, scale=2), comment='Сумма')
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3522,8 +3226,7 @@ class Incasses(Base):
     fiscal_ticket = Column('fiscal_ticket', TEXT, default=None, comment='Текстовий вміст відповіді податкової',
                            nullable=True)
 
-    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None,
-                         nullable=True)
+    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None, nullable=True)
 
     storno_tax_id = Column('storno_tax_id', Integer, comment='Фіскальний номер онлайн чека сторно', nullable=True)
 
@@ -3557,21 +3260,21 @@ class Stornos(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     shift_id = Column("shift_id", Integer, ForeignKey("shifts.id"), comment='Ідентифікатор зміни', nullable=True)
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
-    sum = Column('sum', Numeric(precision=20, scale=2),
-                 comment='Сумма')
+    sum = Column('sum', Numeric(precision=20, scale=2), comment='Сумма')
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3616,19 +3319,17 @@ class Sales(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), comment='Користувач')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     shift_id = Column("shift_id", Integer, ForeignKey("shifts.id"), comment='Ідентифікатор зміни', nullable=True)
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Час прийняття фіскальним сервером', default=None,
                          nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
-    sum = Column('sum', Numeric(precision=20, scale=2),
-                 comment='Сумма')
+    sum = Column('sum', Numeric(precision=20, scale=2), comment='Сумма')
 
     discount = Column('discount', Numeric(precision=20, scale=2), default=0, comment='Дисконт')
 
@@ -3638,6 +3339,8 @@ class Sales(Base):
                          default=None)
 
     pid = Column('pid', Integer, comment='Локальний номер чека', nullable=True)
+
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3649,8 +3352,7 @@ class Sales(Base):
     fiscal_ticket = Column('fiscal_ticket', TEXT, default=None, comment='Текстовий вміст відповіді податкової',
                            nullable=True)
 
-    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None,
-                         nullable=True)
+    storno_time = Column('storno_time', DateTime, comment='Час сторно', default=None, nullable=True)
 
     storno_tax_id = Column('storno_tax_id', Integer, comment='Фіскальний номер онлайн чека сторно', nullable=True)
 
@@ -3758,8 +3460,7 @@ class ZReports(Base):
 
     operator_id = Column('operator_id', Integer, ForeignKey("users.id"), comment='Идентификатор оператора')
 
-    operation_time = Column('operation_time', DateTime, default=datetime.datetime.now,
-                            comment='Час здійснення операції')
+    operation_time = Column('operation_time', DateTime, default=datetime.now, comment='Час здійснення операції')
 
     rro_type = Column('rro_type', String(4), comment='Тип РРО, що зараз використовується(rro, rkks, prro, none)')
 
@@ -3777,28 +3478,27 @@ class ZReports(Base):
 
     pid = Column('pid', Integer, comment='Фіскальний номер онлайн чека')
 
+    offline_pid = Column('offline_pid', Integer, comment='Локальний номер чека оффлайн', nullable=True)
+
     qr = Column('qr', String(100), comment='Содержимое QR кода чека')
 
     fiscal_time = Column('fiscal_time', DateTime, comment='Фискальное время чека')
 
     op_cnt = Column('op_cnt', Integer, comment='Количество операций в чеке')
 
-    sum_reinf = Column('sum_reinf', Numeric(precision=20, scale=2),
-                       comment='Сумма подкреплений')
+    sum_reinf = Column('sum_reinf', Numeric(precision=20, scale=2), comment='Сумма подкреплений')
 
-    sum_collect = Column('sum_collect', Numeric(precision=20, scale=2),
-                         comment='Сумма инкассаций')
+    sum_collect = Column('sum_collect', Numeric(precision=20, scale=2), comment='Сумма инкассаций')
 
-    sum_adv = Column('sum_adv', Numeric(precision=20, scale=2),
-                     comment='Сумма авансов')
+    sum_adv = Column('sum_adv', Numeric(precision=20, scale=2), comment='Сумма авансов')
 
     xml = Column('xml', TEXT, default=None, comment='Текстовий вміст надісланого чека', nullable=True)
 
     fiscal_xml = Column('fiscal_xml', TEXT, default=None, comment='Текстовий вміст чека як його бачить податкова',
                         nullable=True)
 
-    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер',
-                         default=None, nullable=True)
+    server_time = Column('server_time', DateTime, comment='Час відправки на фіскальний сервер', default=None,
+                         nullable=True)
 
     tax_id = Column('tax_id', Integer, comment='Фіскальний номер онлайн чека', nullable=True)
 
@@ -3829,9 +3529,26 @@ class ZReports(Base):
 #       INDEXES & CONSTRAINS
 # ===================================
 
+# doc_uid
 shifts_doc_uid_idx = Index('shifts_doc_uid_idx', Shifts.doc_uid)
 advances_doc_uid_idx = Index('advances_doc_uid_idx', Advances.doc_uid)
 podkreps_doc_uid_idx = Index('podkreps_doc_uid_idx', Podkreps.doc_uid)
 incasses_doc_uid_idx = Index('incasses_doc_uid_idx', Incasses.doc_uid)
 stornos_doc_uid_idx = Index('stornos_doc_uid_idx', Stornos.doc_uid)
 sales_doc_uid_idx = Index('sales_doc_uid_idx', Sales.doc_uid)
+
+departments_rro_id_idx = Index('departments_rro_id_idx', Departments.rro_id)
+
+# offline_session_id
+offline_checks_offline_session_id = Index('offline_checks_offline_session_id', OfflineChecks.offline_session_id)
+shifts_offline_session_id = Index('shifts_offline_session_id', Shifts.offline_session_id)
+advances_offline_session_id = Index('advances_offline_session_id', Advances.offline_session_id)
+incasses_offline_session_id = Index('incasses_offline_session_id', Incasses.offline_session_id)
+podkreps_offline_session_id = Index('podkreps_offline_session_id', Podkreps.offline_session_id)
+sales_offline_session_id = Index('sales_offline_session_id', Sales.offline_session_id)
+stornos_offline_session_id = Index('stornos_offline_session_id', Stornos.offline_session_id)
+zreports_offline_session_id = Index('zreports_offline_session_id', ZReports.offline_session_id)
+
+# operation_type
+offline_checks_operation_type = Index('offline_checks_operation_type', OfflineChecks.operation_type)
+shifts_operation_type = Index('shifts_operation_type', Shifts.operation_type)

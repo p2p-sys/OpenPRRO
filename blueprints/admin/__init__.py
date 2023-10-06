@@ -186,7 +186,8 @@ class DepartmentsAdmin(Filters, ModelView):
     can_view_details = True
 
     column_filters = (
-        'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status', 'shift_state')
+        'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status', 'shift_state', 'closed', 'prro_key_id',
+        'taxform_key_id')
 
     column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
                    'offline']
@@ -445,7 +446,7 @@ class DepartmentsAdmin(Filters, ModelView):
 
                                         print('Смена есть, статус {}'.format(shift.operation_type))
                                         if shift.operation_type == 1:
-                                            operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                                            operation_time = datetime.now(tz.gettz(TIMEZONE))
                                             print(
                                                 'Смена открыта в оффлайн, но не открыта по налоговой, исправляем')
                                             shift.offline = False
@@ -1093,11 +1094,11 @@ class OfflineChecksAdmin(Filters, ModelView):
         super(OfflineChecksAdmin, self).__init__(OfflineChecks, session, name=name, static_folder='static',
                                                  **kwargs)
 
-    column_filters = ['department.rro_id', 'operation_time', 'server_time']
+    column_filters = ['department.rro_id', 'operation_time', 'server_time', 'last_fiscal_error_txt']
 
     column_sortable_list = ('id', 'department.rro_id', 'operation_time', 'server_time')
 
-    column_list = ['id', 'department', 'department.rro_id', 'operation_time', 'server_time']
+    column_list = ['id', 'department', 'department.rro_id', 'operation_time', 'server_time', 'last_fiscal_error_txt']
 
     column_searchable_list = ['department.rro_id']
 
@@ -1174,7 +1175,7 @@ class IndexAdmin(Filters, BaseView):
             .filter(Departments.prro_key_id != None) \
             .count()
 
-        now = datetime.datetime.now(tz.gettz(TIMEZONE))
+        now = datetime.now(tz.gettz(TIMEZONE))
 
         index_form.key_active = DepartmentKeys.query \
             .filter(DepartmentKeys.key_content != None) \

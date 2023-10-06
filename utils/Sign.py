@@ -24,12 +24,7 @@ class Connection:
         self.ohmac = hmac.new(key, digestmod='sha256')
         self.ihmac = hmac.new(key, digestmod='sha256')
         self.CONTROL_LEN = 32
-        self.TYPES = {
-            0x04: 'octstr',
-            0x13: 'printstr',
-            'printstr': 0x13,
-            'octstr': 0x04
-        }
+        self.TYPES = {0x04: 'octstr', 0x13: 'printstr', 'printstr': 0x13, 'octstr': 0x04}
 
     def reset_ohmac(self):
         digest = self.ohmac.digest()
@@ -208,7 +203,7 @@ class Sign(object):
             DEFAULT_NAME = '.dstu-agent.sock'
             home = os.getenv('HOME', '/tmp/')
             default_path = os.path.join(home, DEFAULT_NAME)
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.connect(path or default_path)
         elif mode == 'ip6':
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -264,8 +259,7 @@ class Sign(object):
 
                 else:
                     print('CryproError update_bid no key/password data')
-                    raise Exception('{}'.format(
-                        'Помилка ключа криптографії'))
+                    raise Exception('{}'.format('Помилка ключа криптографії'))
 
         except Exception as e:
             print('CryproError update_bid {}'.format(e))
@@ -369,19 +363,15 @@ class Sign(object):
 
     def get_roles(self, box_id):
 
-        roles = [{'role': 'fop', 'description': 'ФОП'},
-                 {'role': 'director', 'description': 'Директор'},
-                 {'role': 'stamp', 'description': 'Печатка'},
-                 {'role': 'corporate', 'description': 'Корпоративний'},
-                 {'role': 'personal', 'description': 'Особистий'},
-                 {'role': 'other', 'description': 'Інше'}]
+        roles = [{'role': 'fop', 'description': 'ФОП'}, {'role': 'director', 'description': 'Директор'},
+                 {'role': 'stamp', 'description': 'Печатка'}, {'role': 'corporate', 'description': 'Корпоративний'},
+                 {'role': 'personal', 'description': 'Особистий'}, {'role': 'other', 'description': 'Інше'}]
 
         roles_arr = []
 
         for role in roles:
             try:
-                self.cn.pipe(box_id, b'test',
-                             [{"op": "sign", "role": role['role'], "tax": False}])
+                self.cn.pipe(box_id, b'test', [{"op": "sign", "role": role['role'], "tax": False}])
                 roles_arr.append(role)
 
             except Exception as e:
@@ -419,14 +409,12 @@ class Sign(object):
         return self.cn.pipe(box_id, unsigned_data,
                             [{"op": "encrypt", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}])
 
-    def tax_encrypt(self, box_id, unsigned_data, role=None, tax=True, cert=None, headers=None, tsp=False,
-                    ocsp=False):
+    def tax_encrypt(self, box_id, unsigned_data, role=None, tax=True, cert=None, headers=None, tsp=False, ocsp=False):
         try:
-            return self.cn.pipe(box_id, unsigned_data, [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp},
-                                                        {"op": "encrypt", "role": role, "forCert": cert, "addCert": True,
-                                                         "tax": tax},
-                                                        {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}],
-                                headers)
+            return self.cn.pipe(box_id, unsigned_data,
+                                [{"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp},
+                                 {"op": "encrypt", "role": role, "forCert": cert, "addCert": True, "tax": tax},
+                                 {"op": "sign", "role": role, "tax": tax, "tsp": tsp, "ocsp": ocsp}], headers)
         except Exception as e:
             raise Exception('Помилка бібліотеки криптографії під час шифрування документа: {}'.format(e))
 

@@ -26,7 +26,7 @@ def close_shifts():
 
     try:
 
-        now = datetime.datetime.now().time()
+        now = datetime.now().time()
 
         departments = Departments.query \
             .filter(Departments.auto_close_time != None) \
@@ -67,7 +67,7 @@ def delete_offline_sessions():
 
     for session in offline_sessions:
         department = Departments.query.get(session.department_id)
-        session.server_time = datetime.datetime.now()
+        session.server_time = datetime.now()
         db.session.commit()
         print('{} успішно видалили оффлайн сесію'.format(department.rro_id))
 
@@ -82,19 +82,19 @@ def to_online():
         .filter(Departments.offline_status == True) \
         .all()
 
-    print("{} Загальна кількість в офлайні {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+    print("{} Загальна кількість в офлайні {}".format(datetime.now(tz.gettz(TIMEZONE)),
                                                       len(departments)))
 
     for department in departments:
-        print("{} {} Починаємо виводити з офлайн, ключ {}".format(datetime.datetime.now(tz.gettz(TIMEZONE)),
+        print("{} {} Починаємо виводити з офлайн, ключ {}".format(datetime.now(tz.gettz(TIMEZONE)),
                                                                   department.rro_id, department.prro_key))
         messages, status = department.prro_to_online()
         print("{} {} Закінчили виводити з офлайн, отримано повідомлення {}".format(
-            datetime.datetime.now(tz.gettz(TIMEZONE)),
+            datetime.now(tz.gettz(TIMEZONE)),
             department.rro_id, messages))
 
     if len(departments) > 0:
-        print("{} Всі {} РРО оброблені".format(datetime.datetime.now(tz.gettz(TIMEZONE)), len(departments)))
+        print("{} Всі {} РРО оброблені".format(datetime.now(tz.gettz(TIMEZONE)), len(departments)))
 
         # if TELEGRAM_BOT:
         #     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)

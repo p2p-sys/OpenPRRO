@@ -1,5 +1,4 @@
 import base64
-import datetime
 import uuid
 
 import dateutil.parser
@@ -14,39 +13,28 @@ from models import Departments, db, Shifts, DepartmentKeys, ZReports, get_sender
     get_logger
 from utils.taxforms import TaxForms
 
+from datetime import datetime
+
 logger = get_logger(__name__)
 
 
 class ApiView(FlaskView):
     route_base = 'api'
 
-    @route('/keys', methods=['GET', 'POST'],
-           endpoint='keys')
+    @route('/keys', methods=['GET', 'POST'], endpoint='keys')
     @csrf.exempt
     def keys(self):
 
         try:
             logger.info('Надійшов запит /keys')
-            keys = DepartmentKeys.query \
-                .all()
+            keys = DepartmentKeys.query.all()
 
             keys_arr = []
             for key in keys:
-                k = {
-                    "key_id": key.id,
-                    "name": key.name,
-                    "public_key": key.public_key,
-                    "create_date": key.create_date,
-                    "begin_time": key.begin_time,
-                    "end_time": key.end_time,
-                    "key_role": key.key_role,
-                    "edrpou": key.edrpou,
-                    "ceo_fio": key.ceo_fio,
-                    "ceo_tin": key.ceo_tin,
-                    "sign": key.sign,
-                    "encrypt": key.encrypt,
-                    "key_content": key.key_data_txt
-                }
+                k = {"key_id": key.id, "name": key.name, "public_key": key.public_key, "create_date": key.create_date,
+                    "begin_time": key.begin_time, "end_time": key.end_time, "key_role": key.key_role,
+                    "edrpou": key.edrpou, "ceo_fio": key.ceo_fio, "ceo_tin": key.ceo_tin, "sign": key.sign,
+                    "encrypt": key.encrypt, "key_content": key.key_data_txt}
                 keys_arr.append(k)
 
             answer = jsonify(status='success', keys=keys_arr, error_code=0)
@@ -58,8 +46,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/key', methods=['GET', 'POST'],
-           endpoint='key')
+    @route('/key', methods=['GET', 'POST'], endpoint='key')
     @csrf.exempt
     def key(self):
 
@@ -89,21 +76,10 @@ class ApiView(FlaskView):
                 logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
-            k = {
-                "key_id": key.id,
-                "name": key.name,
-                "public_key": key.public_key,
-                "create_date": key.create_date,
-                "begin_time": key.begin_time,
-                "end_time": key.end_time,
-                "key_role": key.key_role,
-                "edrpou": key.edrpou,
-                "ceo_fio": key.ceo_fio,
-                "ceo_tin": key.ceo_tin,
-                "sign": key.sign,
-                "encrypt": key.encrypt,
-                "key_content": key.key_data_txt
-            }
+            k = {"key_id": key.id, "name": key.name, "public_key": key.public_key, "create_date": key.create_date,
+                "begin_time": key.begin_time, "end_time": key.end_time, "key_role": key.key_role, "edrpou": key.edrpou,
+                "ceo_fio": key.ceo_fio, "ceo_tin": key.ceo_tin, "sign": key.sign, "encrypt": key.encrypt,
+                "key_content": key.key_data_txt}
 
             answer = jsonify(status='success', key=k, error_code=0)
             logger.info(f'Відповідь: {answer.json}')
@@ -114,27 +90,19 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/rro', methods=['GET', 'POST'],
-           endpoint='rro')
+    @route('/rro', methods=['GET', 'POST'], endpoint='rro')
     @csrf.exempt
     def rro(self):
 
         try:
             logger.info('Надійшов запит /rro')
-            departments = Departments.query \
-                .all()
+            departments = Departments.query.all()
 
             departments_arr = []
             for department in departments:
-                d = {
-                    "department_id": department.id,
-                    "name": department.full_name,
-                    "rro_id": department.rro_id,
-                    "taxform_key_id": department.taxform_key_id,
-                    "prro_key_id": department.prro_key_id,
-                    "signer_type": department.signer_type,
-                    "key_tax_registered": department.key_tax_registered,
-                }
+                d = {"department_id": department.id, "name": department.full_name, "rro_id": department.rro_id,
+                    "taxform_key_id": department.taxform_key_id, "prro_key_id": department.prro_key_id,
+                    "signer_type": department.signer_type, "key_tax_registered": department.key_tax_registered, }
                 departments_arr.append(d)
 
             answer = jsonify(status='success', rro=departments_arr, error_code=0)
@@ -146,8 +114,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/add_department', methods=['POST', 'GET'],
-           endpoint='add_department')
+    @route('/add_department', methods=['POST', 'GET'], endpoint='add_department')
     @csrf.exempt
     def add_department(self):
 
@@ -242,15 +209,8 @@ class ApiView(FlaskView):
             if department_id:
                 department = Departments.query.get(department_id)
                 if not department:
-                    department = Departments(
-                        id=department_id,
-                        full_name=name,
-                        address=address,
-                        rro_id=rro_id,
-                        taxform_key_id=taxform_key_id,
-                        prro_key_id=prro_key_id,
-                        offline=offline
-                    )
+                    department = Departments(id=department_id, full_name=name, address=address, rro_id=rro_id,
+                        taxform_key_id=taxform_key_id, prro_key_id=prro_key_id, offline=offline)
                     db.session.add(department)
                     db.session.commit()
                 else:
@@ -258,13 +218,8 @@ class ApiView(FlaskView):
                     logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
             else:
-                department = Departments(
-                    full_name=name,
-                    address=address,
-                    rro_id=rro_id,
-                    taxform_key_id=taxform_key_id,
-                    prro_key_id=prro_key_id
-                )
+                department = Departments(full_name=name, address=address, rro_id=rro_id, taxform_key_id=taxform_key_id,
+                    prro_key_id=prro_key_id)
                 db.session.add(department)
                 db.session.commit()
 
@@ -290,27 +245,19 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/departments', methods=['GET', 'POST'],
-           endpoint='departments')
+    @route('/departments', methods=['GET', 'POST'], endpoint='departments')
     @csrf.exempt
     def departments(self):
 
         try:
             logger.info(f'Надійшов запит /departments')
-            departments = Departments.query \
-                .all()
+            departments = Departments.query.all()
 
             departments_arr = []
             for department in departments:
-                d = {
-                    "department_id": department.id,
-                    "name": department.full_name,
-                    "rro_id": department.rro_id,
-                    "taxform_key_id": department.taxform_key_id,
-                    "prro_key_id": department.prro_key_id,
-                    "signer_type": department.signer_type,
-                    "key_tax_registered": department.key_tax_registered,
-                }
+                d = {"department_id": department.id, "name": department.full_name, "rro_id": department.rro_id,
+                    "taxform_key_id": department.taxform_key_id, "prro_key_id": department.prro_key_id,
+                    "signer_type": department.signer_type, "key_tax_registered": department.key_tax_registered, }
                 departments_arr.append(d)
 
             logger.info(f'Відповідь: status=success, departments={departments_arr}, error_code=0')
@@ -321,8 +268,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/department', methods=['GET', 'POST'],
-           endpoint='department')
+    @route('/department', methods=['GET', 'POST'], endpoint='department')
     @csrf.exempt
     def department(self):
 
@@ -351,15 +297,9 @@ class ApiView(FlaskView):
                 logger.error(f'Відповідь: {answer.json}', exc_info=True)
                 return answer
 
-            d = {
-                "department_id": department.id,
-                "name": department.full_name,
-                "rro_id": department.rro_id,
-                "taxform_key_id": department.taxform_key_id,
-                "prro_key_id": department.prro_key_id,
-                "signer_type": department.signer_type,
-                "key_tax_registered": department.key_tax_registered,
-            }
+            d = {"department_id": department.id, "name": department.full_name, "rro_id": department.rro_id,
+                "taxform_key_id": department.taxform_key_id, "prro_key_id": department.prro_key_id,
+                "signer_type": department.signer_type, "key_tax_registered": department.key_tax_registered, }
 
             answer = jsonify(status='success', department=d, error_code=0)
             logger.info(f'Відповідь: {answer.json}')
@@ -370,8 +310,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/set_rro', methods=['POST', 'GET'],
-           endpoint='set_rro')
+    @route('/set_rro', methods=['POST', 'GET'], endpoint='set_rro')
     @csrf.exempt
     def set_rro(self):
 
@@ -419,8 +358,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/fix', methods=['POST', 'GET'],
-           endpoint='fix')
+    @route('/fix', methods=['POST', 'GET'], endpoint='fix')
     @csrf.exempt
     def fix(self):
 
@@ -451,8 +389,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/set_department_keys', methods=['POST', 'GET'],
-           endpoint='set_department_keys')
+    @route('/set_department_keys', methods=['POST', 'GET'], endpoint='set_department_keys')
     @csrf.exempt
     def set_department_keys(self):
 
@@ -512,8 +449,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/set_shift_auto_close', methods=['POST', 'GET'],
-           endpoint='set_shift_auto_close')
+    @route('/set_shift_auto_close', methods=['POST', 'GET'], endpoint='set_shift_auto_close')
     @csrf.exempt
     def set_shift_auto_close(self):
 
@@ -533,11 +469,9 @@ class ApiView(FlaskView):
             if 'auto_close_time' in data:
                 auto_close_time = data['auto_close_time']
                 if auto_close_time:
-                    auto_close_time = datetime.datetime.strptime(auto_close_time, "%H:%M:%S")
+                    auto_close_time = datetime.strptime(auto_close_time, "%H:%M:%S")
             else:
-                auto_close_time = None
-                # msg = 'Не вказано жодного з обов\'язкових параметрів: auto_close_time'
-                # return jsonify(status='error', message=msg, error_code=1)
+                auto_close_time = None  # msg = 'Не вказано жодного з обов\'язкових параметрів: auto_close_time'  # return jsonify(status='error', message=msg, error_code=1)
 
             if auto_close_time:
                 department.auto_close_time = auto_close_time
@@ -560,8 +494,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/open_shift', methods=['POST', 'GET'],
-           endpoint='open_shift')
+    @route('/open_shift', methods=['POST', 'GET'], endpoint='open_shift')
     @csrf.exempt
     def open_shift(self):
 
@@ -624,22 +557,15 @@ class ApiView(FlaskView):
 
             if balance != 0:
                 advance_tax_id, shift, shift_opened_adv, advance_qr, advance_visual, offline = department.prro_advances(
-                    balance, key=key,
-                    testing=testing)
+                    balance, key=key, testing=testing)
                 advance_tax_id = '{}'.format(advance_tax_id)
                 messages.append(
                     'Відправлено чек службового внесення (аванс), отримано фіскальний номер {}'.format(advance_tax_id))
 
             answer = jsonify(status='success', advance_tax_id='{}'.format(advance_tax_id), advance_qr=advance_qr,
-                             messages=messages,
-                             shift_opened_datetime=shift.operation_time,
-                             shift_opened=shift_opened,
-                             tax_id='{}'.format(tax_id),
-                             error_code=0,
-                             advance_tax_visual=advance_visual,
-                             offline=bool(offline),
-                             testing=shift.testing
-                             )
+                             messages=messages, shift_opened_datetime=shift.operation_time, shift_opened=shift_opened,
+                             tax_id='{}'.format(tax_id), error_code=0, advance_tax_visual=advance_visual,
+                             offline=bool(offline), testing=shift.testing)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -648,8 +574,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/shift_status', methods=['POST', 'GET'],
-           endpoint='shift_status')
+    @route('/shift_status', methods=['POST', 'GET'], endpoint='shift_status')
     @csrf.exempt
     def shift_status(self):
 
@@ -672,9 +597,7 @@ class ApiView(FlaskView):
                 if 'key_id' in data:
                     key_id = data['key_id']
                     if key_id:
-                        key = DepartmentKeys.query \
-                            .filter(DepartmentKeys.id == key_id) \
-                            .first()
+                        key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                         if not key:
                             msg = 'Ключ з key_id {} не існує!'.format(key_id)
                             answer = jsonify(status='error', message=msg, error_code=1)
@@ -708,19 +631,15 @@ class ApiView(FlaskView):
                         logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
-                    last_shift = Shifts.query \
-                        .order_by(Shifts.operation_time.desc()) \
-                        .filter(Shifts.department_id == department.id) \
-                        .filter(Shifts.operation_type == 1) \
-                        .first()
+                    last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                        Shifts.department_id == department.id).filter(Shifts.operation_type == 1).first()
                     if last_shift:
                         answer = jsonify(status='success', operation_time=last_shift.operation_time,
                                          registrar_state=registrar_state, error_code=0)
                         logger.info(f'Відповідь: {answer.json}')
                         return answer
                     else:
-                        answer = jsonify(status='success', message='Зміни у системі відсутні',
-                                         operation_time=None,
+                        answer = jsonify(status='success', message='Зміни у системі відсутні', operation_time=None,
                                          registrar_state=registrar_state, error_code=0)
                         logger.info(f'Відповідь: {answer.json}')
                         return answer
@@ -743,17 +662,14 @@ class ApiView(FlaskView):
                     except Exception as e:
                         registrar_state = None
 
-                    last_shift = Shifts.query \
-                        .order_by(Shifts.operation_time.desc()) \
-                        .filter(Shifts.department_id == department.id) \
-                        .filter(Shifts.operation_type == 1) \
-                        .first()
+                    last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                        Shifts.department_id == department.id).filter(Shifts.operation_type == 1).first()
                     if last_shift:
                         last_shists.append({'department_id': department.id, 'rro_id': department.rro_id,
                                             'operation_time': last_shift.operation_time, 'tax_id': last_shift.tax_id,
                                             'registrar_state': registrar_state})
                     else:
-                        datamin = datetime.datetime.min
+                        datamin = datetime.min
                         last_shists.append(
                             {'department_id': department.id, 'rro_id': department.rro_id, 'operation_time': datamin,
                              'tax_id': 0, 'registrar_state': registrar_state})
@@ -767,8 +683,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/advance', methods=['POST', 'GET'],
-           endpoint='advance')
+    @route('/advance', methods=['POST', 'GET'], endpoint='advance')
     @csrf.exempt
     def advance(self):
 
@@ -806,13 +721,8 @@ class ApiView(FlaskView):
 
             answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr,
                              message='Відправлено чек службового внесення (аванс), отримано фіскальний номер {}'.format(
-                                 tax_id),
-                             shift_opened_datetime=shift.operation_time,
-                             shift_opened=shift_opened,
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=visual,
-                             offline=offline)
+                                 tax_id), shift_opened_datetime=shift.operation_time, shift_opened=shift_opened,
+                             shift_tax_id=str(shift_tax_id), error_code=0, tax_visual=visual, offline=offline)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -821,8 +731,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/podkrep', methods=['POST', 'GET'],
-           endpoint='podkrep')
+    @route('/podkrep', methods=['POST', 'GET'], endpoint='podkrep')
     @csrf.exempt
     def podkrep(self):
 
@@ -862,11 +771,7 @@ class ApiView(FlaskView):
                 doc_uid = None
 
             tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_podkrep(
-                sum,
-                key=key,
-                testing=testing,
-                balance=balance,
-                doc_uid=doc_uid)
+                sum, key=key, testing=testing, balance=balance, doc_uid=doc_uid)
 
             message = 'Відправлено підкріплення, отримано фіскальний номер {}'.format(tax_id)
 
@@ -875,18 +780,10 @@ class ApiView(FlaskView):
             else:
                 shift_tax_id = shift.tax_id
 
-            answer = jsonify(status='success',
-                             tax_id='{}'.format(tax_id), qr=qr,
-                             message=message,
-                             shift_opened_datetime=shift.operation_time,
-                             shift_opened=shift_opened,
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=visual,
-                             offline=bool(offline),
-                             tax_id_advance=tax_id_advance,
-                             qr_advance=qr_advance,
-                             visual_advance=visual_advance)
+            answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr, message=message,
+                             shift_opened_datetime=shift.operation_time, shift_opened=shift_opened,
+                             shift_tax_id=str(shift_tax_id), error_code=0, tax_visual=visual, offline=bool(offline),
+                             tax_id_advance=tax_id_advance, qr_advance=qr_advance, visual_advance=visual_advance)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -895,8 +792,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/inkass', methods=['POST', 'GET'],
-           endpoint='inkass')
+    @route('/inkass', methods=['POST', 'GET'], endpoint='inkass')
     @csrf.exempt
     def inkass(self):
 
@@ -936,11 +832,7 @@ class ApiView(FlaskView):
                 doc_uid = None
 
             tax_id, shift, shift_opened, qr, visual, offline, tax_id_advance, qr_advance, visual_advance = department.prro_inkass(
-                sum,
-                key=key,
-                testing=testing,
-                balance=balance,
-                doc_uid=doc_uid)
+                sum, key=key, testing=testing, balance=balance, doc_uid=doc_uid)
 
             message = 'Відправлено інкасацію, отримано фіскальний номер {}'.format(tax_id)
 
@@ -949,18 +841,10 @@ class ApiView(FlaskView):
             else:
                 shift_tax_id = shift.tax_id
 
-            answer = jsonify(status='success',
-                             tax_id='{}'.format(tax_id), qr=qr,
-                             message=message,
-                             shift_opened_datetime=shift.operation_time,
-                             shift_opened=shift_opened,
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=visual,
-                             offline=bool(offline),
-                             tax_id_advance=tax_id_advance,
-                             qr_advance=qr_advance,
-                             visual_advance=visual_advance)
+            answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr, message=message,
+                             shift_opened_datetime=shift.operation_time, shift_opened=shift_opened,
+                             shift_tax_id=str(shift_tax_id), error_code=0, tax_visual=visual, offline=bool(offline),
+                             tax_id_advance=tax_id_advance, qr_advance=qr_advance, visual_advance=visual_advance)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -969,8 +853,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/storno', methods=['POST', 'GET'],
-           endpoint='storno')
+    @route('/storno', methods=['POST', 'GET'], endpoint='storno')
     @csrf.exempt
     def storno(self):
 
@@ -1007,16 +890,10 @@ class ApiView(FlaskView):
             else:
                 shift_tax_id = shift.tax_id
 
-            answer = jsonify(status='success',
-                             tax_id='{}'.format(tax_id), qr=qr,
+            answer = jsonify(status='success', tax_id='{}'.format(tax_id), qr=qr,
                              message=f'Відправлено сторно документа {tax_id}, отримано фіскальний номер {storno_tax_id}',
-                             shift_opened_datetime=shift.operation_time,
-                             shift_opened=shift_opened,
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=visual,
-                             offline=bool(offline)
-                             )
+                             shift_opened_datetime=shift.operation_time, shift_opened=shift_opened,
+                             shift_tax_id=str(shift_tax_id), error_code=0, tax_visual=visual, offline=bool(offline))
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -1025,16 +902,15 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/real', methods=['POST', 'GET'],
-           endpoint='real')
+    @route('/real', methods=['POST', 'GET'], endpoint='real')
     @csrf.exempt
     def real(self):
 
-        start = datetime.datetime.now()
-        print('{} {}'.format(start, 'Поступил чек продажи через API'))
+        start = datetime.now(tz.gettz(TIMEZONE))
 
         try:
             data = request.get_json()
+            print('{} {}'.format(start, 'Надійшов чек продажу через API: {}'.format(data)))
             logger.info(f'Надійшов запит /real: {data}')
             if not data:
                 msg = 'Не вказано жодного з обов\'язкових параметрів або не вказано заголовок Content-Type: ' \
@@ -1080,19 +956,10 @@ class ApiView(FlaskView):
             else:
                 doc_uid = uuid.uuid1()
 
-            check = department.prro_sale(
-                reals,
-                taxes,
-                pays,
-                totals=totals,
-                key=key,
-                testing=testing,
-                balance=balance,
+            check = department.prro_sale(reals, taxes, pays, totals=totals, key=key, testing=testing, balance=balance,
                 doc_uid=doc_uid)
 
-            stop = datetime.datetime.now()
-            print('{} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, (
-                    stop - start).total_seconds()))
+            stop = datetime.now(tz.gettz(TIMEZONE))
 
             message = 'Відправлено чек продажу, отримано фіскальний номер {}'.format(check["tax_id"])
 
@@ -1106,27 +973,18 @@ class ApiView(FlaskView):
             else:
                 merchant_tax_id = department.ipn
 
-            answer = jsonify(status='success',
-                             tax_id='{}'.format(check["tax_id"]),
-                             local_id=check["local_id"],
-                             tax_id_advance=check["tax_id_advance"],
-                             qr=check["qr"], qr_advance=check["qr_advance"],
-                             message=message,
-                             shift_opened_datetime=check["shift_opened_datetime"],
-                             shift_opened=check["shift_opened"],
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=check["tax_visual"],
-                             tax_visual_advance=check["tax_visual_advance"],
-                             offline=bool(check["offline"]),
-                             fiscal_ticket=check["fiscal_ticket"],
-                             testing=check["testing"],
-                             uid=check['uid'],
-                             org_name=department.org_name,
-                             merchant_tax_id=merchant_tax_id,
-                             registrar_id=int(department.rro_id),
-                             merchant_address=department.address
-                             )
+            answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), local_id=check["local_id"],
+                             tax_id_advance=check["tax_id_advance"], qr=check["qr"], qr_advance=check["qr_advance"],
+                             message=message, shift_opened_datetime=check["shift_opened_datetime"],
+                             shift_opened=check["shift_opened"], shift_tax_id=str(shift_tax_id), error_code=0,
+                             tax_visual=check["tax_visual"], tax_visual_advance=check["tax_visual_advance"],
+                             offline=bool(check["offline"]), fiscal_ticket=check["fiscal_ticket"],
+                             testing=check["testing"], uid=check['uid'], org_name=department.org_name,
+                             merchant_tax_id=merchant_tax_id, registrar_id=int(department.rro_id),
+                             merchant_address=department.address)
+
+            print('{} {} Віддали дані чека продажу через API, все зайняло {} секунд'.format(stop, department.rro_id, (
+                    stop - start).total_seconds()))
 
             logger.info(f'Відповідь: {answer.json}')
             return answer
@@ -1136,8 +994,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/return', methods=['POST', 'GET'],
-           endpoint='ret')
+    @route('/return', methods=['POST', 'GET'], endpoint='ret')
     @csrf.exempt
     def ret(self):
 
@@ -1191,11 +1048,8 @@ class ApiView(FlaskView):
             else:
                 testing = False
 
-            check = department.prro_sale(
-                reals, taxes, pays, totals=totals,
-                sales_ret=True,
-                orderretnum=orderretnum, key=key,
-                testing=testing, balance=balance)
+            check = department.prro_sale(reals, taxes, pays, totals=totals, sales_ret=True, orderretnum=orderretnum,
+                key=key, testing=testing, balance=balance)
 
             if check["shift"].tax_id == 0:
                 shift_tax_id = check["shift"].offline_tax_id
@@ -1214,27 +1068,15 @@ class ApiView(FlaskView):
             else:
                 merchant_tax_id = department.ipn
 
-            answer = jsonify(status='success',
-                             tax_id='{}'.format(check["tax_id"]),
-                             local_id=check["local_id"],
-                             tax_id_advance=check["tax_id_advance"],
-                             qr=check["qr"], qr_advance=check["qr_advance"],
-                             message=message,
-                             shift_opened_datetime=check["shift_opened_datetime"],
-                             shift_opened=check["shift_opened"],
-                             shift_tax_id=str(shift_tax_id),
-                             error_code=0,
-                             tax_visual=check["tax_visual"],
-                             tax_visual_advance=check["tax_visual_advance"],
-                             offline=bool(check["offline"]),
-                             fiscal_ticket=check["fiscal_ticket"],
-                             testing=check["testing"],
-                             uid=check['uid'],
-                             org_name=department.org_name,
-                             merchant_tax_id=merchant_tax_id,
-                             registrar_id=int(department.rro_id),
-                             merchant_address=department.address
-                             )
+            answer = jsonify(status='success', tax_id='{}'.format(check["tax_id"]), local_id=check["local_id"],
+                             tax_id_advance=check["tax_id_advance"], qr=check["qr"], qr_advance=check["qr_advance"],
+                             message=message, shift_opened_datetime=check["shift_opened_datetime"],
+                             shift_opened=check["shift_opened"], shift_tax_id=str(shift_tax_id), error_code=0,
+                             tax_visual=check["tax_visual"], tax_visual_advance=check["tax_visual_advance"],
+                             offline=bool(check["offline"]), fiscal_ticket=check["fiscal_ticket"],
+                             testing=check["testing"], uid=check['uid'], org_name=department.org_name,
+                             merchant_tax_id=merchant_tax_id, registrar_id=int(department.rro_id),
+                             merchant_address=department.address)
 
             logger.info(f'Відповідь: {answer.json}')
             return answer
@@ -1244,8 +1086,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/totals', methods=['POST', 'GET'],
-           endpoint='totals')
+    @route('/totals', methods=['POST', 'GET'], endpoint='totals')
     @csrf.exempt
     def totals(self):
 
@@ -1270,8 +1111,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/xrep', methods=['POST', 'GET'],
-           endpoint='xrep')
+    @route('/xrep', methods=['POST', 'GET'], endpoint='xrep')
     @csrf.exempt
     def xrep(self):
 
@@ -1289,7 +1129,7 @@ class ApiView(FlaskView):
                         logger.error(f'Відповідь: {answer.json}', exc_info=True)
                         return answer
 
-                operation_time = datetime.datetime.now(tz.gettz(TIMEZONE))
+                operation_time = datetime.now(tz.gettz(TIMEZONE))
 
                 shift, shift_opened = department.prro_open_shift(False, key=department.prro_key, testing=False)
 
@@ -1420,12 +1260,11 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/close_shift', methods=['POST', 'GET'],
-           endpoint='close_shift')
+    @route('/close_shift', methods=['POST', 'GET'], endpoint='close_shift')
     @csrf.exempt
     def close_shift(self):
 
-        start = datetime.datetime.now()
+        start = datetime.now(tz.gettz(TIMEZONE))
         print('{} {}'.format(start, 'Надійшла команда закриття зміни API'))
 
         try:
@@ -1451,23 +1290,18 @@ class ApiView(FlaskView):
                 balance = 0
 
             z_report_data, z_report_tax_id, close_shift_tax_id, coded_string, tax_id_inkass, qr_inkass, visual_inkass = department.prro_get_xz(
-                True, key=key,
-                testing=testing, balance=balance)
+                True, key=key, testing=testing, balance=balance)
 
-            stop = datetime.datetime.now()
-            print('{} Віддали дані Z звіту через API, все зайняло {} секунд'.format(stop, (
-                    stop - start).total_seconds()))
+            stop = datetime.now(tz.gettz(TIMEZONE))
+            print(
+                '{} Віддали дані Z звіту через API, все зайняло {} секунд'.format(stop, (stop - start).total_seconds()))
 
             if z_report_tax_id:
 
                 answer = jsonify(status='success', data=z_report_data,
-                                 message='Зміна успішно закрита, Z звіт надіслано',
-                                 error_code=0,
-                                 z_report_tax_id=z_report_tax_id,
-                                 close_shift_tax_id=close_shift_tax_id,
-                                 z_report_visual=coded_string,
-                                 tax_id_inkass=tax_id_inkass,
-                                 qr_inkass=qr_inkass,
+                                 message='Зміна успішно закрита, Z звіт надіслано', error_code=0,
+                                 z_report_tax_id=z_report_tax_id, close_shift_tax_id=close_shift_tax_id,
+                                 z_report_visual=coded_string, tax_id_inkass=tax_id_inkass, qr_inkass=qr_inkass,
                                  visual_inkass=visual_inkass)
                 logger.info(f'Відповідь: {answer.json}')
                 return answer
@@ -1488,8 +1322,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/set_local_id', methods=['POST', 'GET'],
-           endpoint='set_local_id')
+    @route('/set_local_id', methods=['POST', 'GET'], endpoint='set_local_id')
     @csrf.exempt
     def set_local_id(self):
 
@@ -1515,10 +1348,8 @@ class ApiView(FlaskView):
 
             else:
                 local_id = data['local_id']
-                last_shift = Shifts.query \
-                    .order_by(Shifts.operation_time.desc()) \
-                    .filter(Shifts.department_id == department.id) \
-                    .first()
+                last_shift = Shifts.query.order_by(Shifts.operation_time.desc()).filter(
+                    Shifts.department_id == department.id).first()
 
                 if last_shift:
                     last_shift.prro_localnumber = local_id
@@ -1533,8 +1364,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/add_key', methods=['POST', 'GET'],
-           endpoint='add_key')
+    @route('/add_key', methods=['POST', 'GET'], endpoint='add_key')
     @csrf.exempt
     def add_key(self):
 
@@ -1587,9 +1417,7 @@ class ApiView(FlaskView):
                     logger.error(f'Відповідь: {answer.json}', exc_info=True)
                     return answer
 
-                department_key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                department_key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not department_key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -1599,13 +1427,8 @@ class ApiView(FlaskView):
                 department_key.key_password = key_password
 
             else:
-                department_key = DepartmentKeys(
-                    key_data=key_data,
-                    cert1_data=cert1_data,
-                    cert2_data=cert2_data,
-                    key_password=key_password,
-                    key_role=key_role
-                )
+                department_key = DepartmentKeys(key_data=key_data, cert1_data=cert1_data, cert2_data=cert2_data,
+                    key_password=key_password, key_role=key_role)
                 db.session.add(department_key)
             # db.session.commit()
 
@@ -1635,9 +1458,7 @@ class ApiView(FlaskView):
                             db.session.commit()
 
                     if not allow_duplicates:
-                        old_key = DepartmentKeys.query \
-                            .filter(DepartmentKeys.public_key == public_key) \
-                            .first()
+                        old_key = DepartmentKeys.query.filter(DepartmentKeys.public_key == public_key).first()
                         if old_key:
                             if old_key.id != department_key.id:
                                 department_key = old_key
@@ -1658,12 +1479,9 @@ class ApiView(FlaskView):
                 status = 'error'
                 error_code = 1
 
-            answer = jsonify(status=status, key_id=department_key.id,
-                             key_role=department_key.key_role,
-                             key_content=department_key.key_data_txt,
-                             update_key_data_text=update_key_data_text,
-                             public_key=public_key, error_code=error_code,
-                             message=update_key_data_text)
+            answer = jsonify(status=status, key_id=department_key.id, key_role=department_key.key_role,
+                             key_content=department_key.key_data_txt, update_key_data_text=update_key_data_text,
+                             public_key=public_key, error_code=error_code, message=update_key_data_text)
             logger.info(f'Відповідь: {answer.json}')
             return answer
 
@@ -1673,8 +1491,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/delete_key', methods=['POST', 'GET'],
-           endpoint='delete_key')
+    @route('/delete_key', methods=['POST', 'GET'], endpoint='delete_key')
     @csrf.exempt
     def delete_key(self):
 
@@ -1692,17 +1509,13 @@ class ApiView(FlaskView):
 
                 key_id = data['key_id']
 
-                departments = Departments.query \
-                    .filter(Departments.prro_key_id == key_id) \
-                    .all()
+                departments = Departments.query.filter(Departments.prro_key_id == key_id).all()
 
                 for department in departments:
                     department.prro_key_id = None
                 db.session.commit()
 
-                departments = Departments.query \
-                    .filter(Departments.taxform_key_id == key_id) \
-                    .all()
+                departments = Departments.query.filter(Departments.taxform_key_id == key_id).all()
 
                 for department in departments:
                     department.taxform_key_id = None
@@ -1732,8 +1545,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/sign', methods=['POST', 'GET'],
-           endpoint='sign')
+    @route('/sign', methods=['POST', 'GET'], endpoint='sign')
     @csrf.exempt
     def sign(self):
 
@@ -1801,8 +1613,8 @@ class ApiView(FlaskView):
                                           tsp=tsp, ocsp=ocsp)
             except Exception as e:
                 box_id = signer.update_bid(db, department_key)
-                signed_data = signer.sign(box_id, unsigned_data, role=department_key.key_role, tax=False,
-                                          tsp=tsp, ocsp=ocsp)
+                signed_data = signer.sign(box_id, unsigned_data, role=department_key.key_role, tax=False, tsp=tsp,
+                                          ocsp=ocsp)
                 department_key.box_id = box_id
                 db.session.commit()
 
@@ -1816,8 +1628,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/encrypt', methods=['POST', 'GET'],
-           endpoint='encrypt')
+    @route('/encrypt', methods=['POST', 'GET'], endpoint='encrypt')
     @csrf.exempt
     def encrypt(self):
 
@@ -1885,8 +1696,8 @@ class ApiView(FlaskView):
                                              tax=False, tsp=tsp, ocsp=ocsp)
             except Exception as e:
                 box_id = signer.update_bid(db, department_key)
-                signed_data = signer.encrypt(box_id, unsigned_data, role=department_key.key_role,
-                                             tax=False, tsp=tsp, ocsp=ocsp)
+                signed_data = signer.encrypt(box_id, unsigned_data, role=department_key.key_role, tax=False, tsp=tsp,
+                                             ocsp=ocsp)
                 department_key.box_id = box_id
                 db.session.commit()
 
@@ -1900,8 +1711,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/unwrap', methods=['POST', 'GET'],
-           endpoint='unwrap')
+    @route('/unwrap', methods=['POST', 'GET'], endpoint='unwrap')
     @csrf.exempt
     def unwrap(self):
 
@@ -1983,8 +1793,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/server_state', methods=['POST', 'GET'],
-           endpoint='server_state')
+    @route('/server_state', methods=['POST', 'GET'], endpoint='server_state')
     @csrf.exempt
     def server_state(self):
 
@@ -2006,8 +1815,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/objects', methods=['POST', 'GET'],
-           endpoint='objects')
+    @route('/objects', methods=['POST', 'GET'], endpoint='objects')
     @csrf.exempt
     def objects(self):
 
@@ -2022,9 +1830,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2051,8 +1857,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/operations', methods=['POST', 'GET'],
-           endpoint='operations')
+    @route('/operations', methods=['POST', 'GET'], endpoint='operations')
     @csrf.exempt
     def operations(self):
 
@@ -2074,7 +1879,7 @@ class ApiView(FlaskView):
                     datetime_from = dateutil.parser.isoparse(data['from'])
                 except:
                     try:
-                        datetime_from = datetime.datetime.strptime(data['from'], '%Y-%m-%dT%H:%M:%S')
+                        datetime_from = datetime.strptime(data['from'], '%Y-%m-%dT%H:%M:%S')
                     except Exception as e:
                         msg = 'Обов\'язковий параметр from має невірний формат {}'.format(e)
                         answer = jsonify(status='error', message=msg, error_code=1)
@@ -2091,7 +1896,7 @@ class ApiView(FlaskView):
                     datetime_to = dateutil.parser.isoparse(data['to'])
                 except:
                     try:
-                        datetime_to = datetime.datetime.strptime(data['to'], '%Y-%m-%dT%H:%M:%S')
+                        datetime_to = datetime.strptime(data['to'], '%Y-%m-%dT%H:%M:%S')
                     except Exception as e:
                         msg = 'Обов\'язковий параметр to має невірний формат {}'.format(e)
                         answer = jsonify(status='error', message=msg, error_code=1)
@@ -2126,8 +1931,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/operators', methods=['POST', 'GET'],
-           endpoint='operators')
+    @route('/operators', methods=['POST', 'GET'], endpoint='operators')
     @csrf.exempt
     def operators(self):
 
@@ -2152,8 +1956,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/check', methods=['POST', 'GET'],
-           endpoint='check')
+    @route('/check', methods=['POST', 'GET'], endpoint='check')
     @csrf.exempt
     def check(self):
 
@@ -2215,9 +2018,9 @@ class ApiView(FlaskView):
                         if key == 'ORDERDATE':
                             orderdate = headelem[key]['text']
 
-                            operation_time = datetime.datetime.strptime(orderdate, '%d%m%Y')
-                            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
-                                tax_id, rro_id, operation_time.strftime("%Y%m%d"))
+                            operation_time = datetime.strptime(orderdate, '%d%m%Y')
+                            qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(tax_id, rro_id,
+                                operation_time.strftime("%Y%m%d"))
 
                 # check = tax_json['CHECK']
                 # for checkelement in check:
@@ -2249,8 +2052,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/zrep', methods=['POST', 'GET'],
-           endpoint='zrep')
+    @route('/zrep', methods=['POST', 'GET'], endpoint='zrep')
     @csrf.exempt
     def zrep(self):
 
@@ -2300,8 +2102,7 @@ class ApiView(FlaskView):
         except Exception as e:
             return jsonify(status='error', message=str(e), error_code=-1)
 
-    @route('/last_z', methods=['POST', 'GET'],
-           endpoint='last_z')
+    @route('/last_z', methods=['POST', 'GET'], endpoint='last_z')
     @csrf.exempt
     def last_z(self):
 
@@ -2327,10 +2128,8 @@ class ApiView(FlaskView):
                     return answer
 
                 else:
-                    last_z = ZReports.query \
-                        .order_by(ZReports.operation_time.desc()) \
-                        .filter(ZReports.department_id == department.id) \
-                        .first()
+                    last_z = ZReports.query.order_by(ZReports.operation_time.desc()).filter(
+                        ZReports.department_id == department.id).first()
 
                     if last_z:
                         answer = jsonify(status='success', operation_time=last_z.operation_time, tax_id=last_z.tax_id,
@@ -2351,16 +2150,14 @@ class ApiView(FlaskView):
                 last_zets = []
                 for department in departments:
 
-                    last_z = ZReports.query \
-                        .order_by(ZReports.operation_time.desc()) \
-                        .filter(ZReports.department_id == department.id) \
-                        .first()
+                    last_z = ZReports.query.order_by(ZReports.operation_time.desc()).filter(
+                        ZReports.department_id == department.id).first()
 
                     if last_z:
                         last_zets.append({'department_id': department.id, 'rro_id': department.rro_id,
                                           'operation_time': last_z.operation_time, 'tax_id': last_z.tax_id})
                     else:
-                        datamin = datetime.datetime.min
+                        datamin = datetime.min
                         last_zets.append(
                             {'department_id': department.id, 'rro_id': department.rro_id, 'operation_time': datamin,
                              'tax_id': 0})
@@ -2374,8 +2171,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/tax_info', methods=['POST', 'GET'],
-           endpoint='tax_info')
+    @route('/tax_info', methods=['POST', 'GET'], endpoint='tax_info')
     @csrf.exempt
     def tax_info(self):
         # https://cabinet.tax.gov.ua/help/cabinet.pdf
@@ -2392,9 +2188,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2451,8 +2245,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/taxform_5prro', methods=['POST', 'GET'],
-           endpoint='taxform_5prro')
+    @route('/taxform_5prro', methods=['POST', 'GET'], endpoint='taxform_5prro')
     @csrf.exempt
     def taxform_5prro(self):
 
@@ -2468,9 +2261,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2510,8 +2301,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/taxform_1prro', methods=['POST', 'GET'],
-           endpoint='taxform_1prro')
+    @route('/taxform_1prro', methods=['POST', 'GET'], endpoint='taxform_1prro')
     @csrf.exempt
     def taxform_1prro(self):
 
@@ -2529,9 +2319,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2593,8 +2381,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/taxform_20opp', methods=['POST', 'GET'],
-           endpoint='taxform_20opp')
+    @route('/taxform_20opp', methods=['POST', 'GET'], endpoint='taxform_20opp')
     @csrf.exempt
     def taxform_20opp(self):
 
@@ -2610,9 +2397,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2656,8 +2441,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/taxform_messages', methods=['POST', 'GET'],
-           endpoint='taxform_messages')
+    @route('/taxform_messages', methods=['POST', 'GET'], endpoint='taxform_messages')
     @csrf.exempt
     def taxform_messages(self):
 
@@ -2673,9 +2457,7 @@ class ApiView(FlaskView):
 
             if 'key_id' in data:
                 key_id = data['key_id']
-                key = DepartmentKeys.query \
-                    .filter(DepartmentKeys.id == key_id) \
-                    .first()
+                key = DepartmentKeys.query.filter(DepartmentKeys.id == key_id).first()
                 if not key:
                     msg = 'Ключ з key_id {} не існує!'.format(key_id)
                     answer = jsonify(status='error', message=msg, error_code=1)
@@ -2704,8 +2486,7 @@ class ApiView(FlaskView):
             logger.error(f'Відповідь: {answer.json}', exc_info=True)
             return answer
 
-    @route('/key_roles', methods=['POST', 'GET'],
-           endpoint='key_roles')
+    @route('/key_roles', methods=['POST', 'GET'], endpoint='key_roles')
     @csrf.exempt
     def key_roles(self):
 

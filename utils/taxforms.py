@@ -81,12 +81,7 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("Send", {'xmlns': 'http://govgate/'})
 
@@ -99,9 +94,7 @@ class TaxForms(object):
         data = etree.SubElement(command, "data")
         data.text = base64data
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -120,12 +113,7 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("ReceiveAll", {'xmlns': 'http://govgate/'})
 
@@ -135,9 +123,7 @@ class TaxForms(object):
         needDelete = etree.SubElement(command, "needDelete")
         needDelete.text = str(need_delete)  # unsignedByte
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -153,21 +139,14 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("GetMessages", {'xmlns': 'http://govgate/'})
 
         signedEDRPOU = etree.SubElement(command, "signedEDRPOU")  # base64Binary
         signedEDRPOU.text = signed_EDRPOU
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -182,12 +161,7 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("GetMessagesEx", {'xmlns': 'http://govgate/'})
 
@@ -197,9 +171,7 @@ class TaxForms(object):
         senderEmail = etree.SubElement(command, "senderEmail")  # base64Binary
         senderEmail.text = self.TAX_EMAIL
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -214,21 +186,14 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("Delete", {'xmlns': 'http://govgate/'})
 
         signedMsgId = etree.SubElement(command, "signedMsgId")  # base64Binary
         signedMsgId.text = signed_id
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -243,21 +208,14 @@ class TaxForms(object):
         XSD = "http://www.w3.org/2001/XMLSchema"
         XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-        soap = ElementMaker(namespace=SOAP_ENV,
-                            nsmap={
-                                'xsi': XSI,
-                                'xsd': XSD,
-                                'soap12': SOAP_ENV,
-                            })
+        soap = ElementMaker(namespace=SOAP_ENV, nsmap={'xsi': XSI, 'xsd': XSD, 'soap12': SOAP_ENV, })
 
         command = etree.Element("Receive", {'xmlns': 'http://govgate/'})
 
         signedMsgId = etree.SubElement(command, "signedMsgId")  # base64Binary
         signedMsgId.text = signed_id
 
-        envelope = soap.Envelope(
-            soap.Body(command)
-        )
+        envelope = soap.Envelope(soap.Body(command))
 
         xml_declaration = """<?xml version="1.0" encoding="utf-8"?>\n"""
         xml = xml_declaration + etree.tostring(envelope, xml_declaration=False, pretty_print=True,
@@ -301,8 +259,7 @@ class TaxForms(object):
 
         status = root.find(".//{http://govgate/}GetMessagesResult")
         if status.text == 'GATE_OK':
-            messages = root.find(".//{http://govgate/}GetMessagesResponse").xpath(
-                '//*[local-name()="string"]')
+            messages = root.find(".//{http://govgate/}GetMessagesResponse").xpath('//*[local-name()="string"]')
 
             ret_messages = []
             for message in messages:
@@ -316,8 +273,7 @@ class TaxForms(object):
     def tax_get_messages_ex(self, m):
 
         signed_EDRPOU = self.signer.sign(self.box_id, '{:010.0f}'.format(int(self.EDRPOU)).encode('windows-1251'),
-                                         self.key_role_tax_form,
-                                         True)
+                                         self.key_role_tax_form, True)
 
         signed_EDRPOU_base64 = base64.b64encode(signed_EDRPOU)
 
@@ -333,8 +289,7 @@ class TaxForms(object):
 
         status = root.find(".//{http://govgate/}GetMessagesExResult")
         if status.text == 'GATE_OK':
-            messages = root.find(".//{http://govgate/}GetMessagesExResponse").xpath(
-                '//*[local-name()="string"]')
+            messages = root.find(".//{http://govgate/}GetMessagesExResponse").xpath('//*[local-name()="string"]')
 
             ret_messages = []
             for message in messages:
@@ -366,8 +321,8 @@ class TaxForms(object):
 
     def tax_receive_all(self, need_delete=True):
 
-        signed_email = self.signer.sign(self.box_id, self.TAX_EMAIL.encode('windows-1251'),
-                                        role=self.key_role_tax_form, tax=True)
+        signed_email = self.signer.sign(self.box_id, self.TAX_EMAIL.encode('windows-1251'), role=self.key_role_tax_form,
+                                        tax=True)
 
         signed_email_base64 = base64.b64encode(signed_email)
 
@@ -388,8 +343,7 @@ class TaxForms(object):
         if status.text == 'GATE_OK':
             # messages = root.find(".//{http://govgate/}messages")
 
-            messages = root.find(".//{http://govgate/}messages").xpath(
-                '//*[local-name()="body"]')
+            messages = root.find(".//{http://govgate/}messages").xpath('//*[local-name()="body"]')
 
             ret_messages = []
             for message in messages:
@@ -556,20 +510,11 @@ class TaxForms(object):
         with open(cert_name, "r") as file:
             cert = file.read()
 
-        headers = {
-            'PRG_TYPE': 'OpenPRRO',
-            'PRG_VER': "20220204",
-            'CERTYPE': 'UA1',
-            'RCV_NAME': 'test',
-            'FILENAME': filename,
-            'EDRPOU': self.EDRPOU,
-            'ENCODING': 'WIN'
-        }
+        headers = {'PRG_TYPE': 'OpenPRRO', 'PRG_VER': "20220204", 'CERTYPE': 'UA1', 'RCV_NAME': 'test',
+            'FILENAME': filename, 'EDRPOU': self.EDRPOU, 'ENCODING': 'WIN'}
 
-        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml,
-                                                     role=self.key_role_tax_form, tax=True,
-                                                     cert=cert,
-                                                     headers=headers, tsp="all", ocsp=False)
+        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml, role=self.key_role_tax_form, tax=True,
+                                                     cert=cert, headers=headers, tsp="all", ocsp=False)
 
         signed_form_xml_base64 = base64.b64encode(encrypted_form_xml)
 
@@ -600,26 +545,18 @@ class TaxForms(object):
          
         '''
 
-        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml,
-                                                     role=self.key_role_tax_form, tax=True, cert=cert,
-                                                     tsp='signature', ocsp=False)
+        encrypted_form_xml = self.signer.tax_encrypt(self.box_id, form_xml, role=self.key_role_tax_form, tax=True,
+                                                     cert=cert, tsp='signature', ocsp=False)
 
         FISCAL_API_HOST = 'https://cabinet.tax.gov.ua'
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json', }
 
         signed_form_xml_base64 = base64.b64encode(encrypted_form_xml)
         print(signed_form_xml_base64.decode())
 
-        response = requests.post(
-            '{}/cabinet/public/api/exchange/report'.format(FISCAL_API_HOST),
-            json=[{'contentBase64': signed_form_xml_base64.decode(), 'fname': filename}],
-            headers=headers,
-            timeout=10
-        )
+        response = requests.post('{}/cabinet/public/api/exchange/report'.format(FISCAL_API_HOST),
+            json=[{'contentBase64': signed_form_xml_base64.decode(), 'fname': filename}], headers=headers, timeout=10)
 
         print(response.status_code)
         print(response.content)
@@ -657,11 +594,8 @@ class TaxForms(object):
 
         url = '{}&size={}'.format(url, size)
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': signed_data_base64,
-            'Accept': 'application/json',
-        }
+        headers = {'Content-Type': 'application/json', 'Authorization': signed_data_base64,
+            'Accept': 'application/json', }
 
         answer = requests.get(url, headers=headers, timeout=100)
 
@@ -685,20 +619,16 @@ class TaxForms(object):
 
         unsigned_data = self.EDRPOU.encode()
 
-        signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form,
-                                  tax=False,
-                                  tsp=tsp, ocsp=ocsp)
+        signed_data = signer.sign(self.box_id, unsigned_data, role=self.key_role_tax_form, tax=False, tsp=tsp,
+                                  ocsp=ocsp)
 
         signed_data_base64 = base64.b64encode(signed_data)
 
         url = 'https://cabinet.tax.gov.ua/ws/public_api/reg_doc/list?periodYear={}&periodMonth={}'.format(period_year,
                                                                                                           period_month)
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': signed_data_base64,
-            'Accept': 'application/json',
-        }
+        headers = {'Content-Type': 'application/json', 'Authorization': signed_data_base64,
+            'Accept': 'application/json', }
 
         answer = requests.get(url, headers=headers, timeout=100)
 
@@ -805,11 +735,10 @@ class TaxForms(object):
             44-47	.xml	Расширение файла.
         '''
 
-        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
-            TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
+        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(TAX_OBL,
+            # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(edrpou),
-            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(edrpou), # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -817,18 +746,15 @@ class TaxForms(object):
             doc_type,
             # 24-25	C_DOC_TYPE	Номер нового отчётного (уточняющего) док-та в отчётном периоде. Дополняется слева нулями до 2 знаков
             doc_cnt,  # 26-32	C_DOC_CNT	Номер документа в периоде. Дополняется слева нулями до 7 знаков.
-            period_type,
-            # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
+            period_type, # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
             int(doc_mounth),  # 34-35	PERIOD_MONTH	Отчётный месяц. Дополняется слева нулями до 2 знаков.
             doc_year,  # 36-39	PERIOD_YEAR	Отчётный год.
             TAX_OBL,  # 40-43	C_STI_ORIG	Код инспекции, в которую подаётся оригинал документа
-            TAX_RAYON
-        )
+            TAX_RAYON)
 
         attr_qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "noNamespaceSchemaLocation")
         DECLAR = etree.Element("DECLAR", {attr_qname: xsdname},
-                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'}
-                               )
+                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'})
         DECLARHEAD = etree.SubElement(DECLAR, "DECLARHEAD")
 
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
@@ -1055,11 +981,10 @@ class TaxForms(object):
             44-47	.xml	Расширение файла.
         '''
 
-        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
-            TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
+        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(TAX_OBL,
+            # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(edrpou),
-            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(edrpou), # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -1067,18 +992,15 @@ class TaxForms(object):
             doc_type,
             # 24-25	C_DOC_TYPE	Номер нового отчётного (уточняющего) док-та в отчётном периоде. Дополняется слева нулями до 2 знаков
             doc_cnt,  # 26-32	C_DOC_CNT	Номер документа в периоде. Дополняется слева нулями до 7 знаков.
-            period_type,
-            # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
+            period_type, # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
             int(doc_mounth),  # 34-35	PERIOD_MONTH	Отчётный месяц. Дополняется слева нулями до 2 знаков.
             doc_year,  # 36-39	PERIOD_YEAR	Отчётный год.
             TAX_OBL,  # 40-43	C_STI_ORIG	Код инспекции, в которую подаётся оригинал документа
-            TAX_RAYON
-        )
+            TAX_RAYON)
 
         attr_qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "noNamespaceSchemaLocation")
         DECLAR = etree.Element("DECLAR", {attr_qname: xsdname},
-                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'}
-                               )
+                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'})
         DECLARHEAD = etree.SubElement(DECLAR, "DECLARHEAD")
 
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
@@ -1375,11 +1297,10 @@ class TaxForms(object):
             44-47	.xml	Расширение файла.
         '''
 
-        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(
-            TAX_OBL,  # 1-2	C_REG 	Код ГНИ получателя.
+        filename = '{}{}{:010.0f}{}{}{:02.0f}{}{:02.0f}{:07.0f}{}{:02.0f}{}{}{}.XML'.format(TAX_OBL,
+            # 1-2	C_REG 	Код ГНИ получателя.
             TAX_RAYON,  # 3-4	C_RAJ	Код ГНИ получателя.
-            int(edrpou),
-            # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
+            int(edrpou), # 5-14	TIN	Номер ЄДРПОУ, серия-номер паспорта. Дополняется слева нулями до 10 знаков.
             doc,  # 5-17	C_DOC	Код документа.
             doc_sub,  # 18-20	C_DOC_SUB	Подтип документа
             doc_ver,  # 21-22	C_DOC_VER	Номер версии документа. Дополняется слева нулями до 2 знаков.
@@ -1387,18 +1308,15 @@ class TaxForms(object):
             doc_type,
             # 24-25	C_DOC_TYPE	Номер нового отчётного (уточняющего) док-та в отчётном периоде. Дополняется слева нулями до 2 знаков
             doc_cnt,  # 26-32	C_DOC_CNT	Номер документа в периоде. Дополняется слева нулями до 7 знаков.
-            period_type,
-            # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
+            period_type, # 33	PERIOD_TYPE	Код отчётного периода (1-месяц, 2-квартал, 3-полугодие, 4-девять мес., 5-год).
             int(doc_mounth),  # 34-35	PERIOD_MONTH	Отчётный месяц. Дополняется слева нулями до 2 знаков.
             doc_year,  # 36-39	PERIOD_YEAR	Отчётный год.
             TAX_OBL,  # 40-43	C_STI_ORIG	Код инспекции, в которую подаётся оригинал документа
-            TAX_RAYON
-        )
+            TAX_RAYON)
 
         attr_qname = etree.QName("http://www.w3.org/2001/XMLSchema-instance", "noNamespaceSchemaLocation")
         DECLAR = etree.Element("DECLAR", {attr_qname: xsdname},
-                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'}
-                               )
+                               nsmap={'xsi': 'http://www.w3.org/2001/XMLSchema-instance'})
         DECLARHEAD = etree.SubElement(DECLAR, "DECLARHEAD")
 
         ''' Код ЄДРПОУ либо серия-номер паспорта '''
