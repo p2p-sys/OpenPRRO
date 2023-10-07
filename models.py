@@ -206,14 +206,14 @@ def close_offline_session(rro_id):
     print('{} {} Починаю підписувати'.format(datetime.now(tz.gettz(TIMEZONE)), department.rro_fn))
     try:
         try:
-            signed_data = signer.sign(department_key.box_id, xml, role=department.get_prro_key_role())
+            signed_data = signer.sign(department_key.box_id, xml)
         except Exception as e:
             print('{} {} Помилка бібліотеки криптографії {}, пробуємо ще раз'.format(datetime.now(tz.gettz(TIMEZONE)),
                                                                                      department.rro_fn, e))
             box_id = signer.update_bid(department_key.db, department_key)
             print('{} {} Успішно оновили ідентифікатор сесії для підпису'.format(datetime.now(tz.gettz(TIMEZONE)),
                                                                                  department.rro_fn))
-            signed_data = signer.sign(box_id, xml, role=department.get_prro_key_role())
+            signed_data = signer.sign(box_id, xml)
             department_key.box_id = box_id
             db.session.commit()
     except Exception as e:
@@ -534,21 +534,6 @@ class Departments(Base):
 
     def get_taxform_key(self):
         return self.taxform_key
-
-    def get_prro_key_role(self):
-        key = self.get_prro_key()
-        if key:
-            if key.acsk:
-                if 'ПРИВАТБАНК' in key.acsk:
-                    return key.key_role
-        return None
-
-    def get_taxform_key_role(self):
-        key = self.get_taxform_key()
-        if 'ПРИВАТБАНК' in key.acsk:
-            return key.key_role_tax_form
-        else:
-            return None
 
     def prro_fix(self, delete_offline_session=False):
 
@@ -1097,12 +1082,12 @@ class Departments(Base):
                                                                                  xml.decode('windows-1251')))
 
                     try:
-                        signed_data = signer.sign(department_key.box_id, xml, role=self.get_prro_key_role())
+                        signed_data = signer.sign(department_key.box_id, xml)
                     except Exception as e:
                         print('{] {} Помилка {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_id, e))
                         list_msgs.append('Помилка {}'.format(e))
                         box_id = signer.update_bid(department_key.db, department_key)
-                        signed_data = signer.sign(box_id, xml, role=self.get_prro_key_role())
+                        signed_data = signer.sign(box_id, xml)
                         department_key.box_id = box_id
                         db.session.commit()
 

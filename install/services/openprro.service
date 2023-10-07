@@ -1,5 +1,5 @@
 [Unit]
-	Description=uWSGI instance for kasa_blanka PRRO
+	Description=uWSGI instance for OpenPRRO service
 
 [Service]
     User=signer-agent
