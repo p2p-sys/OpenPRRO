@@ -31,7 +31,7 @@ def get_logger(name):
 
     # Налаштування обробника та форматувальника
     # file_handler = logging.handlers.TimedRotatingFileHandler('{}'.format(LOGFILE), when='midnight', delay=True)
-    file_handler = logging.FileHandler('{}-{}'.format(LOGFILE, datetime.today()), delay=True)
+    file_handler = logging.FileHandler('{}-{}'.format(LOGFILE, datetime.now(tz.gettz(TIMEZONE)).date()), delay=True)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # Додавання форматувальника до оброблювача
@@ -537,10 +537,11 @@ class Departments(Base):
 
     def get_prro_key_role(self):
         key = self.get_prro_key()
-        if 'ПРИВАТБАНК' in key.acsk:
-            return key.key_role
-        else:
-            return None
+        if key:
+            if key.acsk:
+                if 'ПРИВАТБАНК' in key.acsk:
+                    return key.key_role
+        return None
 
     def get_taxform_key_role(self):
         key = self.get_taxform_key()
