@@ -27,7 +27,7 @@ class SendData2(object):
         if not self.key:
             raise Exception('Не задано ключ криптографії')
 
-        self.key_role = department.get_prro_key_role()
+        self.key_role = None
 
         self.department = department
 
@@ -234,14 +234,6 @@ class SendData2(object):
             print('{} {} Помилка надсилання даних: {}'.format(datetime.now(tz.gettz(TIMEZONE)), self.rro_fn, e))
             self.last_fiscal_error_code = 500
             self.last_fiscal_error_txt = str(e)
-            # time.sleep(3)
-            # if command != "cmd":
-            #     data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-            #     if data:
-            #         return True
-            #     else:
-            #         return True
-            # return False
 
             return False
 
@@ -295,22 +287,28 @@ class SendData2(object):
                         error_key = message[errr_key_pos + 29:errr_key_pos + 93]
 
                         if error_rro == self.rro_fn and error_key == self.key.public_key:
-                            data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-                            # print(data)
-                            if data:
-                                self.last_fiscal_error_txt = ''
-                                self.last_fiscal_error_code = 0
-                                return True
+                            try:
+                                data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
+                                # print(data)
+                                if data:
+                                    self.last_fiscal_error_txt = ''
+                                    self.last_fiscal_error_code = 0
+                                    return True
+                            except:
+                                return 9
 
                 raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 
             if message.find('ZRepAlreadyRegistered') != -1:
-                data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
-                # print(data)
-                if data:
-                    self.last_fiscal_error_txt = ''
-                    self.last_fiscal_error_code = 0
-                    return True
+                try:
+                    data = self.get_fiscal_data_by_local_number(self.department.next_local_number, data)
+                    # print(data)
+                    if data:
+                        self.last_fiscal_error_txt = ''
+                        self.last_fiscal_error_code = 0
+                        return True
+                except:
+                    return 9
 
                 raise Exception("Помилка надсилання даних на фіскальний сервер: {}".format(message))
 

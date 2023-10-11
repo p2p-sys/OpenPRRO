@@ -187,16 +187,16 @@ class DepartmentsAdmin(Filters, ModelView):
 
     column_filters = (
         'id', 'full_name', 'rro_id', 'signer_type', 'offline', 'offline_status', 'shift_state', 'closed', 'prro_key_id',
-        'taxform_key_id')
+        'taxform_key_id', 'create_date')
 
     column_list = ['id', 'full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'key_tax_registered',
-                   'offline']
+                   'offline', 'create_date']
 
-    column_sortable_list = ('id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered', 'offline')
+    column_sortable_list = ('id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered', 'offline', 'create_date')
 
     column_searchable_list = ['id', 'full_name', 'rro_id', 'signer_type', 'key_tax_registered']
 
-    form_columns = ('full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'offline')
+    form_columns = ('full_name', 'rro_id', 'taxform_key', 'prro_key', 'signer_type', 'offline', 'create_date')
 
     form_excluded_columns = ('key_tax_registered')
 
@@ -206,7 +206,7 @@ class DepartmentsAdmin(Filters, ModelView):
 
     column_export_exclude_list = form_excluded_columns
 
-    column_default_sort = [('id', False)]
+    column_default_sort = [('id', True)]
 
     column_editable_list = ['full_name']
 
@@ -863,30 +863,19 @@ class DepartmentsAdmin(Filters, ModelView):
                         objects = sender.Objects()
                         # print(objects)
 
-                        if not sender.zn:
-                            access = "Фіскального номера немає в доступі"
-                        else:
-                            registrar_state = sender.TransactionsRegistrarState()
+                        registrar_state = sender.TransactionsRegistrarState()
 
-                            if registrar_state:
-                                if registrar_state['ShiftState'] == 0:
-                                    flash('Отделение {}, стан зміни: закрита. '.format(department.full_name),
-                                          'error')
-                                else:
-                                    LastFiscalNum = registrar_state["LastFiscalNum"]
+                        if registrar_state:
+                            if registrar_state['ShiftState'] == 0:
+                                flash('{}, стан зміни: закрита. '.format(department.rro_id),
+                                      'error')
+                            else:
+                                LastFiscalNum = registrar_state["LastFiscalNum"]
 
-                                    # try:
-                                    # doc = sender.GetCheckExt(LastFiscalNum, 0)
-                                    # print(doc)
+                                coded_string, cabinet_url = sender.GetCheckExt(LastFiscalNum, 3)
+                                decoded_string = base64.b64decode(coded_string)
 
-                                    coded_string = sender.GetCheckExt(LastFiscalNum, 3)
-                                    decoded_string = base64.b64decode(coded_string)
-                                    decoded_string = decoded_string.decode('UTF-8')
-                                    # print(decoded_string)
-                                    # qr = 'https://cabinet.tax.gov.ua/cashregs/check?id={}&fn={}&date={}'.format(
-                                    #     storno_tax_id, self.rro_id, operation_time.strftime("%Y%m%d"))
-                                    #
-                                    flash('{}'.format(decoded_string))
+                                flash('{}\n{}'.format(decoded_string.decode('UTF-8'), cabinet_url))
 
                     else:
                         flash('Сервер податкової не працює', 'error')
@@ -906,38 +895,25 @@ class DepartmentsAdmin(Filters, ModelView):
             for department in query.all():
                 department = Departments.query.get(department.id)
 
-                if not department.taxform_key:
-                    flash('{} не заданий ключ для підпису податкових форм'.format(department.id), 'error')
-
                 if not department.prro_key:
                     flash('{} не заданий ключ для підпису пРРО'.format(department.id), 'error')
 
-                if department.taxform_key and department.prro_key:
-                    from utils.SendData2 import SendData2
-                    sender = SendData2(db, department.taxform_key, department, 0, "")
+                try:
+                    if department.prro_key:
+                        from utils.SendData2 import SendData2
+                        sender = SendData2(db, department.prro_key, department, 0, "")
 
-                    objects = sender.post_data("cmd", {"Command": "Objects"})
+                        objects = sender.post_data("cmd", {"Command": "Objects"})
 
-                    if objects:
-                        if 'TaxObjects' in objects:
-                            objects = objects['TaxObjects']
-                            print(objects)
-                            if objects:
-                                for object in objects:
-                                    print(object)
-                            #         SubjectKeyId = operator['SubjectKeyId']
-                            #         if SubjectKeyId == department.prro_key.public_key:
-                            #
-                            #             # RegNum = operator['RegNum'] # Реєстраційний номер особи оператора (ЄДРПОУ,ДРФО,Картка платника податків)
-                            #             ChiefCashier = operator['ChiefCashier']
-                            #
-                            #             department.key_tax_registered = True
-                            #             if ChiefCashier == True:
-                            #                 department.signer_type = 'Старший касир'
-                            #             else:
-                            #                 department.signer_type = 'Касир'
-                            #
-                            #             db.session.commit()
+                        if objects:
+                            if 'TaxObjects' in objects:
+                                objects = objects['TaxObjects']
+                                if objects:
+                                    for object in objects:
+                                        flash('{}'.format(object))
+
+                except Exception as e:
+                    flash('{} помилка {}'.format(department.full_name, e), 'error')
 
         else:
             flash('У вас немає доступу для даної операції!', 'error')
@@ -957,9 +933,9 @@ class DepartmentKeysAdmin(Filters, ModelView):
     def __init__(self, session, **kwargs):
         super(DepartmentKeysAdmin, self).__init__(DepartmentKeys, session, **kwargs)
 
-    column_list = ['id', 'name', 'key_role', 'ceo_fio', 'acsk', 'begin_time', 'end_time']
-    column_sortable_list = ['id', 'name', 'key_role', 'ceo_fio', 'begin_time', 'end_time', 'acsk']
-    column_default_sort = ('name', 'begin_time')
+    column_list = ['id', 'name', 'key_role', 'ceo_fio', 'acsk', 'begin_time', 'end_time', 'create_date']
+    column_sortable_list = column_list
+    column_default_sort = [('id', True)]
 
     column_filters = ('id', 'name', 'ceo_fio', 'begin_time', 'end_time', 'key_role', 'acsk')
 

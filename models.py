@@ -490,6 +490,8 @@ class Departments(Base):
     offline_checks = relationship("OfflineChecks", backref=backref('department', order_by='OfflineChecks.id'),
         foreign_keys='OfflineChecks.department_id')
 
+    create_date = db.Column(db.DateTime, default=datetime.now)
+
     def __repr__(self):
         return '| {} | {} |'.format(self.id, self.full_name)
 
@@ -2703,11 +2705,7 @@ class DepartmentKeys(Base):
 
     id = Column('id', Integer, primary_key=True, comment='Iдентифікатор')
 
-    # department_id = Column(Integer, ForeignKey('departments.id'), comment='Відділення', nullable=True)
-
     name = Column('name', String(100), comment='Назва', nullable=True)
-
-    # short_name = Column('short_name', String(100), comment='short_name', nullable=True)
 
     public_key = Column('public_key', String(100), comment='Ідентифікатор відкритого ключа', nullable=True)
 
@@ -2914,11 +2912,12 @@ class DepartmentKeys(Base):
             self.key_data_txt = key_content
 
             if not self.key_role:
-                role = signer.get_role(self.box_id)
-                if role:
-                    self.key_role = role
-                else:
-                    return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None
+                try:
+                    role = signer.get_role(self.box_id)
+                    if role:
+                        self.key_role = role
+                except:
+                    pass
             else:
                 if not signer.check_role(self.box_id, self.key_role):
                     role = signer.get_role(self.box_id)
