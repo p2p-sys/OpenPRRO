@@ -44,18 +44,13 @@ TESTING_OFFLINE = False
 FS_URL = 'http://fs.tax.gov.ua:8609/fs/'
 
 # Адреси для автоматичного завантаження сертифікатів
-CMP_URLS = [
-    'http://ca.tax.gov.ua/services/cmp/',
-    'http://uakey.com.ua/services/cmp/',
-    'http://masterkey.ua/services/cmp/',
-    'http://ca.informjust.ua/services/cmp/',
-    'http://ca.oschadbank.ua/public/cmp/',
-    'http://ca.csd.ua/public/x509/cmp/',
-    'http://ca.gp.gov.ua/cmp/'
-]
+# [] - Автоматично
+# Або вкажіть масив, наприклад
+#     ['http://ca.tax.gov.ua/services/cmp/', 'http://uakey.com.ua/services/cmp/', 'http://masterkey.ua/services/cmp/',] etc
+#  Адреси можна взяти тут https://iit.com.ua/download/productfiles/CAs.json
+CMP_URLS = []
 
+# Дані для автоматичного повідомлення про події та помилки
 TELEGRAM_BOT = False
-
 TELEGRAM_BOT_TOKEN = '000000000:AbcdefghAbcdefghAbcdefgh'
-
 TELEGRAM_BOT_CHAT = '1234567890'
