@@ -1381,6 +1381,7 @@ class ApiView(FlaskView):
             key_data = None
             cert1_data = None
             cert2_data = None
+            privatbank = False
 
             if not 'key_id' in data:
 
@@ -1389,13 +1390,38 @@ class ApiView(FlaskView):
                     key_file_content = base64.b64decode(key)
                     key_data = key_file_content
 
-                if 'cert1' in data:
-                    cert1 = data['cert1']
-                    cert1_data = base64.b64decode(cert1)
+                # if 'key_file' in data:
+                #     key_file_name = data['key_file']
+                #     if '.jks' in key_file_name:
+                #         privatbank = True
+                # else:
+                #     if b'privatbank' in key_data:
+                #         privatbank = True
 
-                if 'cert2' in data:
-                    cert2 = data['cert2']
-                    cert2_data = base64.b64decode(cert2)
+                if not privatbank:
+                    if 'cert1_file' in data:
+                        cert1_file_name = data['cert1_file']
+                        if not '.crt' in cert1_file_name and not '.cer' in cert1_file_name:
+                            cert_msg = 'Неправильне розширення файлу сертифіката {}'.format(cert1_file_name)
+                            answer = jsonify(status='error', message=cert_msg, error_code=1)
+                            logger.error(f'Відповідь: {answer.json}', exc_info=True)
+                            return answer
+
+                    if 'cert2_file' in data:
+                        cert2_file_name = data['cert2_file']
+                        if not '.crt' in cert2_file_name and not '.cer' in cert2_file_name:
+                            cert_msg = 'Неправильне розширення файлу сертифіката {}'.format(cert2_file_name)
+                            answer = jsonify(status='error', message=cert_msg, error_code=1)
+                            logger.error(f'Відповідь: {answer.json}', exc_info=True)
+                            return answer
+
+                    if 'cert1' in data:
+                        cert1 = data['cert1']
+                        cert1_data = base64.b64decode(cert1)
+
+                    if 'cert2' in data:
+                        cert2 = data['cert2']
+                        cert2_data = base64.b64decode(cert2)
 
             if 'password' in data:
                 key_password = data['password']

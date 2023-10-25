@@ -177,7 +177,7 @@ def close_offline_session(rro_id):
 
     registrar_state = sender.TransactionsRegistrarState()
 
-    print(registrar_state)
+    # print(registrar_state)
 
     offline_dt = datetime.now(tz.gettz(TIMEZONE))
 
@@ -237,9 +237,7 @@ def close_offline_session(rro_id):
 
             if cnt < lngth:
                 signed_doc = signed_docs[cnt]
-                # print(signed_doc)
                 lenb = len(signed_doc).to_bytes(4, byteorder="little", signed=True)
-                # print(len(signed_doc))
                 data = data + lenb + signed_doc
                 cnt += 1  # print(cnt)
 
@@ -247,13 +245,12 @@ def close_offline_session(rro_id):
         packet += 1
 
         command = 'pck'
-        ret = sender.post_data(command, data, return_cmd_data=False)
         try:
-            return data
-        except:
-            print(ret)
+            ret = sender.post_data(command, data, return_cmd_data=False)
+            return ret
+        except Exception as e:
+            print('{} {} {}'.format(datetime.now(tz.gettz(TIMEZONE)), department.rro_fn, e))
             return False
-
 
 class Users(Base):
     ''' Таблица пользователей программного продукта '''
@@ -2788,7 +2785,6 @@ class DepartmentKeys(Base):
                 box_id = signer.add_key(self.key_data, self.key_password)
 
             unpacked_keys = signer.unpack_key(self.key_data, self.key_password)
-            print(unpacked_keys)
 
         else:
             try:
@@ -2911,23 +2907,16 @@ class DepartmentKeys(Base):
 
             self.key_data_txt = key_content
 
-            if not self.key_role:
-                try:
-                    role = signer.get_role(self.box_id)
-                    if role:
-                        self.key_role = role
-                except:
-                    pass
-            else:
-                if not signer.check_role(self.box_id, self.key_role):
-                    role = signer.get_role(self.box_id)
-                    if role:
-                        self.key_role = role
-                    else:
-                        return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None  # return False, 'Помилка читання даних ключа, невірно зазначена роль {}'.format(self.key_role), None
+            try:
+                test_data = b'test'
+                signed_data = signer.sign(box_id, test_data)
+                unsigned_data, meta = signer.unwrap(box_id, signed_data)
+                if unsigned_data != test_data:
+                    return False, 'Помилка під час перевірки роботи ключа. Цим ключем не вдалося підписати тестові дані. Спробуйте додати інший ключ.', None
 
-            if not self.key_role:
-                return False, 'Помилка читання даних ключа, можливо неправильний пароль або надані не всі файли', None
+            except Exception as e:
+                print(e)
+                return False, 'Помилка під час перевірки роботи ключа. Цим ключем не вдалося підписати тестові дані. Спробуйте додати інший ключ.', None
 
             if self.key_content and self.cert1_content:
                 self.key_password = ''
