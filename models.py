@@ -928,7 +928,7 @@ class Departments(Base):
             # Для офлайну потрібно додати номер, т.к. ми не знаємо пройшов чек чи ні
             self.next_local_number += 1
 
-            xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False, revoke=False)
+            xml, signed_xml, offline_tax_id = self.sender.to_offline(operation_time, testing=False, revoke=True)
             off = OfflineChecks(operation_type=1, department_id=self.id, user_id=None, operation_time=operation_time,
                 shift_id=None, fiscal_time=operation_time, server_time=None, pid=self.next_local_number,
                 offline_pid=self.next_offline_local_number, testing=False, offline_fiscal_xml_signed=signed_xml,
@@ -1107,7 +1107,7 @@ class Departments(Base):
                         data = b''
                         cnt_in_packet = 0
 
-                        # Обмеження: Розмір пакету даних, що надсилається, не може перевищувати 200 Kb.
+                        # Обмеження: Розмір пакета даних, що надсилається, не може перевищувати 200 Kb.
                         #            Максимальна кількість документів в пакеті обмежена (100).
                         while cnt < lngth and len(data) < 200 * 1024 and cnt_in_packet < 100:
                             signed_doc = signed_docs[cnt]
@@ -2204,7 +2204,7 @@ class Departments(Base):
                         if 'LETTERS' in real:
                             sale_check.letters = real['LETTERS']
 
-                        # <!--Сума операції (15.2 цифри)-->
+                        # <!--Сума операції (без урахування знижки) (15.2 цифри)-->
                         if 'COST' in real:
                             sale_check.cost = real['COST']
 

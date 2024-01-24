@@ -11,6 +11,9 @@ from config import TIMEZONE
 from models import db
 from utils.Sign import Sign
 
+# Check:
+# https://tax.gov.ua/elektronna-zvitnist/platnikam-podatkiv-pro/informatsiyno-analitichne-za/reestr-elektronnih-form-po/reestr-form/
+# https://tax.gov.ua/data/material/000/103/154157/Forms_servis_yur.htm
 
 class TaxForms(object):
 

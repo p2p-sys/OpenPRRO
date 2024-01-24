@@ -112,7 +112,7 @@ def fix_all():
 
     for department in departments:
         try:
-            msg = department.prro_fix()
+            msg = department.prro_fix(delete_offline_session=True)
             print(department.rro_id, msg)
         except Exception as e:
             print(department.rro_id, e)

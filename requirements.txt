@@ -4,7 +4,7 @@ dill
 requests
 Flask==1.1.4
 flask-login
-sqlalchemy
+SQLAlchemy==1.4
 flask-sqlalchemy
 flask_classy
 tabulate

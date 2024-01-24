@@ -853,7 +853,7 @@ class SendData2(object):
         }
         return self.post_data("doc", data)
 
-    def get_check_xml(self, doc_type, doc_sub_type=None, offline=False, dt=None, orderretnum=None, orderstornum=None,
+    def get_check_xml(self, doc_type, doc_sub_type=None, offline=False, dt=None, orderretnum=None, orderstornum=None, ordertypenum=None,
                       prev_hash=None, offline_tax_number=None, revoke=None, testing=False, doc_uid=None):
 
         if not dt:
@@ -868,16 +868,30 @@ class SendData2(object):
                               )
         CHECKHEAD = etree.SubElement(CHECK, "CHECKHEAD")
 
-        #   <!--Тип документа (числовий):-->
-        #   <!--0-Чек реалізації товарів/послуг, 1-Чек переказу коштів, 2–Чек операції обміну валюти, 3-Чек видачі готівки,
-        #       100-Відкриття зміни, 101-Закриття зміни, 102-Початок офлайн сесії, 103-Завершення офлайн сесії-->
-
+        '''
+            Тип документа (числовий):
+			    0-Чек реалізації товарів/послуг, 
+			    1-Чек переказу коштів, 
+			    2–Чек операції обміну валюти, 
+			    3-Чек видачі готівки,
+				4-Чек обслуговування у ломбарді,
+				100-Відкриття зміни, 
+				101-Закриття зміни, 
+				102-Початок офлайн сесії, 
+				103-Завершення офлайн сесії
+        '''
         DOCTYPE = etree.SubElement(CHECKHEAD, "DOCTYPE")
         DOCTYPE.text = str(doc_type)
 
-        # 		<!--Розширений тип документа (числовий):-->
-        # 		<!--0-Касовий чек (реалізація), 1-Видатковий чек (повернення), 2-Чек операції «службове внесення»/«отримання авансу»,
-        # 			3-Чек операції «отримання підкріплення», 4–Чек операції «службова видача»/«інкасація»...-->
+        '''
+            Розширений тип документа (числовий):
+			    0-Касовий чек (реалізація), 
+			    1-Видатковий чек (повернення),
+			    2-Чек операції «службове внесення»/«отримання авансу»,
+				3-Чек операції «отримання підкріплення», 
+				4–Чек операції «службова видача»/«інкасація»,
+				5-Чек сторнування попереднього чека
+        '''
         if doc_sub_type != None:
             DOCSUBTYPE = etree.SubElement(CHECKHEAD, "DOCSUBTYPE")
             DOCSUBTYPE.text = str(doc_sub_type)
@@ -939,6 +953,11 @@ class SendData2(object):
             # <!--Фіскальний номер чека, для якого здійснюється повернення (зазначається тільки для чеків повернення) (128 символів)-->
             ORDERRETNUM = etree.SubElement(CHECKHEAD, "ORDERRETNUM")
             ORDERRETNUM.text = '{}'.format(orderretnum)
+
+        if ordertypenum:
+            # <!--Найменування типу операції (128 символів)-->
+            OPERTYPENM = etree.SubElement(CHECKHEAD, "OPERTYPENM")
+            OPERTYPENM.text = '{}'.format(ordertypenum)
 
         if orderstornum:
             # <!--Фіскальний номер чека, для якого здійснюється сторнування (зазначається тільки для чеків сторнування) (128 символів)-->
@@ -1029,7 +1048,7 @@ class SendData2(object):
 
         xml = etree.tostring(CHECK, pretty_print=True, encoding='windows-1251')
         print(
-            '{} {} Вміст чека "Службовий чек переходу в режим офлайн": \r\n'.format(
+            '{} {} Вміст чека "Службовий чек переходу в режим офлайн": \r\n{}'.format(
                 datetime.now(tz.gettz(TIMEZONE)),
                 self.rro_fn, xml.decode('windows-1251')))
 
@@ -1290,6 +1309,16 @@ class SendData2(object):
                 SUM = etree.SubElement(CHECKTOTAL, "SUM")
                 SUM.text = "{:.2f}".format(totals['SUM'])
 
+            if 'PWNSUMISSUED' in totals:
+                ''' <!--Загальна сума коштів, виданих клієнту ломбарда (15.2 цифри) (наприклад, 1000.00)--> '''
+                PWNSUMISSUED = etree.SubElement(CHECKTOTAL, "PWNSUMISSUED")
+                PWNSUMISSUED.text = "{:.2f}".format(totals['PWNSUMISSUED'])
+
+            if 'PWNSUMRECEIVED' in totals:
+                ''' <!--Загальна сума коштів, одержаних від клієнта ломбарда (15.2 цифри) (наприклад, 1000.00)--> '''
+                PWNSUMRECEIVED = etree.SubElement(CHECKTOTAL, "PWNSUMRECEIVED")
+                PWNSUMRECEIVED.text = "{:.2f}".format(totals['PWNSUMRECEIVED'])
+
             if 'RNDSUM' in totals:
                 ''' <!--Заокруглення (15.2 цифри) (наприклад, 0.71)--> '''
                 SUM = etree.SubElement(CHECKTOTAL, "RNDSUM")
@@ -1299,6 +1328,68 @@ class SendData2(object):
                 ''' <!--Загальна сума без заокруглення (15.2 цифри) (наприклад, 1000.71)--> '''
                 SUM = etree.SubElement(CHECKTOTAL, "NORNDSUM")
                 SUM.text = "{:.2f}".format(totals['NORNDSUM'])
+
+            if 'NOTAXSUM' in totals:
+                ''' <!--Сума чеку без урахування податків/зборів (15.2 цифри)--> '''
+                NOTAXSUM = etree.SubElement(CHECKTOTAL, "NOTAXSUM")
+                NOTAXSUM.text = "{:.2f}".format(totals['NOTAXSUM'])
+
+            if 'COMMISSION' in totals:
+                ''' <<!--Сума комісії (15.2 цифри)--> '''
+                COMMISSION = etree.SubElement(CHECKTOTAL, "COMMISSION")
+                COMMISSION.text = "{:.2f}".format(totals['COMMISSION'])
+
+            if 'USAGETYPE' in totals:
+                '''<!--Тип застосування знижки/націнки (числовий):
+    			    0–Попередній продаж, 1–Проміжний підсумок, 2–Спеціальна...-->
+                '''
+                USAGETYPE = etree.SubElement(CHECKTOTAL, "USAGETYPE")
+                USAGETYPE.text = '{:d}'.format(totals['USAGETYPE'])
+
+            if 'SUBCHECK' in totals:
+                ''' <!--Сума на яку нараховується знижка/націнка (15.2 цифри)--> '''
+                SUBCHECK = etree.SubElement(CHECKTOTAL, "SUBCHECK")
+                SUBCHECK.text = "{:.2f}".format(totals['SUBCHECK'])
+
+            if 'DISCOUNTTYPE' in totals:
+                '''<!--Тип знижки/націнки (числовий):
+			        0–Сумова, 1–Відсоткова-->
+                '''
+                DISCOUNTTYPE = etree.SubElement(CHECKTOTAL, "DISCOUNTTYPE")
+                DISCOUNTTYPE.text = '{:d}'.format(totals['DISCOUNTTYPE'])
+
+            if 'DISCOUNTPERCENT' in totals:
+                ''' <!--Відсоток знижки/націнки, для відсоткових знижок/націнок (не зазначається при фіксованій сумі знижки/націнки) (15.2 цифри)--> '''
+                DISCOUNTPERCENT = etree.SubElement(CHECKTOTAL, "DISCOUNTPERCENT")
+                DISCOUNTPERCENT.text = "{:.2f}".format(totals['DISCOUNTPERCENT'])
+
+            if 'DISCOUNTSUM' in totals:
+                ''' <!--Загальна сума знижки/націнки (15.2 цифри)--> '''
+                DISCOUNTSUM = etree.SubElement(CHECKTOTAL, "DISCOUNTSUM")
+                DISCOUNTSUM.text = "{:.2f}".format(totals['DISCOUNTSUM'])
+
+            if 'PARTPAYTYPE' in totals:
+                ''' <!--Тип часткової сплати (числовий):
+                 	1-Передплата, 2-Остаточний розрахунок, 3-Чергова сплата-->
+                '''
+                PARTPAYTYPE = etree.SubElement(CHECKTOTAL, "PARTPAYTYPE")
+                PARTPAYTYPE.text = '{:d}'.format(totals['PARTPAYTYPE'])
+
+            if 'PARTPAYPERCENT' in totals:
+                ''' <!--Відсоток часткової сплати (15.2 цифри)-->'''
+                PARTPAYPERCENT = etree.SubElement(CHECKTOTAL, "PARTPAYPERCENT")
+                PARTPAYPERCENT.text = '{:.2f}'.format(totals['PARTPAYPERCENT'])
+
+            if 'PARTPAYSUM' in totals:
+                ''' <!--Cума часткової сплати (15.2 цифри)-->'''
+                PARTPAYSUM = etree.SubElement(CHECKTOTAL, "PARTPAYSUM")
+                PARTPAYSUM.text = '{:.2f}'.format(totals['PARTPAYSUM'])
+
+            if 'PARTPAYORDPREPAYNUM' in totals:
+                ''' <!--Фіскальний номер чека часткової сплати типу "Передплата"
+                     (для типів часткової сплати 2 та 3) (128 символів)-->'''
+                PARTPAYORDPREPAYNUM = etree.SubElement(CHECKTOTAL, "PARTPAYORDPREPAYNUM")
+                PARTPAYORDPREPAYNUM.text = '{}'.format(totals['PARTPAYORDPREPAYNUM'])
 
         else:
             ''' <!--Загальна сума (15.2 цифри)--> '''
@@ -1361,7 +1452,7 @@ class SendData2(object):
                         PAYSYSROW.text = ''
 
                         if 'TAXNUM' in pay_sys_item:
-                            # <!--Податковий номер платіжної системи (64 символи)-->
+                            # <!--Податковий номер платіжної системи (128 символи)-->
                             TAXNUM = etree.SubElement(PAYSYSROW, "TAXNUM")
                             TAXNUM.text = '{}'.format(pay_sys_item['TAXNUM'])
 
@@ -1371,7 +1462,7 @@ class SendData2(object):
                             NAME.text = '{}'.format(pay_sys_item['NAME'])
 
                         if 'ACQUIREPN' in pay_sys_item:
-                            # <!--Податковий номер еквайра торговця (64 символи)-->
+                            # <!--Податковий номер еквайра торговця (128 символи)-->
                             ACQUIREPN = etree.SubElement(PAYSYSROW, "ACQUIREPN")
                             ACQUIREPN.text = '{}'.format(pay_sys_item['ACQUIREPN'])
 
@@ -1548,9 +1639,18 @@ class SendData2(object):
                     LETTERS.text = '{}'.format(real['LETTERS'])
 
                 if 'COST' in real:
-                    # <!--Сума операції (15.2 цифри)-->
+                    # <!--Сума операції (без урахування знижки) (15.2 цифри)-->
                     COST = etree.SubElement(ROW, "COST")
                     COST.text = '{:.2f}'.format(real['COST'])
+
+                # <!--Ломбард-->
+                if 'PWNDIR' in real:
+                    '''<!--Напрямок руху коштів: видано клієнту ломбарда (false)/одержано від клієнта ломбарда (true)-->'''
+                    PWNDIR = etree.SubElement(ROW, "PWNDIR")
+                    if real['PWNDIR']:
+                        PWNDIR.text = 'true'
+                    else:
+                        PWNDIR.text = 'false'
 
                 # <!--Знижка/націнка-->
                 if 'USAGETYPE' in real:
@@ -1587,6 +1687,11 @@ class SendData2(object):
                     # <!--Загальна сума знижки/націнки (15.2 цифри)-->
                     DISCOUNTSUM = etree.SubElement(ROW, "DISCOUNTSUM")
                     DISCOUNTSUM.text = '{:.2f}'.format(real['DISCOUNTSUM'])
+
+                if 'PARTPAYSUM' in real:
+                    # <!--Cума часткової сплати (15.2 цифри)-->
+                    PARTPAYSUM = etree.SubElement(ROW, "PARTPAYSUM")
+                    PARTPAYSUM.text = '{:.2f}'.format(real['PARTPAYSUM'])
 
                 if 'COMMENT' in real:
                     # <!--Коментар-->
